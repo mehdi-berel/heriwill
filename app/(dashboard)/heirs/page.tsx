@@ -12,30 +12,22 @@ import { supabase } from "@/lib/supabase"
 
 interface Heir {
   id: string
-  full_name: string
-  email: string
-  phone?: string
-  relationship: string
-  invitation_status: 'pending' | 'accepted' | 'rejected' | 'expired'
-  invitation_code?: string
+  user_id: string
+  full_name_encrypted: string | null
+  email_encrypted: string | null
+  phone_encrypted: string | null
+  relationship: string | null
   access_level: 'full' | 'partial' | 'view'
-  verification_method: 'email' | 'phone' | 'id_document' | 'other'
-  verification_status: 'pending' | 'verified' | 'failed'
+  invitation_status: string | null
+  invitation_code: string | null
+  invited_at: string | null
+  invitation_expires_at: string | null
+  verification_method: string | null
+  has_accepted: boolean | null
+  accepted_at: string | null
+  is_active: boolean | null
   created_at: string
-  accepted_at?: string
-  last_activity?: string
-  invitation_expires_at?: string
-  backup_contact?: {
-    name: string
-    phone: string
-    relationship: string
-  }
-  notification_preferences: {
-    email: boolean
-    sms: boolean
-    in_app: boolean
-  }
-  special_instructions?: string
+  updated_at: string
 }
 
 interface HeirActivity {
@@ -140,19 +132,16 @@ export default function HeirsPage() {
         .from('heirs')
         .insert({
           user_id: user.id,
-          full_name: formData.full_name,
-          email: formData.email,
-          phone: formData.phone,
+          full_name_encrypted: formData.full_name, // In production, this should be encrypted
+          email_encrypted: formData.email, // In production, this should be encrypted
+          phone_encrypted: formData.phone || null, // In production, this should be encrypted
           relationship: formData.relationship,
           access_level: formData.access_level,
           verification_method: formData.verification_method,
           invitation_status: 'pending',
           invitation_code: generateInvitationCode(),
           invited_at: new Date().toISOString(),
-          invitation_expires_at: formData.invitation_expires_at,
-          notification_preferences: formData.notification_preferences,
-          backup_contact: formData.backup_contact,
-          special_instructions: formData.special_instructions
+          invitation_expires_at: formData.invitation_expires_at || null
         })
         .select()
         .single()
@@ -255,39 +244,39 @@ export default function HeirsPage() {
   }
 
   const getHeirStats = () => {
-    const totalHeirs = heirs.length
-    const acceptedHeirs = heirs.filter(h => h.invitation_status === 'accepted').length
-    const pendingHeirs = heirs.filter(h => h.invitation_status === 'pending').length
-    const rejectedHeirs = heirs.filter(h => h.invitation_status === 'rejected').length
-    const expiredHeirs = heirs.filter(h => h.invitation_status === 'expired').length
-    const verifiedHeirs = heirs.filter(h => h.verification_status === 'verified').length
-    const fullAccessHeirs = heirs.filter(h => h.access_level === 'full').length
-    const partialAccessHeirs = heirs.filter(h => h.access_level === 'partial').length
-    const viewAccessHeirs = heirs.filter(h => h.access_level === 'view').length
-    const recentlyActive = heirs.filter(h => {
-      if (!h.last_activity) return false
-      return new Date(h.last_activity) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
-    }).length
+  const totalHeirs = heirs.length
+  const acceptedHeirs = heirs.filter(h => h.invitation_status === 'accepted').length
+  const pendingHeirs = heirs.filter(h => h.invitation_status === 'pending').length
+  const rejectedHeirs = heirs.filter(h => h.invitation_status === 'rejected').length
+  const expiredHeirs = heirs.filter(h => h.invitation_status === 'expired').length
+  const verifiedHeirs = heirs.filter(h => h.has_accepted === true).length
+  const fullAccessHeirs = heirs.filter(h => h.access_level === 'full').length
+  const partialAccessHeirs = heirs.filter(h => h.access_level === 'partial').length
+  const viewAccessHeirs = heirs.filter(h => h.access_level === 'view').length
+  const recentlyActive = heirs.filter(h => {
+    if (!h.updated_at) return false
+    return new Date(h.updated_at) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+  }).length
 
-    return {
-      totalHeirs,
-      acceptedHeirs,
-      pendingHeirs,
-      rejectedHeirs,
-      expiredHeirs,
-      verifiedHeirs,
-      fullAccessHeirs,
-      partialAccessHeirs,
-      viewAccessHeirs,
-      recentlyActive,
-      averageResponseTime: 48, // Mock data
-      invitationsSentThisMonth: 3, // Mock data
-      verificationBreakdown: {
-        email: heirs.filter(h => h.verification_method === 'email').length,
-        phone: heirs.filter(h => h.verification_method === 'phone').length,
-        id_document: heirs.filter(h => h.verification_method === 'id_document').length,
-        other: heirs.filter(h => h.verification_method === 'other').length
-      }
+  return {
+    totalHeirs,
+    acceptedHeirs,
+    pendingHeirs,
+    rejectedHeirs,
+    expiredHeirs,
+    verifiedHeirs,
+    fullAccessHeirs,
+    partialAccessHeirs,
+    viewAccessHeirs,
+    recentlyActive,
+    averageResponseTime: 48, // Mock data
+    invitationsSentThisMonth: 3, // Mock data
+    verificationBreakdown: {
+      email: heirs.filter(h => h.verification_method === 'email').length,
+      phone: heirs.filter(h => h.verification_method === 'phone').length,
+      id_document: heirs.filter(h => h.verification_method === 'id_document').length,
+      other: heirs.filter(h => h.verification_method === 'other').length
+    }
     }
   }
 
@@ -357,7 +346,22 @@ export default function HeirsPage() {
               setViewMode('list')
               setSelectedHeir(null)
             }}
-            initialData={selectedHeir}
+            initialData={selectedHeir ? {
+              full_name: selectedHeir.full_name,
+              email: selectedHeir.email,
+              phone: selectedHeir.phone || '',
+              relationship: selectedHeir.relationship,
+              access_level: selectedHeir.access_level,
+              notification_preferences: selectedHeir.notification_preferences,
+              backup_contact: selectedHeir.backup_contact || {
+                name: '',
+                phone: '',
+                relationship: ''
+              },
+              special_instructions: selectedHeir.special_instructions || '',
+              verification_method: selectedHeir.verification_method,
+              invitation_expires_at: selectedHeir.invitation_expires_at
+            } : undefined}
             isEditing={!!selectedHeir}
           />
         )}

@@ -163,15 +163,13 @@ export default function AssetsPage() {
           user_id: user.id,
           name: assetData.name,
           type: assetData.type,
-          description: assetData.description,
-          value: assetData.value,
-          location: assetData.location,
+          description: assetData.description || null,
+          value: assetData.value || null,
+          location: assetData.location || null,
           ownership_type: assetData.ownership_type,
-          beneficiaries: assetData.beneficiaries,
-          documents: assetData.documents,
-          notes: assetData.notes,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
+          beneficiaries: assetData.beneficiaries || [],
+          documents: assetData.documents || [],
+          notes: assetData.notes || null
         })
         .select()
         .single()
@@ -194,14 +192,13 @@ export default function AssetsPage() {
         .update({
           name: assetData.name,
           type: assetData.type,
-          description: assetData.description,
-          value: assetData.value,
-          location: assetData.location,
+          description: assetData.description || null,
+          value: assetData.value || null,
+          location: assetData.location || null,
           ownership_type: assetData.ownership_type,
-          beneficiaries: assetData.beneficiaries,
-          documents: assetData.documents,
-          notes: assetData.notes,
-          updated_at: new Date().toISOString()
+          beneficiaries: assetData.beneficiaries || [],
+          documents: assetData.documents || [],
+          notes: assetData.notes || null
         })
         .eq('id', selectedAsset.id)
         .select()
@@ -317,7 +314,13 @@ export default function AssetsPage() {
       withLocationCount,
       withDocumentsCount,
       averageValue,
-      highestValueAsset
+      highestValueAsset: highestValueAsset && highestValueAsset.value 
+        ? {
+            name: highestValueAsset.name,
+            value: highestValueAsset.value,
+            type: highestValueAsset.type
+          }
+        : undefined
     }
   }
 
@@ -397,7 +400,7 @@ export default function AssetsPage() {
               setViewMode('list')
               setSelectedAsset(null)
             }}
-            initialData={selectedAsset}
+            initialData={selectedAsset || undefined}
           />
         )}
 
@@ -406,7 +409,7 @@ export default function AssetsPage() {
             asset={selectedAsset}
             onBack={() => setViewMode('list')}
             onEdit={() => setViewMode('add')}
-            onDelete={handleDeleteAsset}
+            onDelete={() => handleDeleteAsset(selectedAsset.id)}
             onUploadDocument={handleUploadDocument}
             onDownloadDocument={handleDownloadDocument}
             onDeleteDocument={handleDeleteDocument}
