@@ -7,22 +7,22 @@ import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { 
   FileText, 
-  Shield, 
-  AlertTriangle, 
-  CheckCircle, 
-  Clock, 
   Download, 
-  Eye,
-  Upload,
-  Calendar,
+  Eye, 
+  Edit, 
+  Trash2, 
+  CheckCircle, 
+  AlertCircle, 
+  Clock, 
+  Shield, 
+  Star, 
+  MoreVertical,
+  Gavel,
   User,
   Scale,
-  Gavel,
   FileCheck,
-  Trash2,
-  MoreVertical,
-  Link,
-  ExternalLink
+  Upload,
+  AlertTriangle
 } from "lucide-react"
 
 interface LegalDocument {

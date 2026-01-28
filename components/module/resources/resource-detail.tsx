@@ -357,7 +357,7 @@ export function ResourceDetail({
               </CardHeader>
               <CardContent>
                 <p className="text-muted-foreground">
-                  This resource doesn't have any content available yet.
+                  This resource doesn&apos;t have any content available yet.
                 </p>
               </CardContent>
             </Card>

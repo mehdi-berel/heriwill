@@ -1,32 +1,28 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { 
+  FolderOpen, 
   Lock, 
   Unlock, 
-  Users, 
-  FileText, 
   Eye, 
   Download, 
   Share2, 
-  Calendar,
-  Clock,
-  CheckCircle,
-  AlertCircle,
-  Key,
-  Shield,
-  Archive,
-  Globe,
-  Heart,
-  Star,
+  AlertCircle, 
+  Calendar, 
+  User, 
+  Shield, 
+  Search, 
   MoreVertical,
-  Search,
-  Filter
+  Key,
+  Clock,
+  Archive,
+  Users
 } from "lucide-react"
 
 interface SharedVault {
@@ -123,8 +119,11 @@ export function SharedVault({
     })
   }
 
-  const isExpired = vault.expiresAt && new Date(vault.expiresAt) < new Date()
-  const isExpiringSoon = vault.expiresAt && new Date(vault.expiresAt) < new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+  const now = useMemo(() => new Date(), [])
+  const sevenDaysFromNow = useMemo(() => new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), [])
+  
+  const isExpired = vault.expiresAt && new Date(vault.expiresAt) < now
+  const isExpiringSoon = vault.expiresAt && new Date(vault.expiresAt) < sevenDaysFromNow
 
   const filteredPermissions = vault.permissions.filter(permission =>
     permission.heirName.toLowerCase().includes(searchTerm.toLowerCase())

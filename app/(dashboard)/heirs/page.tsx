@@ -8,6 +8,9 @@ import { HeirList } from "@/components/module/heirs/heir-list"
 import { HeirStats } from "@/components/module/heirs/heir-stats"
 import { HeirDetail } from "@/components/module/heirs/heir-detail"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
+import { Search } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 
 interface Heir {
@@ -17,15 +20,20 @@ interface Heir {
   email_encrypted: string | null
   phone_encrypted: string | null
   relationship: string | null
+  heir_type: 'family' | 'friend' | 'professional' | 'organization' | null
   access_level: 'full' | 'partial' | 'view'
-  invitation_status: string | null
+  invitation_status: 'pending' | 'accepted' | 'rejected' | 'expired' | null
   invitation_code: string | null
   invited_at: string | null
   invitation_expires_at: string | null
-  verification_method: string | null
   has_accepted: boolean | null
   accepted_at: string | null
+  notify_on_activation: boolean | null
+  notification_delay_days: number | null
   is_active: boolean | null
+  rejected_at: string | null
+  heir_user_id: string | null
+  inheritance_plan_id: string | null
   created_at: string
   updated_at: string
 }
@@ -38,34 +46,39 @@ interface HeirActivity {
   metadata?: Record<string, any>
 }
 
-type ViewMode = 'stats' | 'list' | 'add' | 'detail'
 
 export default function HeirsPage() {
   const [user, setUser] = useState<any>(null)
   const [profile, setProfile] = useState<any>(null)
   const [loading, setLoading] = useState(true)
-  const [viewMode, setViewMode] = useState<ViewMode>('stats')
   const [heirs, setHeirs] = useState<Heir[]>([])
-  const [selectedHeir, setSelectedHeir] = useState<Heir | null>(null)
-  const [heirActivities, setHeirActivities] = useState<HeirActivity[]>([])
   const [searchTerm, setSearchTerm] = useState('')
+  const [selectedStatus, setSelectedStatus] = useState<'pending' | 'accepted' | 'active' | null>(null)
+  const [showForm, setShowForm] = useState(false)
+  const [editingHeir, setEditingHeir] = useState<Heir | null>(null)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [heirToDelete, setHeirToDelete] = useState<string | null>(null)
   const router = useRouter()
 
   useEffect(() => {
     const getUser = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
-        router.push("/auth/login")
+        router.push("/login")
         return
       }
       setUser(user)
       
       // Load user profile
-      const { data: profileData } = await supabase
-        .from('user_profiles')
+      const { data: profileData, error: profileError } = await supabase
+        .from('users')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('id', user.id)
         .single()
+      
+      if (profileError) {
+        console.error('Error loading profile:', profileError)
+      }
       
       setProfile(profileData)
       
@@ -79,7 +92,7 @@ export default function HeirsPage() {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!session?.user) {
-        router.push("/auth/login")
+        router.push("/login")
       } else {
         setUser(session.user)
         loadHeirs(session.user.id)
@@ -91,11 +104,16 @@ export default function HeirsPage() {
 
   const loadHeirs = async (userId: string) => {
     try {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('heirs')
         .select('*')
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
+
+      if (error) {
+        console.error('Error loading heirs:', error)
+        return
+      }
 
       setHeirs(data || [])
     } catch (error) {
@@ -106,21 +124,7 @@ export default function HeirsPage() {
   const loadHeirActivities = async (heirId: string) => {
     try {
       // In a real app, this would fetch from an activities table
-      const mockActivities: HeirActivity[] = [
-        {
-          id: '1',
-          type: 'login',
-          description: 'Logged into account',
-          timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()
-        },
-        {
-          id: '2',
-          type: 'vault_access',
-          description: 'Accessed "Family Photos" vault',
-          timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
-        }
-      ]
-      setHeirActivities(mockActivities)
+      // Mock activities removed since we're not using detail view in this page
     } catch (error) {
       console.error('Error loading heir activities:', error)
     }
@@ -128,27 +132,35 @@ export default function HeirsPage() {
 
   const handleAddHeir = async (formData: any) => {
     try {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('heirs')
         .insert({
           user_id: user.id,
-          full_name_encrypted: formData.full_name, // In production, this should be encrypted
-          email_encrypted: formData.email, // In production, this should be encrypted
-          phone_encrypted: formData.phone || null, // In production, this should be encrypted
-          relationship: formData.relationship,
+          full_name_encrypted: formData.full_name,
+          email_encrypted: formData.email,
+          phone_encrypted: formData.phone || null,
+          relationship: formData.relationship || null,
+          heir_type: formData.heir_type || 'family',
           access_level: formData.access_level,
-          verification_method: formData.verification_method,
           invitation_status: 'pending',
           invitation_code: generateInvitationCode(),
           invited_at: new Date().toISOString(),
-          invitation_expires_at: formData.invitation_expires_at || null
+          invitation_expires_at: formData.invitation_expires_at || null,
+          notify_on_activation: true,
+          notification_delay_days: 0,
+          is_active: true
         })
         .select()
         .single()
 
+      if (error) {
+        console.error('Error adding heir:', error)
+        return
+      }
+
       if (data) {
         setHeirs([data, ...heirs])
-        setViewMode('list')
+        setShowForm(false)
       }
     } catch (error) {
       console.error('Error adding heir:', error)
@@ -156,48 +168,63 @@ export default function HeirsPage() {
   }
 
   const handleUpdateHeir = async (formData: any) => {
-    if (!selectedHeir) return
+    if (!editingHeir) return
 
     try {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('heirs')
         .update({
-          full_name: formData.full_name,
-          email: formData.email,
-          phone: formData.phone,
-          relationship: formData.relationship,
+          full_name_encrypted: formData.full_name,
+          email_encrypted: formData.email,
+          phone_encrypted: formData.phone || null,
+          relationship: formData.relationship || null,
+          heir_type: formData.heir_type || 'family',
           access_level: formData.access_level,
-          verification_method: formData.verification_method,
-          notification_preferences: formData.notification_preferences,
-          backup_contact: formData.backup_contact,
-          special_instructions: formData.special_instructions
+          notification_delay_days: formData.notification_delay_days || 0,
+          is_active: formData.is_active !== undefined ? formData.is_active : true
         })
-        .eq('id', selectedHeir.id)
+        .eq('id', editingHeir.id)
         .select()
         .single()
 
+      if (error) {
+        console.error('Error updating heir:', error)
+        return
+      }
+
       if (data) {
-        setHeirs(heirs.map(h => h.id === selectedHeir.id ? data : h))
-        setSelectedHeir(data)
-        setViewMode('detail')
+        setHeirs(heirs.map(h => h.id === editingHeir.id ? data : h))
+        setShowForm(false)
+        setEditingHeir(null)
       }
     } catch (error) {
       console.error('Error updating heir:', error)
     }
   }
 
-  const handleDeleteHeir = async (heirId: string) => {
+  const handleDeleteHeir = (heirId: string) => {
+    setHeirToDelete(heirId)
+    setShowDeleteModal(true)
+  }
+
+  const confirmDeleteHeir = async () => {
+    if (!heirToDelete) return
+
     try {
-      await supabase
+      const { error } = await supabase
         .from('heirs')
         .delete()
-        .eq('id', heirId)
+        .eq('id', heirToDelete)
       
-      setHeirs(heirs.filter(h => h.id !== heirId))
-      if (selectedHeir?.id === heirId) {
-        setSelectedHeir(null)
-        setViewMode('list')
+      if (error) {
+        console.error('Error deleting heir:', error)
+        return
       }
+      
+      setHeirs(heirs.filter(h => h.id !== heirToDelete))
+      
+      setShowDeleteModal(false)
+      setHeirToDelete(null)
     } catch (error) {
       console.error('Error deleting heir:', error)
     }
@@ -210,13 +237,22 @@ export default function HeirsPage() {
 
   const handleRevokeAccess = async (heirId: string) => {
     try {
-      await supabase
+      const { error } = await supabase
         .from('heirs')
-        .update({ invitation_status: 'rejected' })
+        .update({ 
+          invitation_status: 'rejected',
+          is_active: false,
+          rejected_at: new Date().toISOString()
+        })
         .eq('id', heirId)
       
+      if (error) {
+        console.error('Error revoking access:', error)
+        return
+      }
+      
       setHeirs(heirs.map(h => 
-        h.id === heirId ? { ...h, invitation_status: 'rejected' as const } : h
+        h.id === heirId ? { ...h, invitation_status: 'rejected' as const, is_active: false } : h
       ))
     } catch (error) {
       console.error('Error revoking access:', error)
@@ -224,14 +260,12 @@ export default function HeirsPage() {
   }
 
   const handleHeirSelect = (heir: Heir) => {
-    setSelectedHeir(heir)
-    loadHeirActivities(heir.id)
-    setViewMode('detail')
+    router.push(`/heirs/${heir.id}`)
   }
 
   const handleHeirEdit = (heir: Heir) => {
-    setSelectedHeir(heir)
-    setViewMode('add')
+    setEditingHeir(heir)
+    setShowForm(true)
   }
 
   const generateInvitationCode = () => {
@@ -240,43 +274,20 @@ export default function HeirsPage() {
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()
-    router.push("/auth/login")
+    router.push("/login")
   }
 
   const getHeirStats = () => {
-  const totalHeirs = heirs.length
-  const acceptedHeirs = heirs.filter(h => h.invitation_status === 'accepted').length
-  const pendingHeirs = heirs.filter(h => h.invitation_status === 'pending').length
-  const rejectedHeirs = heirs.filter(h => h.invitation_status === 'rejected').length
-  const expiredHeirs = heirs.filter(h => h.invitation_status === 'expired').length
-  const verifiedHeirs = heirs.filter(h => h.has_accepted === true).length
-  const fullAccessHeirs = heirs.filter(h => h.access_level === 'full').length
-  const partialAccessHeirs = heirs.filter(h => h.access_level === 'partial').length
-  const viewAccessHeirs = heirs.filter(h => h.access_level === 'view').length
-  const recentlyActive = heirs.filter(h => {
-    if (!h.updated_at) return false
-    return new Date(h.updated_at) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
-  }).length
+    const totalHeirs = heirs.length
+    const activeHeirs = heirs.filter(h => h.is_active === true).length
+    const pendingHeirs = heirs.filter(h => h.invitation_status === 'pending').length
+    const acceptedHeirs = heirs.filter(h => h.has_accepted === true).length
 
-  return {
-    totalHeirs,
-    acceptedHeirs,
-    pendingHeirs,
-    rejectedHeirs,
-    expiredHeirs,
-    verifiedHeirs,
-    fullAccessHeirs,
-    partialAccessHeirs,
-    viewAccessHeirs,
-    recentlyActive,
-    averageResponseTime: 48, // Mock data
-    invitationsSentThisMonth: 3, // Mock data
-    verificationBreakdown: {
-      email: heirs.filter(h => h.verification_method === 'email').length,
-      phone: heirs.filter(h => h.verification_method === 'phone').length,
-      id_document: heirs.filter(h => h.verification_method === 'id_document').length,
-      other: heirs.filter(h => h.verification_method === 'other').length
-    }
+    return {
+      totalHeirs,
+      activeHeirs,
+      pendingHeirs,
+      acceptedHeirs
     }
   }
 
@@ -295,89 +306,130 @@ export default function HeirsPage() {
     >
       <div className="p-6">
         {/* Header */}
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            <h1 className="text-3xl font-bold">Heirs Management</h1>
-            <p className="text-muted-foreground">
-              Manage who will inherit your digital assets and information.
-            </p>
+        <div className="mb-6">
+          <div className="flex justify-between items-center mb-4">
+            <h1 className="text-3xl font-bold">Heirs</h1>
+            <Button 
+              onClick={() => {
+                setEditingHeir(null)
+                setShowForm(true)
+              }}
+              className="h-12 w-12 rounded-full p-0"
+            >
+              <span className="text-2xl">+</span>
+            </Button>
           </div>
-          <div className="flex gap-2">
+          
+          {/* Category Tabs - Centered */}
+          <div className="flex justify-center gap-2 mb-4">
             <Button
-              variant={viewMode === 'stats' ? 'default' : 'outline'}
-              onClick={() => setViewMode('stats')}
+              variant={selectedStatus === 'accepted' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setSelectedStatus(selectedStatus === 'accepted' ? null : 'accepted')}
+              className="rounded-lg"
             >
-              Stats
+              Accepted ({heirs.filter(h => h.has_accepted === true).length})
             </Button>
             <Button
-              variant={viewMode === 'list' ? 'default' : 'outline'}
-              onClick={() => setViewMode('list')}
+              variant={selectedStatus === 'pending' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setSelectedStatus(selectedStatus === 'pending' ? null : 'pending')}
+              className="rounded-lg"
             >
-              List
+              Pending ({heirs.filter(h => h.invitation_status === 'pending').length})
             </Button>
-            <Button onClick={() => setViewMode('add')}>
-              Add Heir
+            <Button
+              variant={selectedStatus === 'active' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setSelectedStatus(selectedStatus === 'active' ? null : 'active')}
+              className="rounded-lg"
+            >
+              Successors ({heirs.filter(h => h.is_active === true).length})
             </Button>
+          </div>
+          
+          {/* Search Bar */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+            <Input
+              placeholder="Search heirs..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 h-11 bg-background-secondary border-border rounded-xl"
+            />
           </div>
         </div>
 
-        {/* Content based on view mode */}
-        {viewMode === 'stats' && (
-          <HeirStats stats={getHeirStats()} />
-        )}
+        {/* Heirs List */}
+        <HeirList
+          heirs={heirs}
+          onHeirSelect={handleHeirSelect}
+          onHeirEdit={handleHeirEdit}
+          onHeirDelete={handleDeleteHeir}
+          onResendInvitation={handleResendInvitation}
+          onRevokeAccess={handleRevokeAccess}
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
+          selectedStatus={selectedStatus}
+        />
 
-        {viewMode === 'list' && (
-          <HeirList
-            heirs={heirs}
-            onHeirSelect={handleHeirSelect}
-            onHeirEdit={handleHeirEdit}
-            onHeirDelete={handleDeleteHeir}
-            onResendInvitation={handleResendInvitation}
-            onRevokeAccess={handleRevokeAccess}
-            searchTerm={searchTerm}
-            onSearchChange={setSearchTerm}
-          />
-        )}
+        {/* Heir Form Modal */}
+        <Dialog open={showForm} onOpenChange={(open) => {
+          setShowForm(open)
+          if (!open) setEditingHeir(null)
+        }}>
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+            <DialogTitle className="sr-only">
+              {editingHeir ? 'Edit Heir' : 'Add New Heir'}
+            </DialogTitle>
+            <HeirForm
+              initialData={editingHeir ? {
+                full_name: editingHeir.full_name_encrypted || '',
+                email: editingHeir.email_encrypted || '',
+                phone: editingHeir.phone_encrypted || '',
+                relationship: editingHeir.relationship || '',
+                heir_type: editingHeir.heir_type || 'family',
+                access_level: editingHeir.access_level,
+                invitation_expires_at: editingHeir.invitation_expires_at || undefined
+              } : undefined}
+              onSubmit={editingHeir ? handleUpdateHeir : handleAddHeir}
+              onCancel={() => {
+                setShowForm(false)
+                setEditingHeir(null)
+              }}
+              isEditing={!!editingHeir}
+            />
+          </DialogContent>
+        </Dialog>
 
-        {viewMode === 'add' && (
-          <HeirForm
-            onSubmit={selectedHeir ? handleUpdateHeir : handleAddHeir}
-            onCancel={() => {
-              setViewMode('list')
-              setSelectedHeir(null)
-            }}
-            initialData={selectedHeir ? {
-              full_name: selectedHeir.full_name,
-              email: selectedHeir.email,
-              phone: selectedHeir.phone || '',
-              relationship: selectedHeir.relationship,
-              access_level: selectedHeir.access_level,
-              notification_preferences: selectedHeir.notification_preferences,
-              backup_contact: selectedHeir.backup_contact || {
-                name: '',
-                phone: '',
-                relationship: ''
-              },
-              special_instructions: selectedHeir.special_instructions || '',
-              verification_method: selectedHeir.verification_method,
-              invitation_expires_at: selectedHeir.invitation_expires_at
-            } : undefined}
-            isEditing={!!selectedHeir}
-          />
-        )}
-
-        {viewMode === 'detail' && selectedHeir && (
-          <HeirDetail
-            heir={selectedHeir}
-            activities={heirActivities}
-            onBack={() => setViewMode('list')}
-            onEdit={() => setViewMode('add')}
-            onDelete={() => handleDeleteHeir(selectedHeir.id)}
-            onResendInvitation={() => handleResendInvitation(selectedHeir.id)}
-            onRevokeAccess={() => handleRevokeAccess(selectedHeir.id)}
-            onRefreshActivity={() => loadHeirActivities(selectedHeir.id)}
-          />
-        )}
+        {/* Delete Confirmation Modal */}
+        <Dialog open={showDeleteModal} onOpenChange={setShowDeleteModal}>
+          <DialogContent className="max-w-md">
+            <DialogTitle>Delete Heir</DialogTitle>
+            <div className="space-y-4">
+              <p className="text-muted-foreground">
+                Are you sure you want to delete this heir? This action cannot be undone and they will lose all access to your vaults.
+              </p>
+              <div className="flex justify-end gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowDeleteModal(false)
+                    setHeirToDelete(null)
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={confirmDeleteHeir}
+                >
+                  Delete Heir
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   )

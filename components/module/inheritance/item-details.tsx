@@ -6,29 +6,27 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { 
-  ArrowLeft, 
+  FileText, 
   Download, 
-  Share2, 
+  Eye, 
   Edit, 
   Trash2, 
-  Eye, 
   Lock, 
   Unlock, 
   Star, 
-  Calendar,
-  Clock,
-  FileText,
-  Globe,
-  Heart,
-  Archive,
-  MoreVertical,
-  Copy,
-  ExternalLink,
-  Shield,
-  Key,
-  Users,
+  Calendar, 
+  Users, 
+  Shield, 
+  AlertCircle, 
+  CheckCircle, 
+  Share2, 
+  Copy, 
+  ExternalLink, 
   Upload,
-  History
+  ArrowLeft,
+  Archive,
+  History,
+  Key
 } from "lucide-react"
 
 interface VaultItem {
@@ -66,7 +64,6 @@ interface ItemDetailsProps {
   onFavorite: () => void
   onLockToggle: () => void
   onCopyLink: () => void
-  onUploadNewVersion: (file: File) => void
 }
 
 export function ItemDetails({ 
@@ -78,18 +75,17 @@ export function ItemDetails({
   onShare, 
   onFavorite, 
   onLockToggle,
-  onCopyLink,
-  onUploadNewVersion
+  onCopyLink
 }: ItemDetailsProps) {
   const [activeTab, setActiveTab] = useState('overview')
 
   const getItemIcon = (type: string) => {
     switch (type) {
       case 'document': return <FileText className="h-6 w-6" />
-      case 'image': return <Globe className="h-6 w-6" />
+      case 'image': return <Eye className="h-6 w-6" />
       case 'video': return <Eye className="h-6 w-6" />
-      case 'audio': return <Heart className="h-6 w-6" />
-      case 'archive': return <Archive className="h-6 w-6" />
+      case 'audio': return <Eye className="h-6 w-6" />
+      case 'archive': return <FileText className="h-6 w-6" />
       default: return <FileText className="h-6 w-6" />
     }
   }
@@ -377,7 +373,7 @@ export function ItemDetails({
               </CardHeader>
               <CardContent>
                 <p className="text-muted-foreground">
-                  This item doesn't have any content available for preview.
+                  This item doesn&apos;t have a description yet.
                 </p>
               </CardContent>
             </Card>
@@ -475,7 +471,7 @@ export function ItemDetails({
                     <div>
                       <p className="font-medium">Previous Version</p>
                       <p className="text-sm text-muted-foreground">
-                        {formatSize(item.size * 0.8)} • {formatDate(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())}
+                        {formatSize(item.size * 0.8)} • {formatDate(new Date(new Date().getTime() - 7 * 24 * 60 * 60 * 1000).toISOString())}
                       </p>
                     </div>
                   </div>

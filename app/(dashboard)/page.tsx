@@ -19,7 +19,7 @@ interface DashboardStats {
 
 export default function HomePage() {
   const [user, setUser] = useState<any>(null)
-  const [profile, setProfile] = useState<Database['public']['Tables']['user_profiles']['Row'] | null>(null)
+  const [profile, setProfile] = useState<any>(null)
   const [stats, setStats] = useState<DashboardStats>({
     totalAssets: 0,
     totalBeneficiaries: 0,
@@ -35,7 +35,7 @@ export default function HomePage() {
     const getUser = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
-        router.push("/auth/login")
+        router.push("/login")
         return
       }
       setUser(user)
@@ -53,7 +53,7 @@ export default function HomePage() {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!session?.user) {
-        router.push("/auth/login")
+        router.push("/login")
       } else {
         setUser(session.user)
         loadProfile(session.user.id)
@@ -75,65 +75,94 @@ export default function HomePage() {
 
   const loadStats = async (userId: string) => {
     try {
+      // Load vaults count
+      const { data: vaults } = await supabase
+        .from('vaults')
+        .select('id')
+        .eq('user_id', userId)
+
+      // Load heirs count
+      const { data: heirs } = await supabase
+        .from('heirs')
+        .select('id')
+        .eq('user_id', userId)
+
       // Load assets count
       const { data: assets } = await supabase
-        .from('digital_assets')
+        .from('assets')
         .select('id')
         .eq('user_id', userId)
 
-      // Load beneficiaries count
-      const { data: beneficiaries } = await supabase
-        .from('beneficiaries')
+      // Load vault items count
+      const { data: vaultItems } = await supabase
+        .from('vault_items')
         .select('id')
         .eq('user_id', userId)
 
-      // Load inheritance plan progress
+      // Load inheritance plans
       const { data: plans } = await supabase
         .from('inheritance_plans')
-        .select('id, progress')
+        .select('id, is_triggered, is_active')
         .eq('user_id', userId)
-        .single()
 
-      const { data: sections } = await supabase
-        .from('inheritance_sections')
-        .select('is_completed')
-        .eq('plan_id', plans?.id || '')
+      const activePlans = plans?.filter((p: any) => p.is_active && !p.is_triggered).length || 0
+      const completedSections = plans?.filter((p: any) => p.is_triggered).length || 0
 
-      const completedSections = sections?.filter(s => s.is_completed).length || 0
+      // Calculate security score
+      const securityScore = calculateSecurityScore(
+        vaults?.length || 0,
+        heirs?.length || 0,
+        assets?.length || 0,
+        vaultItems?.length || 0
+      )
 
-      setStats(prev => ({
-        ...prev,
+      setStats({
         totalAssets: assets?.length || 0,
-        totalBeneficiaries: beneficiaries?.length || 0,
+        totalBeneficiaries: heirs?.length || 0,
         completedSections,
-        totalSections: sections?.length || 6,
-        securityScore: calculateSecurityScore(userId)
-      }))
+        totalSections: (vaults?.length || 0) + (heirs?.length || 0) + (assets?.length || 0),
+        securityScore,
+        pendingTasks: activePlans
+      })
     } catch (error) {
       console.error('Error loading stats:', error)
     }
   }
 
-  const calculateSecurityScore = (userId: string): number => {
-    // Basic security score calculation
-    // In a real app, this would check 2FA, password strength, etc.
-    let score = 60 // Base score
+  const calculateSecurityScore = (
+    vaultsCount: number,
+    heirsCount: number,
+    assetsCount: number,
+    vaultItemsCount: number
+  ): number => {
+    let score = 0
     
-    // Add points for having beneficiaries
-    if (stats.totalBeneficiaries > 0) score += 10
+    // Base score for having vaults (max 30 points)
+    if (vaultsCount > 0) {
+      score += Math.min(30, vaultsCount * 10)
+    }
     
-    // Add points for having assets
-    if (stats.totalAssets > 0) score += 10
+    // Points for having heirs (max 25 points)
+    if (heirsCount > 0) {
+      score += Math.min(25, heirsCount * 12)
+    }
     
-    // Add points for plan progress
-    if (stats.completedSections > 0) score += Math.min(20, stats.completedSections * 4)
+    // Points for having assets (max 20 points)
+    if (assetsCount > 0) {
+      score += Math.min(20, assetsCount * 10)
+    }
+    
+    // Points for vault items (max 25 points)
+    if (vaultItemsCount > 0) {
+      score += Math.min(25, vaultItemsCount * 2)
+    }
     
     return Math.min(100, score)
   }
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()
-    router.push("/auth/login")
+    router.push("/login")
   }
 
   if (loading) {

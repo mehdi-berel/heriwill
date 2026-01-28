@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -12,9 +12,9 @@ import {
   FolderOpen, 
   FileText, 
   Eye, 
-  Download, 
-  Upload, 
-  Share2, 
+  Download,
+  Upload,
+  Share2,
   Calendar,
   Clock,
   CheckCircle,
@@ -27,9 +27,9 @@ import {
   Star,
   MoreVertical,
   Search,
-  Filter,
-  Grid3X3,
   List,
+  Grid3X3,
+  Filter,
   SortAsc,
   SortDesc,
   Users
@@ -180,8 +180,11 @@ export function VaultDetails({
     { value: 'other', label: 'Other' }
   ]
 
-  const isExpired = vault.expiresAt && new Date(vault.expiresAt) < new Date()
-  const isExpiringSoon = vault.expiresAt && new Date(vault.expiresAt) < new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+  const now = useMemo(() => new Date(), [])
+  const sevenDaysFromNow = useMemo(() => new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), [])
+  
+  const isExpired = vault.expiresAt && new Date(vault.expiresAt) < now
+  const isExpiringSoon = vault.expiresAt && new Date(vault.expiresAt) < sevenDaysFromNow
 
   return (
     <div className="space-y-6">
@@ -294,7 +297,7 @@ export function VaultDetails({
               
               <select
                 value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as any)}
+                onChange={(e) => setSortBy(e.target.value as 'name' | 'date' | 'size' | 'type')}
                 className="px-3 py-2 border border-input rounded-md text-sm"
               >
                 <option value="name">Sort by Name</option>

@@ -1,27 +1,34 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
-import { CheckCircle, Circle, FileText, Users, Shield, Archive, ArrowRight, Plus } from "lucide-react"
-import { InheritanceList } from "./inheritance-list"
+import { ShieldCheck, FolderOpen, Info, User, ArrowLeft, Lock } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 
-interface Heir {
+interface SharedVault {
   id: string
   name: string
-  email: string
-  phone?: string
-  relationship: string
-  percentage: number
-  status: 'pending' | 'accepted' | 'verified' | 'rejected'
-  inheritedAssets: any[]
-  inheritedVaults: any[]
-  totalValue: number
-  lastContact?: string
-  createdAt: string
+  description: string | null
+  icon: string | null
+  color: string | null
+  category: string
+  shared_from_user_id: string
+  shared_from_user_name: string | null
+  can_view: boolean
+  can_export: boolean
+  can_edit: boolean
+  item_count: number
+  created_at: string
+}
+
+interface VaultItem {
+  id: string
+  title_encrypted: string
+  item_type: string
+  is_favorite: boolean | null
+  created_at: string
 }
 
 interface InheritancePageProps {
@@ -29,315 +36,326 @@ interface InheritancePageProps {
 }
 
 export function InheritancePage({ userId }: InheritancePageProps) {
-  const [heirs, setHeirs] = useState<Heir[]>([])
+  const [sharedVaults, setSharedVaults] = useState<SharedVault[]>([])
+  const [selectedVault, setSelectedVault] = useState<SharedVault | null>(null)
+  const [vaultItems, setVaultItems] = useState<VaultItem[]>([])
   const [loading, setLoading] = useState(true)
-  const [selectedHeir, setSelectedHeir] = useState<Heir | null>(null)
-  const [showHeirDetails, setShowHeirDetails] = useState(false)
-  const [searchTerm, setSearchTerm] = useState('')
+  const [loadingItems, setLoadingItems] = useState(false)
 
-  // Mock data for demonstration
-  const mockHeirs: Heir[] = [
-    {
-      id: '1',
-      name: 'John Doe',
-      email: 'john.doe@example.com',
-      phone: '+1-555-0123-4567',
-      relationship: 'Son',
-      percentage: 40,
-      status: 'accepted',
-      inheritedAssets: [
-        { id: '1', name: 'Family Home', type: 'real_estate', value: 500000, description: 'Primary residence in California' },
-        { id: '2', name: 'Investment Portfolio', type: 'financial', value: 250000, description: 'Stocks and bonds' },
-        { id: '3', name: 'Family Car', type: 'vehicle', value: 35000, description: '2022 Toyota Camry' }
-      ],
-      inheritedVaults: [
-        { id: '1', name: 'Family Documents', itemCount: 15, isShared: false, lastAccessed: '2024-01-15' },
-        { id: '2', name: 'Personal Photos', itemCount: 500, isShared: true, lastAccessed: '2024-01-20' }
-      ],
-      totalValue: 785000,
-      lastContact: '2024-01-20',
-      createdAt: '2024-01-01'
-    },
-    {
-      id: '2',
-      name: 'Jane Smith',
-      email: 'jane.smith@example.com',
-      phone: '+1-555-0123-4568',
-      relationship: 'Daughter',
-      percentage: 35,
-      status: 'verified',
-      inheritedAssets: [
-        { id: '4', name: 'Vacation Property', type: 'real_estate', value: 300000, description: 'Beach house in Florida' },
-        { id: '5', name: 'Jewelry Collection', type: 'personal', value: 75000, description: 'Family heirlooms' }
-      ],
-      inheritedVaults: [
-        { id: '3', name: 'Legal Documents', itemCount: 8, isShared: false, lastAccessed: '2024-01-18' }
-      ],
-      totalValue: 375000,
-      lastContact: '2024-01-18',
-      createdAt: '2024-01-01'
-    },
-    {
-      id: '3',
-      'name': 'Michael Johnson',
-      email: 'michael.johnson@example.com',
-      phone: '+1-555-0123-4569',
-      relationship: 'Spouse',
-      percentage: 25,
-      status: 'pending',
-      inheritedAssets: [
-        { id: '6', name: 'Business Assets', type: 'business', value: 200000, description: 'Company shares and equipment' }
-      ],
-      inheritedVaults: [
-        { id: '4', name: 'Business Records', itemCount: 25, isShared: true, lastAccessed: '2024-01-10' }
-      ],
-      totalValue: 200000,
-      lastContact: '2024-01-10',
-      createdAt: '2024-01-01'
+  const loadSharedVaults = useCallback(async () => {
+    if (!userId) return
+
+    try {
+      setLoading(true)
+      
+      // Get vaults shared with this user as an heir
+      const { data: accessData, error: accessError } = await supabase
+        .from('heir_vault_access')
+        .select(`
+          vault_id,
+          can_view,
+          can_export,
+          can_edit,
+          vaults (
+            id,
+            name,
+            description,
+            icon,
+            color,
+            category,
+            user_id,
+            created_at
+          )
+        `)
+        .eq('heir_id', userId)
+
+      if (accessError) {
+        console.error('Error loading shared vaults:', accessError)
+        setSharedVaults([])
+        return
+      }
+
+      if (!accessData || accessData.length === 0) {
+        setSharedVaults([])
+        return
+      }
+
+      // Get owner names and item counts
+      const vaultsWithDetails = await Promise.all(
+        accessData.map(async (access: any) => {
+          const vault = access.vaults
+          
+          // Get owner name
+          const { data: ownerData } = await supabase
+            .from('users')
+            .select('full_name, email')
+            .eq('id', vault.user_id)
+            .single()
+
+          // Get item count
+          const { count } = await supabase
+            .from('vault_items')
+            .select('*', { count: 'exact', head: true })
+            .eq('vault_id', vault.id)
+
+          const owner = ownerData as { full_name?: string; email?: string } | null
+
+          return {
+            id: vault.id,
+            name: vault.name,
+            description: vault.description,
+            icon: vault.icon,
+            color: vault.color,
+            category: vault.category,
+            shared_from_user_id: vault.user_id,
+            shared_from_user_name: owner?.full_name || owner?.email || 'Unknown',
+            can_view: access.can_view,
+            can_export: access.can_export,
+            can_edit: access.can_edit,
+            item_count: count || 0,
+            created_at: vault.created_at
+          }
+        })
+      )
+
+      setSharedVaults(vaultsWithDetails)
+    } catch (error) {
+      console.error('Error loading shared vaults:', error)
+      setSharedVaults([])
+    } finally {
+      setLoading(false)
     }
-  ]
-
-  useEffect(() => {
-    // In a real app, this would fetch from Supabase
-    // For now, using mock data
-    setHeirs(mockHeirs)
-    setLoading(false)
   }, [userId])
 
-  const handleHeirSelect = (heir: Heir) => {
-    setSelectedHeir(heir)
-    setShowHeirDetails(true)
+  const loadVaultItems = useCallback(async (vault: SharedVault) => {
+    try {
+      setLoadingItems(true)
+      
+      const { data, error } = await supabase
+        .from('vault_items')
+        .select('id, title_encrypted, item_type, is_favorite, created_at')
+        .eq('vault_id', vault.id)
+        .order('created_at', { ascending: false })
+
+      if (error) {
+        console.error('Error loading vault items:', error)
+        setVaultItems([])
+        return
+      }
+
+      setVaultItems(data || [])
+    } catch (error) {
+      console.error('Error loading vault items:', error)
+      setVaultItems([])
+    } finally {
+      setLoadingItems(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    loadSharedVaults()
+  }, [loadSharedVaults])
+
+  const handleVaultClick = (vault: SharedVault) => {
+    setSelectedVault(vault)
+    loadVaultItems(vault)
   }
 
-  const handleHeirEdit = (heir: Heir) => {
-    // In a real app, this would open an edit form
-    console.log('Edit heir:', heir)
+  const handleHeirEdit = (heir: { id: string; name: string; email: string }) => {
+    setSelectedVault(null)
+    setVaultItems([])
   }
 
-  const handleHeirDelete = (heirId: string) => {
-    // In a real app, this would delete the heir
-    console.log('Delete heir:', heirId)
-    setHeirs(prev => prev.filter(h => h.id !== heirId))
-  }
-
-  const handleBack = () => {
-    setShowHeirDetails(false)
-    setSelectedHeir(null)
+  const handleBackToVaults = () => {
+    setSelectedVault(null)
+    setVaultItems([])
   }
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-lg">Loading inheritance plan...</div>
+      <div className="flex items-center justify-center h-full min-h-[400px]">
+        <div className="text-lg text-text-muted">Loading inherited vaults...</div>
       </div>
     )
   }
 
-  if (showHeirDetails && selectedHeir) {
-    // Show heir details view
+  // Show vault items if a vault is selected
+  if (selectedVault) {
     return (
       <div className="p-6 space-y-6">
-        <div className="flex items-center space-x-4">
-          <Button variant="ghost" onClick={handleBack}>
-            ← Back to Heirs
-          </Button>
-          <div className="flex items-center space-x-2">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <Users className="h-5 w-5 text-blue-600" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold">{selectedHeir.name}</h1>
-              <p className="text-muted-foreground">
-                {selectedHeir.relationship} • {selectedHeir.percentage}% inheritance
-              </p>
-            </div>
-          </div>
-        </div>
+        {/* Back Button */}
+        <Button
+          variant="ghost"
+          onClick={handleBackToVaults}
+          className="mb-4"
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back to Inherited Vaults
+        </Button>
 
-        {/* Heir Inheritance Summary */}
+        {/* Vault Header */}
         <Card>
           <CardHeader>
-            <CardTitle>Inheritance Summary</CardTitle>
-            <CardDescription>
-              What {selectedHeir.name} will inherit
-            </CardDescription>
+            <div className="flex items-start gap-4">
+              <div 
+                className="h-14 w-14 rounded-lg flex items-center justify-center flex-shrink-0"
+                style={{ backgroundColor: selectedVault.color || '#9333EA' }}
+              >
+                <FolderOpen className="h-7 w-7 text-white" />
+              </div>
+              <div className="flex-1">
+                <CardTitle className="text-2xl mb-2">{selectedVault.name}</CardTitle>
+                <div className="flex items-center gap-2 text-sm text-text-secondary mb-2">
+                  <User className="h-4 w-4" />
+                  <span>From: {selectedVault.shared_from_user_name}</span>
+                </div>
+                {selectedVault.description && (
+                  <CardDescription className="mt-2">{selectedVault.description}</CardDescription>
+                )}
+              </div>
+            </div>
           </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Total Value */}
-            <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
-              <span className="font-medium">Total Inheritance Value</span>
-              <span className="text-2xl font-bold text-green-600">
-                ${selectedHeir.totalValue.toLocaleString()}
-              </span>
-            </div>
-
-            {/* Assets Section */}
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Assets</h3>
-              <div className="space-y-3">
-                {selectedHeir.inheritedAssets.map((asset) => (
-                  <div key={asset.id} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div className="flex items-center space-x-3">
-                      <div className="p-2 bg-blue-100 rounded-lg">
-                        <Archive className="h-4 w-4 text-blue-600" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="font-medium">{asset.name}</p>
-                        <p className="text-sm text-muted-foreground">{asset.description}</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-medium">${asset.value.toLocaleString()}</p>
-                      <Badge variant="outline" className="text-xs">
-                        {asset.type}
-                      </Badge>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Vaults Section */}
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Vaults</h3>
-              <div className="space-y-3">
-                {selectedHeir.inheritedVaults.map((vault) => (
-                  <div key={vault.id} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div className="flex items-center space-x-3">
-                      <div className={`p-2 ${vault.isShared ? 'bg-purple-100' : 'bg-gray-100'} rounded-lg`}>
-                        <Shield className={`h-4 w-4 ${vault.isShared ? 'text-purple-600' : 'text-gray-600'}`} />
-                      </div>
-                      <div className="flex-1">
-                        <p className="font-medium">{vault.name}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {vault.itemCount} items • {vault.isShared ? 'Shared' : 'Private'}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      {vault.lastAccessed && (
-                        <p className="text-xs text-muted-foreground">
-                          Last: {new Date(vault.lastAccessed).toLocaleDateString()}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Contact Info */}
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <p className="text-sm font-medium">Email</p>
-                <p className="text-sm">{selectedHeir.email}</p>
-              </div>
-              <div>
-                <p className="text-sm font-medium">Phone</p>
-                <p className="text-sm">{selectedHeir.phone}</p>
-              </div>
-              <div>
-                <p className="text-sm font-medium">Relationship</p>
-                <p className="text-sm">{selectedHeir.relationship}</p>
-              </div>
-              <div>
-                <p className="text-sm font-medium">Last Contact</p>
-                <p className="text-sm">
-                  {selectedHeir.lastContact ? new Date(selectedHeir.lastContact).toLocaleDateString() : 'Never'}
-                </p>
-              </div>
+          <CardContent>
+            <div className="flex gap-2">
+              {selectedVault.can_view && (
+                <Badge variant="secondary">Can View</Badge>
+              )}
+              {selectedVault.can_export && (
+                <Badge variant="secondary">Can Export</Badge>
+              )}
+              {selectedVault.can_edit && (
+                <Badge variant="secondary">Can Edit</Badge>
+              )}
             </div>
           </CardContent>
         </Card>
 
-        {/* Action Buttons */}
-        <div className="flex gap-4">
-          <Button variant="outline" onClick={handleBack}>
-            Back to Heirs
-          </Button>
-          <Button>
-            Edit Heir Details
-          </Button>
-        </div>
+        {/* Vault Items */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Vault Contents</CardTitle>
+            <CardDescription>
+              {vaultItems.length} {vaultItems.length === 1 ? 'item' : 'items'} in this vault
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {loadingItems ? (
+              <div className="text-center py-8 text-text-muted">Loading items...</div>
+            ) : vaultItems.length === 0 ? (
+              <div className="text-center py-12">
+                <FolderOpen className="h-12 w-12 mx-auto mb-4 text-text-muted" />
+                <p className="text-text-muted">This vault is empty</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {vaultItems.map((item) => (
+                  <div
+                    key={item.id}
+                    className="flex items-center justify-between p-4 rounded-lg border border-border-default hover:bg-background-hover transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Lock className="h-5 w-5 text-text-tertiary" />
+                      <div>
+                        <p className="font-medium text-text-primary">{item.title_encrypted}</p>
+                        <p className="text-sm text-text-secondary capitalize">{item.item_type}</p>
+                      </div>
+                    </div>
+                    {item.is_favorite && (
+                      <Badge variant="outline">Favorite</Badge>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     )
   }
 
+  // Show vault list
   return (
     <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Inheritance Distribution</h1>
-        <p className="text-muted-foreground">
-          See exactly what each heir will inherit from your estate
-        </p>
+      {/* Header */}
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-text-primary">Inherited Vaults</h1>
+          <p className="text-text-secondary mt-1">
+            Vaults that have been shared with you by others
+          </p>
+        </div>
+        <div className="h-14 w-14 rounded-full bg-primary-600/10 flex items-center justify-center">
+          <ShieldCheck className="h-7 w-7 text-primary-400" />
+        </div>
       </div>
 
-      {/* Summary Stats */}
-      <div className="grid gap-4 md:grid-cols-4">
+      {/* Info Banner */}
+      <Card className="bg-primary-600/5 border-primary-600/20">
+        <CardContent className="flex items-start gap-3 p-4">
+          <Info className="h-5 w-5 text-primary-400 flex-shrink-0 mt-0.5" />
+          <p className="text-sm text-text-secondary">
+            These are vaults that have been shared with you as an heir. You can view the contents based on the permissions granted to you.
+          </p>
+        </CardContent>
+      </Card>
+
+      {/* Vaults List */}
+      {sharedVaults.length === 0 ? (
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Total Heirs</p>
-                <p className="text-2xl font-bold">{heirs.length}</p>
-              </div>
-              <Users className="h-8 w-8 text-blue-600" />
+          <CardContent className="p-12 text-center">
+            <div className="h-20 w-20 rounded-full bg-primary-600/10 flex items-center justify-center mx-auto mb-4">
+              <FolderOpen className="h-10 w-10 text-primary-400" />
             </div>
+            <h3 className="text-lg font-semibold mb-2 text-text-primary">No Inherited Vaults</h3>
+            <p className="text-text-muted mb-4">
+              You don't have access to any inherited vaults yet. When someone shares a vault with you as an heir, it will appear here.
+            </p>
           </CardContent>
         </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Total Value</p>
-                <p className="text-2xl font-bold">
-                  ${heirs.reduce((sum, heir) => sum + heir.totalValue, 0).toLocaleString()}
-                </p>
-              </div>
-              <Archive className="h-8 w-8 text-green-600" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Accepted</p>
-                <p className="text-2xl font-bold">
-                  {heirs.filter(h => h.status === 'accepted' || h.status === 'verified').length}
-                </p>
-              </div>
-              <CheckCircle className="h-8 w-8 text-green-500" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Pending</p>
-                <p className="text-2xl font-bold">
-                  {heirs.filter(h => h.status === 'pending').length}
-                </p>
-              </div>
-              <Circle className="h-8 w-8 text-yellow-500" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Heirs List */}
-      <InheritanceList
-        heirs={heirs}
-        onHeirSelect={handleHeirSelect}
-        onHeirEdit={handleHeirEdit}
-        onHeirDelete={handleHeirDelete}
-        searchTerm={searchTerm}
-        onSearchChange={setSearchTerm}
-      />
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {sharedVaults.map((vault) => (
+            <Card
+              key={vault.id}
+              className="cursor-pointer hover:shadow-lg transition-all hover:border-primary-600/30"
+              onClick={() => handleVaultClick(vault)}
+            >
+              <CardHeader>
+                <div className="flex items-start gap-3">
+                  <div 
+                    className="h-12 w-12 rounded-lg flex items-center justify-center flex-shrink-0"
+                    style={{ backgroundColor: vault.color || '#9333EA' }}
+                  >
+                    <FolderOpen className="h-6 w-6 text-white" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <CardTitle className="text-lg truncate">{vault.name}</CardTitle>
+                    <div className="flex items-center gap-1 text-xs text-text-tertiary mt-1">
+                      <User className="h-3 w-3" />
+                      <span className="truncate">{vault.shared_from_user_name}</span>
+                    </div>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {vault.description && (
+                  <p className="text-sm text-text-secondary mb-3 line-clamp-2">
+                    {vault.description}
+                  </p>
+                )}
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-text-tertiary">
+                    {vault.item_count} {vault.item_count === 1 ? 'item' : 'items'}
+                  </span>
+                  <Badge variant="secondary" className="capitalize">
+                    {vault.category.replace('_', ' ')}
+                  </Badge>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

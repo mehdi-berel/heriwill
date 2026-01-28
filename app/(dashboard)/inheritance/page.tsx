@@ -16,17 +16,21 @@ export default function InheritanceRoute() {
     const getUser = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
-        router.push("/auth/login")
+        router.push("/login")
         return
       }
       setUser(user)
       
       // Load user profile
-      const { data: profileData } = await supabase
-        .from('user_profiles')
+      const { data: profileData, error: profileError } = await supabase
+        .from('users')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('id', user.id)
         .single()
+      
+      if (profileError) {
+        console.error('Error loading profile:', profileError)
+      }
       
       setProfile(profileData)
       setLoading(false)
@@ -36,7 +40,7 @@ export default function InheritanceRoute() {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!session?.user) {
-        router.push("/auth/login")
+        router.push("/login")
       } else {
         setUser(session.user)
       }

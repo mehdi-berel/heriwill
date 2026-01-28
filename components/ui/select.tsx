@@ -5,10 +5,23 @@ import { cn } from "@/lib/utils"
 
 interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
   children: React.ReactNode
+  onValueChange?: (value: string) => void
 }
 
 const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
-  ({ className, children, ...props }, ref) => {
+  ({ className, children, onValueChange, onChange, ...props }, ref) => {
+    const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+      if (onValueChange) {
+        onValueChange(e.target.value)
+      }
+      if (onChange) {
+        onChange(e)
+      }
+    }
+
+    // Remove onValueChange from props to prevent warning
+    const { onValueChange: _removed, ...selectProps } = props as Record<string, unknown>
+
     return (
       <select
         ref={ref}
@@ -16,7 +29,8 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
           "flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
           className
         )}
-        {...props}
+        onChange={handleChange}
+        {...selectProps}
       >
         {children}
       </select>
@@ -25,17 +39,14 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
 )
 Select.displayName = "Select"
 
-interface SelectTriggerProps {
-  children: React.ReactNode
-  className?: string
+// SelectTrigger is now a no-op wrapper for API compatibility
+const SelectTrigger = ({ children }: { children?: React.ReactNode }) => {
+  return <>{children}</>
 }
 
-const SelectTrigger = ({ children, className }: SelectTriggerProps) => {
-  return <div className={cn("relative", className)}>{children}</div>
-}
-
-const SelectValue = ({ placeholder }: { placeholder?: string }) => {
-  return <span>{placeholder}</span>
+// SelectValue is now a no-op for API compatibility
+const SelectValue = () => {
+  return null
 }
 
 const SelectContent = ({ children }: { children: React.ReactNode }) => {

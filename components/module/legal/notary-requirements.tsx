@@ -4,21 +4,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { 
-  Shield, 
+  FileText, 
   CheckCircle, 
   AlertTriangle, 
   Clock, 
   User, 
-  FileText, 
-  Scale,
-  MapPin,
-  Phone,
-  Mail,
-  Calendar,
-  Info,
+  Phone, 
+  MapPin, 
   ExternalLink,
-  Download,
-  Upload
+  Info,
+  Gavel,
+  Eye,
+  Shield
 } from "lucide-react"
 
 interface NotaryRequirement {

@@ -34,8 +34,8 @@ interface Asset {
   value?: number
   location?: string
   ownership_type: 'sole' | 'joint' | 'tenants_in_common' | 'community_property'
-  beneficiaries: string[]
-  documents: string[]
+  beneficiaries?: string[]
+  documents?: string[]
   notes?: string
   created_at: string
   updated_at: string
@@ -46,7 +46,6 @@ interface AssetDetailProps {
   onBack: () => void
   onEdit: () => void
   onDelete: () => void
-  onUploadDocument: (files: File[]) => void
   onDownloadDocument: (docName: string) => void
   onDeleteDocument: (docName: string) => void
 }
@@ -56,7 +55,6 @@ export function AssetDetail({
   onBack, 
   onEdit, 
   onDelete, 
-  onUploadDocument, 
   onDownloadDocument, 
   onDeleteDocument 
 }: AssetDetailProps) {
@@ -207,11 +205,11 @@ export function AssetDetail({
               <CardContent className="space-y-4">
                 <div className="flex justify-between items-center">
                   <span className="text-sm">Beneficiaries</span>
-                  <Badge variant="secondary">{asset.beneficiaries.length}</Badge>
+                  <Badge variant="secondary">{asset.beneficiaries?.length || 0}</Badge>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm">Documents</span>
-                  <Badge variant="outline">{asset.documents.length}</Badge>
+                  <Badge variant="outline">{asset.documents?.length || 0}</Badge>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm">Created</span>
@@ -242,14 +240,14 @@ export function AssetDetail({
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
                 Designated Beneficiaries
-                <Badge variant="secondary">{asset.beneficiaries.length}</Badge>
+                <Badge variant="secondary">{asset.beneficiaries?.length || 0}</Badge>
               </CardTitle>
               <CardDescription>
                 People who will inherit this asset
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {asset.beneficiaries.length > 0 ? (
+              {asset.beneficiaries && asset.beneficiaries.length > 0 ? (
                 <div className="space-y-3">
                   {asset.beneficiaries.map((beneficiary, index) => (
                     <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
@@ -284,7 +282,7 @@ export function AssetDetail({
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
                 Related Documents
-                <Badge variant="outline">{asset.documents.length}</Badge>
+                <Badge variant="outline">{asset.documents?.length || 0}</Badge>
               </CardTitle>
               <CardDescription>
                 Legal documents and paperwork for this asset
@@ -305,7 +303,7 @@ export function AssetDetail({
                 </div>
 
                 {/* Documents List */}
-                {asset.documents.length > 0 ? (
+                {asset.documents && asset.documents.length > 0 ? (
                   <div className="space-y-2">
                     {asset.documents.map((document, index) => (
                       <div key={index} className="flex items-center justify-between p-3 border rounded-lg">

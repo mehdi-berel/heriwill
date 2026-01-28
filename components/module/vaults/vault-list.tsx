@@ -10,15 +10,9 @@ import {
   Lock, 
   Share2, 
   Trash2, 
-  Eye, 
   Edit,
-  Star,
-  Search,
-  Filter,
   MoreVertical,
-  Shield,
-  Archive,
-  Key
+  Shield
 } from "lucide-react"
 
 interface Vault {
@@ -45,6 +39,7 @@ interface VaultListProps {
   onVaultDelete: (vaultId: string) => void
   searchTerm?: string
   onSearchChange?: (term: string) => void
+  selectedCategory?: 'share_after_death' | 'delete_after_death' | 'sign_off_after_death' | null
 }
 
 export function VaultList({ 
@@ -53,43 +48,25 @@ export function VaultList({
   onVaultEdit, 
   onVaultDelete, 
   searchTerm = '',
-  onSearchChange 
+  onSearchChange,
+  selectedCategory = null
 }: VaultListProps) {
-  const [selectedCategory, setSelectedCategory] = useState<string>('all')
-  const [sortBy, setSortBy] = useState<'name' | 'created' | 'accessed'>('name')
 
   const filteredVaults = vaults.filter(vault => {
     const matchesSearch = vault.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         vault.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         vault.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
-    
-    const matchesCategory = selectedCategory === 'all' || vault.category === selectedCategory
-    
+                         vault.description?.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesCategory = selectedCategory === null || vault.category === selectedCategory
     return matchesSearch && matchesCategory
   })
 
-  const sortedVaults = [...filteredVaults].sort((a, b) => {
-    switch (sortBy) {
-      case 'name':
-        return a.name.localeCompare(b.name)
-      case 'created':
-        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-      case 'accessed':
-        if (!a.last_accessed && !b.last_accessed) return 0
-        if (!a.last_accessed) return 1
-        if (!b.last_accessed) return -1
-        return new Date(b.last_accessed).getTime() - new Date(a.last_accessed).getTime()
-      default:
-        return 0
-    }
-  })
+  const sortedVaults = [...filteredVaults].sort((a, b) => a.name.localeCompare(b.name))
 
   const getCategoryIcon = (category: string) => {
     switch (category) {
-      case 'share_after_death': return <Share2 className="h-4 w-4" />
-      case 'delete_after_death': return <Trash2 className="h-4 w-4" />
-      case 'sign_off_after_death': return <Lock className="h-4 w-4" />
-      default: return <FolderOpen className="h-4 w-4" />
+      case 'share_after_death': return <Share2 className="h-6 w-6 text-white" />
+      case 'delete_after_death': return <Trash2 className="h-6 w-6 text-white" />
+      case 'sign_off_after_death': return <Shield className="h-6 w-6 text-white" />
+      default: return <FolderOpen className="h-6 w-6 text-white" />
     }
   }
 
@@ -102,191 +79,90 @@ export function VaultList({
     }
   }
 
-  const categories = [
-    { value: 'all', label: 'All Vaults', count: vaults.length },
-    { value: 'share_after_death', label: 'Share After Death', count: vaults.filter(v => v.category === 'share_after_death').length },
-    { value: 'delete_after_death', label: 'Delete After Death', count: vaults.filter(v => v.category === 'delete_after_death').length },
-    { value: 'sign_off_after_death', label: 'Sign Off After Death', count: vaults.filter(v => v.category === 'sign_off_after_death').length }
-  ]
-
   return (
     <div className="space-y-6">
-      {/* Search and Filters */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search vaults..."
-            value={searchTerm}
-            onChange={(e) => onSearchChange?.(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm">
-            <Filter className="h-4 w-4 mr-2" />
-            Filter
-          </Button>
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as any)}
-            className="px-3 py-2 border rounded-md text-sm"
-          >
-            <option value="name">Sort by Name</option>
-            <option value="created">Sort by Created</option>
-            <option value="accessed">Sort by Last Accessed</option>
-          </select>
-        </div>
-      </div>
-
-      {/* Category Tabs */}
-      <div className="flex gap-2 border-b">
-        {categories.map((category) => (
-          <button
-            key={category.value}
-            onClick={() => setSelectedCategory(category.value)}
-            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-              selectedCategory === category.value
-                ? 'border-primary text-primary'
-                : 'border-transparent text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            {category.label}
-            <span className="ml-2 text-xs bg-muted px-2 py-1 rounded-full">
-              {category.count}
-            </span>
-          </button>
-        ))}
-      </div>
-
       {/* Vaults Grid */}
       {sortedVaults.length === 0 ? (
-        <Card>
-          <CardContent className="py-12">
-            <div className="text-center">
-              <FolderOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium mb-2">No vaults found</h3>
-              <p className="text-muted-foreground">
-                {searchTerm || selectedCategory !== 'all' 
-                  ? 'Try adjusting your search or filters.' 
-                  : 'Create your first vault to start organizing your digital assets.'}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="flex flex-col items-center justify-center py-16 px-8">
+          <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center mb-6">
+            <FolderOpen className="h-12 w-12 text-primary" />
+          </div>
+          <h3 className="text-xl font-bold mb-2">No vaults found</h3>
+          <p className="text-muted-foreground text-center mb-8 max-w-md">
+            {searchTerm || selectedCategory !== null 
+              ? 'Try adjusting your search or filters.' 
+              : 'Create your first vault to start organizing your digital assets.'}
+          </p>
+        </div>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="space-y-3">
           {sortedVaults.map((vault) => (
-            <Card 
-              key={vault.id} 
-              className="cursor-pointer hover:shadow-lg transition-shadow group"
+            <div
+              key={vault.id}
+              className="flex items-center p-4 bg-background-card border border-border rounded-xl cursor-pointer hover:border-primary/50 transition-all group"
               onClick={() => onVaultSelect(vault)}
             >
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div 
-                      className={`h-10 w-10 rounded-lg flex items-center justify-center ${
-                        vault.is_encrypted ? 'bg-yellow-100' : 'bg-primary'
-                      }`}
-                    >
-                      {vault.is_encrypted ? (
-                        <Lock className="h-5 w-5 text-yellow-600" />
-                      ) : (
-                        <div className="h-5 w-5 bg-primary-foreground rounded" />
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <CardTitle className="text-lg truncate">{vault.name}</CardTitle>
-                      <CardDescription className="truncate">{vault.description}</CardDescription>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    {vault.is_favorite && <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />}
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        onVaultEdit(vault)
-                      }}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="space-y-3">
-                  {/* Category and Status */}
-                  <div className="flex items-center justify-between">
-                    <Badge className={getCategoryColor(vault.category)}>
-                      {getCategoryIcon(vault.category)}
-                      <span className="ml-1">
-                        {vault.category.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                      </span>
-                    </Badge>
-                    <div className="flex items-center space-x-1">
-                      {vault.is_locked && <Lock className="h-3 w-3 text-muted-foreground" />}
-                      {vault.is_shared && <Share2 className="h-3 w-3 text-muted-foreground" />}
-                    </div>
-                  </div>
+              {/* Icon Container */}
+              <div 
+                className="w-12 h-12 rounded-full flex items-center justify-center mr-3 flex-shrink-0"
+                style={{ backgroundColor: vault.color || 'rgb(124, 58, 237)' }}
+              >
+                {vault.is_encrypted ? (
+                  <Lock className="h-6 w-6 text-white" />
+                ) : (
+                  getCategoryIcon(vault.category)
+                )}
+              </div>
 
-                  {/* Tags */}
-                  {vault.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1">
-                      {vault.tags.slice(0, 3).map((tag) => (
-                        <Badge key={tag} variant="secondary" className="text-xs">
-                          {tag}
-                        </Badge>
-                      ))}
-                      {vault.tags.length > 3 && (
-                        <Badge variant="secondary" className="text-xs">
-                          +{vault.tags.length - 3}
-                        </Badge>
-                      )}
+              {/* Content */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <h3 className="text-base font-semibold truncate">{vault.name}</h3>
+                  {vault.is_encrypted && (
+                    <div className="px-1.5 py-0.5 rounded bg-success/20 flex items-center">
+                      <Lock className="h-3 w-3 text-success" />
                     </div>
                   )}
-
-                  {/* Stats */}
-                  <div className="flex items-center justify-between text-sm text-muted-foreground">
-                    <span>{vault.item_count} items</span>
-                    <span>
-                      {vault.last_accessed 
-                        ? `Accessed ${new Date(vault.last_accessed).toLocaleDateString()}`
-                        : `Created ${new Date(vault.created_at).toLocaleDateString()}`
-                      }
-                    </span>
-                  </div>
-
-                  {/* Quick Actions */}
-                  <div className="flex gap-2 pt-2">
-                    <Button 
-                      size="sm" 
-                      variant="outline" 
-                      className="flex-1"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        onVaultSelect(vault)
-                      }}
-                    >
-                      <Eye className="h-4 w-4 mr-1" />
-                      Open
-                    </Button>
-                    <Button 
-                      size="sm" 
-                      variant="outline"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        onVaultDelete(vault.id)
-                      }}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
                 </div>
-              </CardContent>
-            </Card>
+                <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                  <FolderOpen className="h-3.5 w-3.5" />
+                  <span>{vault.item_count} {vault.item_count === 1 ? 'item' : 'items'}</span>
+                  {vault.is_shared && (
+                    <>
+                      <span>•</span>
+                      <Share2 className="h-3.5 w-3.5 text-primary" />
+                      <span className="text-primary font-medium">Shared</span>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center gap-2 ml-2">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-9 w-9 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onVaultEdit(vault)
+                  }}
+                >
+                  <Edit className="h-4 w-4" />
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-9 w-9 p-0 opacity-0 group-hover:opacity-100 transition-opacity bg-red-500/10 hover:bg-red-500/20"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onVaultDelete(vault.id)
+                  }}
+                >
+                  <Trash2 className="h-4 w-4 text-red-500" />
+                </Button>
+              </div>
+            </div>
           ))}
         </div>
       )}

@@ -1,7 +1,6 @@
 "use client"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { 
@@ -9,18 +8,22 @@ import {
   Users, 
   FolderOpen, 
   Shield, 
-  TrendingUp,
   AlertCircle,
   CheckCircle,
-  Circle,
-  ArrowRight,
   Home,
-  Settings,
   Lock,
-  Archive,
   Heart,
   Globe,
-  Key
+  Mail,
+  Phone,
+  FileCheck,
+  UserPlus,
+  Upload,
+  Bell,
+  BookOpen,
+  CreditCard,
+  Building,
+  Briefcase
 } from "lucide-react"
 
 interface DashboardStats {
@@ -37,125 +40,232 @@ interface DashboardOverviewProps {
   userName?: string
 }
 
-interface DashboardSection {
+interface ChecklistItem {
   id: string
   title: string
   description: string
   icon: React.ReactNode
   isCompleted: boolean
   href: string
-  count?: number
+  priority: 'high' | 'medium' | 'low'
+  category: 'app_setup' | 'pre_death'
 }
 
 export function DashboardOverview({ stats, userName }: DashboardOverviewProps) {
-  const progressPercentage = stats.totalSections > 0 
-    ? (stats.completedSections / stats.totalSections) * 100 
-    : 0
-
-  const getSecurityLevel = (score: number) => {
-    if (score >= 80) return { level: "Excellent", color: "text-green-600" }
-    if (score >= 60) return { level: "Good", color: "text-yellow-600" }
-    return { level: "Needs Attention", color: "text-red-600" }
-  }
-
-  const securityLevel = getSecurityLevel(stats.securityScore)
-
-  const dashboardSections: DashboardSection[] = [
+  // App Setup Checklist
+  const appSetupTasks: ChecklistItem[] = [
     {
-      id: 'overview',
-      title: 'Overview',
-      description: 'Dashboard and statistics',
-      icon: <Home className="h-5 w-5" />,
+      id: 'create_account',
+      title: 'Create Your Account',
+      description: 'Set up your HeriWill account with secure credentials',
+      icon: <UserPlus className="h-5 w-5" />,
       isCompleted: true,
-      href: '/dashboard',
-      count: stats.totalAssets + stats.totalBeneficiaries
+      href: '/profile',
+      priority: 'high',
+      category: 'app_setup'
     },
     {
-      id: 'inheritance',
-      title: 'Inheritance Plan',
-      description: 'Complete inheritance preparation',
-      icon: <FileText className="h-5 w-5" />,
-      isCompleted: stats.completedSections >= 3,
-      href: '/dashboard/inheritance',
-      count: stats.completedSections
-    },
-    {
-      id: 'assets',
-      title: 'Digital Assets',
-      description: 'Manage your digital assets',
-      icon: <FolderOpen className="h-5 w-5" />,
-      isCompleted: stats.totalAssets > 0,
-      href: '/dashboard/assets',
-      count: stats.totalAssets
-    },
-    {
-      id: 'beneficiaries',
-      title: 'Beneficiaries',
-      description: 'Manage designated beneficiaries',
+      id: 'add_heirs',
+      title: 'Add Heirs',
+      description: 'Designate trusted people to inherit your digital assets',
       icon: <Users className="h-5 w-5" />,
       isCompleted: stats.totalBeneficiaries > 0,
-      href: '/dashboard/beneficiaries',
-      count: stats.totalBeneficiaries
+      href: '/heirs',
+      priority: 'high',
+      category: 'app_setup'
     },
     {
-      id: 'vaults',
-      title: 'Secure Vaults',
-      description: 'Encrypted document storage',
+      id: 'create_vaults',
+      title: 'Create Vaults',
+      description: 'Organize your digital assets into secure vaults',
       icon: <Lock className="h-5 w-5" />,
       isCompleted: false,
-      href: '/dashboard/vaults'
+      href: '/vaults',
+      priority: 'high',
+      category: 'app_setup'
     },
     {
-      id: 'resources',
-      title: 'Resources',
-      description: 'Educational materials and guides',
-      icon: <Globe className="h-5 w-5" />,
+      id: 'upload_documents',
+      title: 'Upload Important Documents',
+      description: 'Store passwords, files, and sensitive information',
+      icon: <Upload className="h-5 w-5" />,
+      isCompleted: stats.totalAssets > 0,
+      href: '/vaults',
+      priority: 'high',
+      category: 'app_setup'
+    },
+    {
+      id: 'setup_trigger',
+      title: 'Configure Global Trigger',
+      description: 'Set up when and how your assets will be released',
+      icon: <Bell className="h-5 w-5" />,
       isCompleted: false,
-      href: '/dashboard/resources'
+      href: '/signoff',
+      priority: 'high',
+      category: 'app_setup'
     },
     {
-      id: 'security',
-      title: 'Security',
-      description: 'Security settings and authentication',
+      id: 'enable_2fa',
+      title: 'Enable Two-Factor Authentication',
+      description: 'Add an extra layer of security to your account',
       icon: <Shield className="h-5 w-5" />,
       isCompleted: stats.securityScore >= 80,
-      href: '/dashboard/security'
+      href: '/security',
+      priority: 'medium',
+      category: 'app_setup'
     },
     {
-      id: 'settings',
-      title: 'Settings',
-      description: 'Account and application settings',
-      icon: <Settings className="h-5 w-5" />,
+      id: 'verify_contacts',
+      title: 'Verify Heir Contact Information',
+      description: 'Ensure all heir contact details are accurate',
+      icon: <Mail className="h-5 w-5" />,
       isCompleted: false,
-      href: '/dashboard/settings'
+      href: '/heirs',
+      priority: 'medium',
+      category: 'app_setup'
+    },
+    {
+      id: 'test_notifications',
+      title: 'Test Notification System',
+      description: 'Verify heirs receive invitation notifications',
+      icon: <Phone className="h-5 w-5" />,
+      isCompleted: false,
+      href: '/heirs',
+      priority: 'low',
+      category: 'app_setup'
     }
   ]
 
-  const completedSections = dashboardSections.filter(s => s.isCompleted).length
-  const totalSections = dashboardSections.length
-
-  const quickActions = [
+  // Pre-Death Preparation Checklist
+  const preDeathTasks: ChecklistItem[] = [
     {
-      title: "Add Beneficiary",
-      icon: Users,
-      href: "/dashboard/beneficiaries"
+      id: 'create_will',
+      title: 'Create or Update Your Will',
+      description: 'Legal document outlining asset distribution',
+      icon: <FileText className="h-5 w-5" />,
+      isCompleted: false,
+      href: '/Legal',
+      priority: 'high',
+      category: 'pre_death'
     },
     {
-      title: "Upload Document", 
-      icon: FileText,
-      href: "/dashboard/vaults"
+      id: 'list_assets',
+      title: 'List All Physical Assets',
+      description: 'Property, vehicles, jewelry, and valuables',
+      icon: <Home className="h-5 w-5" />,
+      isCompleted: false,
+      href: '/assets',
+      priority: 'high',
+      category: 'pre_death'
     },
     {
-      title: "Security Check",
-      icon: Shield,
-      href: "/dashboard/security"
+      id: 'financial_accounts',
+      title: 'Document Financial Accounts',
+      description: 'Bank accounts, investments, retirement funds',
+      icon: <CreditCard className="h-5 w-5" />,
+      isCompleted: false,
+      href: '/vaults',
+      priority: 'high',
+      category: 'pre_death'
     },
     {
-      title: "View Resources",
-      icon: Globe,
-      href: "/dashboard/resources"
+      id: 'insurance_policies',
+      title: 'Organize Insurance Policies',
+      description: 'Life, health, property insurance documents',
+      icon: <Shield className="h-5 w-5" />,
+      isCompleted: false,
+      href: '/vaults',
+      priority: 'high',
+      category: 'pre_death'
+    },
+    {
+      id: 'debts_obligations',
+      title: 'List Debts and Obligations',
+      description: 'Mortgages, loans, credit cards, subscriptions',
+      icon: <FileCheck className="h-5 w-5" />,
+      isCompleted: false,
+      href: '/vaults',
+      priority: 'high',
+      category: 'pre_death'
+    },
+    {
+      id: 'business_interests',
+      title: 'Document Business Interests',
+      description: 'Company ownership, partnerships, contracts',
+      icon: <Briefcase className="h-5 w-5" />,
+      isCompleted: false,
+      href: '/vaults',
+      priority: 'medium',
+      category: 'pre_death'
+    },
+    {
+      id: 'medical_directives',
+      title: 'Prepare Medical Directives',
+      description: 'Living will, healthcare proxy, DNR orders',
+      icon: <Heart className="h-5 w-5" />,
+      isCompleted: false,
+      href: '/Legal',
+      priority: 'high',
+      category: 'pre_death'
+    },
+    {
+      id: 'funeral_wishes',
+      title: 'Document Funeral Wishes',
+      description: 'Burial preferences, ceremony details, obituary',
+      icon: <BookOpen className="h-5 w-5" />,
+      isCompleted: false,
+      href: '/vaults',
+      priority: 'medium',
+      category: 'pre_death'
+    },
+    {
+      id: 'power_of_attorney',
+      title: 'Assign Power of Attorney',
+      description: 'Legal authority for financial and medical decisions',
+      icon: <FileText className="h-5 w-5" />,
+      isCompleted: false,
+      href: '/Legal',
+      priority: 'high',
+      category: 'pre_death'
+    },
+    {
+      id: 'digital_legacy',
+      title: 'Plan Your Digital Legacy',
+      description: 'Social media, email, online accounts management',
+      icon: <Globe className="h-5 w-5" />,
+      isCompleted: stats.totalAssets > 0,
+      href: '/vaults',
+      priority: 'medium',
+      category: 'pre_death'
+    },
+    {
+      id: 'tax_documents',
+      title: 'Organize Tax Documents',
+      description: 'Recent returns, property records, receipts',
+      icon: <Building className="h-5 w-5" />,
+      isCompleted: false,
+      href: '/vaults',
+      priority: 'medium',
+      category: 'pre_death'
+    },
+    {
+      id: 'final_messages',
+      title: 'Write Final Messages',
+      description: 'Personal letters to loved ones',
+      icon: <Mail className="h-5 w-5" />,
+      isCompleted: false,
+      href: '/vaults',
+      priority: 'low',
+      category: 'pre_death'
     }
   ]
+
+  const allTasks = [...appSetupTasks, ...preDeathTasks]
+  const completedTasks = allTasks.filter(t => t.isCompleted).length
+  const totalTasks = allTasks.length
+  const progressPercentage = (completedTasks / totalTasks) * 100
+
+  const appSetupCompleted = appSetupTasks.filter(t => t.isCompleted).length
 
   const recentActivity = [
     {
@@ -188,207 +298,145 @@ export function DashboardOverview({ stats, userName }: DashboardOverviewProps) {
     <div className="p-6 space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold">Dashboard</h1>
+        <h1 className="text-3xl font-bold">Your Preparation Checklist</h1>
         <p className="text-muted-foreground">
-          Welcome back, {userName || "User"}. Manage your inheritance preparation from here.
+          Welcome back, {userName || "User"}. Complete these essential tasks to secure your digital legacy.
         </p>
       </div>
 
-      {/* Progress Overview */}
-      <Card>
+      {/* Overall Progress */}
+      <Card className="border">
         <CardHeader>
           <CardTitle>Overall Progress</CardTitle>
           <CardDescription>
-            {completedSections} of {totalSections} sections completed
+            {completedTasks} of {totalTasks} tasks completed
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Progress value={progressPercentage} className="mb-4" />
           <div className="flex justify-between text-sm text-muted-foreground">
-            <span>Getting Started</span>
-            <span>{Math.round(progressPercentage)}% Complete</span>
-            <span>Almost There</span>
+            <span>Just Started</span>
+            <span className="font-bold">{Math.round(progressPercentage)}% Complete</span>
+            <span>Fully Prepared</span>
           </div>
         </CardContent>
       </Card>
-
-      {/* Dashboard Sections Grid */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {dashboardSections.map((section) => (
-          <Card key={section.id} className="hover:shadow-lg transition-shadow cursor-pointer">
-            <CardHeader>
-              <div className="flex items-center space-x-2">
-                <div className={section.isCompleted ? "text-green-600" : "text-gray-400"}>
-                  {section.icon}
-                </div>
-                <div className="flex-1">
-                  <CardTitle className="text-lg">{section.title}</CardTitle>
-                  <CardDescription>{section.description}</CardDescription>
-                </div>
-                {section.isCompleted ? (
-                  <CheckCircle className="h-5 w-5 text-green-600" />
-                ) : (
-                  <Circle className="h-5 w-5 text-gray-400" />
-                )}
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="flex justify-between items-center">
-                <div>
-                  {section.count !== undefined && (
-                    <Badge variant={section.isCompleted ? "default" : "secondary"}>
-                      {section.count} {section.count === 1 ? 'item' : 'items'}
-                    </Badge>
-                  )}
-                </div>
-                <Button size="sm" variant="outline">
-                  {section.isCompleted ? "View" : "Start"}
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
 
       {/* Stats Overview */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Digital Assets</CardTitle>
-            <FolderOpen className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalAssets}</div>
-            <p className="text-xs text-muted-foreground">
-              Accounts and files tracked
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Beneficiaries</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalBeneficiaries}</div>
-            <p className="text-xs text-muted-foreground">
-              People designated
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Plan Progress</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{Math.round(progressPercentage)}%</div>
-            <p className="text-xs text-muted-foreground">
-              {stats.completedSections} of {stats.totalSections} sections
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Security Score</CardTitle>
-            <Shield className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className={`text-2xl font-bold ${securityLevel.color}`}>
-              {stats.securityScore}
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card className="border">
+          <CardContent className="flex flex-col items-center p-4">
+            <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center mb-3">
+              <Lock className="h-5 w-5 text-primary" />
             </div>
-            <p className="text-xs text-muted-foreground">
-              {securityLevel.level} security
-            </p>
+            <div className="text-3xl font-bold mb-1">{stats.totalAssets}</div>
+            <div className="text-sm text-muted-foreground font-medium text-center">Vaults</div>
+          </CardContent>
+        </Card>
+
+        <Card className="border">
+          <CardContent className="flex flex-col items-center p-4">
+            <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center mb-3">
+              <FolderOpen className="h-5 w-5 text-primary" />
+            </div>
+            <div className="text-3xl font-bold mb-1">{stats.totalAssets}</div>
+            <div className="text-sm text-muted-foreground font-medium text-center">Items</div>
+          </CardContent>
+        </Card>
+
+        <Card className="border">
+          <CardContent className="flex flex-col items-center p-4">
+            <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center mb-3">
+              <Users className="h-5 w-5 text-primary" />
+            </div>
+            <div className="text-3xl font-bold mb-1">{stats.totalBeneficiaries}</div>
+            <div className="text-sm text-muted-foreground font-medium text-center">Heirs</div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Pending Tasks */}
-      {stats.pendingTasks > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <AlertCircle className="h-5 w-5 text-yellow-600" />
-              <span>Pending Tasks</span>
-              <Badge variant="secondary">{stats.pendingTasks}</Badge>
-            </CardTitle>
-            <CardDescription>
-              Tasks that need your attention
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
-                <div className="flex items-center space-x-3">
-                  <FileText className="h-4 w-4 text-yellow-600" />
-                  <span className="text-sm">Complete legal documents section</span>
-                </div>
-                <Button size="sm" variant="outline">
-                  Complete
-                </Button>
-              </div>
-              <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                <div className="flex items-center space-x-3">
-                  <Users className="h-4 w-4 text-blue-600" />
-                  <span className="text-sm">Verify beneficiary contact information</span>
-                </div>
-                <Button size="sm" variant="outline">
-                  Review
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Quick Actions */}
-      <Card>
+      {/* App Setup Checklist */}
+      <Card className="border">
         <CardHeader>
-          <CardTitle>Quick Actions</CardTitle>
-          <CardDescription>
-            Common tasks and resources for your inheritance plan
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-xl">App Setup Tasks</CardTitle>
+              <CardDescription>
+                {appSetupCompleted} of {appSetupTasks.length} tasks completed
+              </CardDescription>
+            </div>
+            <Badge variant="secondary" className="text-lg px-3 py-1">
+              {Math.round((appSetupCompleted / appSetupTasks.length) * 100)}%
+            </Badge>
+          </div>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            {quickActions.map((action, index) => (
-              <Button key={index} variant="outline" className="h-20 flex-col">
-                <action.icon className="h-6 w-6 mb-2" />
-                <span>{action.title}</span>
-              </Button>
+          <div className="space-y-3">
+            {appSetupTasks.map((task) => (
+              <div
+                key={task.id}
+                className="flex items-center p-4 bg-background-card border border-border rounded-xl hover:border-primary/50 transition-all cursor-pointer"
+              >
+                {/* Bullet Point */}
+                <div className="mr-4 flex-shrink-0">
+                  {task.isCompleted ? (
+                    <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center">
+                      <div className="w-3 h-3 rounded-full bg-white" />
+                    </div>
+                  ) : (
+                    <div className="w-6 h-6 rounded-full border-2 border-muted-foreground" />
+                  )}
+                </div>
+
+                {/* Icon */}
+                <div className="w-10 h-10 rounded-full flex items-center justify-center mr-3 flex-shrink-0 bg-primary/20">
+                  <div className="text-primary">{task.icon}</div>
+                </div>
+
+                {/* Content */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <h4 className={`font-medium ${
+                      task.isCompleted ? 'line-through text-muted-foreground' : ''
+                    }`}>{task.title}</h4>
+                    {task.priority === 'high' && !task.isCompleted && (
+                      <Badge variant="destructive" className="text-xs">High Priority</Badge>
+                    )}
+                  </div>
+                  <p className="text-sm text-muted-foreground">{task.description}</p>
+                </div>
+              </div>
             ))}
           </div>
         </CardContent>
       </Card>
 
-      {/* Recent Activity */}
-      <Card>
+      {/* Tips & Resources */}
+      <Card className="border bg-primary/5">
         <CardHeader>
-          <CardTitle>Recent Activity</CardTitle>
-          <CardDescription>
-            Your latest inheritance plan updates
-          </CardDescription>
+          <CardTitle className="flex items-center gap-2">
+            <AlertCircle className="h-5 w-5 text-primary" />
+            Important Reminders
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {recentActivity.map((activity, index) => (
-              <div key={index} className="flex items-center space-x-3">
-                <activity.icon className={`h-4 w-4 ${activity.iconColor}`} />
-                <div className="flex-1">
-                  <p className="text-sm font-medium">{activity.title}</p>
-                  <p className="text-xs text-muted-foreground">{activity.description}</p>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Badge variant="secondary" className="text-xs">{activity.badge}</Badge>
-                  <span className="text-xs text-muted-foreground">{activity.time}</span>
-                </div>
-              </div>
-            ))}
+          <div className="space-y-3 text-sm">
+            <div className="flex items-start gap-2">
+              <CheckCircle className="h-4 w-4 text-success mt-0.5 flex-shrink-0" />
+              <p>Keep your vault passwords secure and share them only with trusted heirs</p>
+            </div>
+            <div className="flex items-start gap-2">
+              <CheckCircle className="h-4 w-4 text-success mt-0.5 flex-shrink-0" />
+              <p>Review and update your information regularly, especially after major life events</p>
+            </div>
+            <div className="flex items-start gap-2">
+              <CheckCircle className="h-4 w-4 text-success mt-0.5 flex-shrink-0" />
+              <p>Inform your heirs about HeriWill and ensure they know how to access their inheritance</p>
+            </div>
+            <div className="flex items-start gap-2">
+              <CheckCircle className="h-4 w-4 text-success mt-0.5 flex-shrink-0" />
+              <p>Store physical copies of critical documents in a safe location</p>
+            </div>
           </div>
         </CardContent>
       </Card>

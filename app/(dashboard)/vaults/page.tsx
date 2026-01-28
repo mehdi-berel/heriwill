@@ -5,47 +5,48 @@ import { useRouter } from "next/navigation"
 import { DashboardLayout } from "@/components/module/dashboard/dashboard-layout"
 import { VaultForm } from "@/components/module/vaults/vault-form"
 import { VaultList } from "@/components/module/vaults/vault-list"
-import { VaultStats } from "@/components/module/vaults/vault-stats"
 import { VaultDetail } from "@/components/module/vaults/vault-detail"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
+import { Search } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 
 interface Vault {
   id: string
+  user_id: string
   name: string
-  description: string
+  description: string | null
   category: 'share_after_death' | 'delete_after_death' | 'sign_off_after_death'
-  is_encrypted: boolean
-  is_locked: boolean
-  is_favorite: boolean
-  is_shared: boolean
-  tags: string[]
-  item_count: number
+  is_encrypted: boolean | null
+  is_locked: boolean | null
+  is_favorite: boolean | null
+  is_shared: boolean | null
+  tags: string[] | null
   created_at: string
-  last_accessed?: string
-  icon?: string
-  color?: string
-  access_control: {
-    allowedHeirs: string[]
-    requireApproval: boolean
-  }
-  death_settings: {
-    notifyContacts: boolean
-    triggerAfterDays: number
-    instructions: string
-  }
+  updated_at: string
+  last_accessed: string | null
+  icon: string | null
+  color: string | null
+  settings: any
+  access_control: any
+  death_settings: any
+  sort_order: number | null
 }
 
 interface VaultItem {
   id: string
-  name: string
-  type: 'password' | 'document' | 'video' | 'image' | 'note' | 'crypto' | 'bank' | 'other'
-  size: number
+  vault_id: string
+  user_id: string
+  item_type: 'password' | 'document' | 'video' | 'image' | 'note' | 'crypto' | 'bank' | 'other'
+  storage_path: string
+  storage_bucket: string
+  file_size: number | null
+  title_encrypted: string
+  tags: string[] | null
+  is_favorite: boolean | null
   created_at: string
   updated_at: string
-  is_encrypted: boolean
-  tags: string[]
 }
 
 export default function VaultsPage() {
@@ -56,23 +57,32 @@ export default function VaultsPage() {
   const [selectedVault, setSelectedVault] = useState<Vault | null>(null)
   const [vaultItems, setVaultItems] = useState<VaultItem[]>([])
   const [searchTerm, setSearchTerm] = useState('')
+  const [selectedCategory, setSelectedCategory] = useState<'share_after_death' | 'delete_after_death' | 'sign_off_after_death' | null>(null)
+  const [showForm, setShowForm] = useState(false)
+  const [editingVault, setEditingVault] = useState<Vault | null>(null)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [vaultToDelete, setVaultToDelete] = useState<string | null>(null)
   const router = useRouter()
 
   useEffect(() => {
     const getUser = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
-        router.push("/auth/login")
+        router.push("/login")
         return
       }
       setUser(user)
       
       // Load user profile
-      const { data: profileData } = await supabase
-        .from('user_profiles')
+      const { data: profileData, error: profileError } = await supabase
+        .from('users')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('id', user.id)
         .single()
+      
+      if (profileError) {
+        console.error('Error loading profile:', profileError)
+      }
       
       setProfile(profileData)
       
@@ -86,7 +96,7 @@ export default function VaultsPage() {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!session?.user) {
-        router.push("/auth/login")
+        router.push("/login")
       } else {
         setUser(session.user)
         loadVaults(session.user.id)
@@ -98,13 +108,40 @@ export default function VaultsPage() {
 
   const loadVaults = async (userId: string) => {
     try {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('vaults')
         .select('*')
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
 
-      setVaults(data || [])
+      if (error) {
+        console.error('Error loading vaults:', error)
+        return
+      }
+
+      // Load item counts for each vault
+      if (data) {
+        const vaultsWithCounts = await Promise.all(
+          data.map(async (vault) => {
+            const { count, error: countError } = await supabase
+              .from('vault_items')
+              .select('*', { count: 'exact', head: true })
+              .eq('vault_id', vault.id)
+            
+            if (countError) {
+              console.error('Error loading vault item count:', countError)
+            }
+            
+            return {
+              ...vault,
+              item_count: count || 0
+            }
+          })
+        )
+        setVaults(vaultsWithCounts)
+      } else {
+        setVaults([])
+      }
     } catch (error) {
       console.error('Error loading vaults:', error)
     }
@@ -143,25 +180,52 @@ export default function VaultsPage() {
 
   const handleAddVault = async (formData: any) => {
     try {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('vaults')
         .insert({
           user_id: user.id,
           name: formData.name,
-          description: formData.description,
-          category: formData.category,
-          is_encrypted: formData.is_encrypted,
-          is_favorite: formData.is_favorite,
-          tags: formData.tags,
-          access_control: formData.access_control,
-          death_settings: formData.death_settings,
-          created_at: new Date().toISOString()
+          description: formData.description || null,
+          category: formData.category || 'share_after_death',
+          is_encrypted: formData.is_encrypted || false,
+          is_favorite: formData.is_favorite || false,
+          is_locked: false,
+          is_shared: false,
+          tags: formData.tags || [],
+          icon: formData.icon || null,
+          color: formData.color || null,
+          settings: formData.settings || {
+            autoLock: true,
+            autoLockTimeout: 15,
+            twoFactorEnabled: false,
+            maxFailedAttempts: 5
+          },
+          access_control: formData.access_control || {
+            allowedHeirs: [],
+            allowedUsers: [],
+            requireApproval: true
+          },
+          death_settings: formData.death_settings || {
+            notifyContacts: true,
+            triggerAfterDays: 30,
+            instructions: '',
+            notifySMS: [],
+            notifyEmail: []
+          },
+          sort_order: 0
         })
         .select()
         .single()
 
+      if (error) {
+        console.error('Error adding vault:', error)
+        return
+      }
+
       if (data) {
-        setVaults([data, ...vaults])
+        setVaults([{ ...data, item_count: 0 }, ...vaults])
+        setShowForm(false)
+        setEditingVault(null)
       }
     } catch (error) {
       console.error('Error adding vault:', error)
@@ -169,57 +233,80 @@ export default function VaultsPage() {
   }
 
   const handleUpdateVault = async (formData: any) => {
-    if (!selectedVault) return
+    if (!editingVault) return
 
     try {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('vaults')
         .update({
           name: formData.name,
-          description: formData.description,
+          description: formData.description || null,
           category: formData.category,
           is_encrypted: formData.is_encrypted,
           is_favorite: formData.is_favorite,
-          tags: formData.tags,
+          tags: formData.tags || [],
           access_control: formData.access_control,
-          death_settings: formData.death_settings
+          death_settings: formData.death_settings,
+          last_accessed: new Date().toISOString()
         })
-        .eq('id', selectedVault.id)
+        .eq('id', editingVault.id)
         .select()
         .single()
 
+      if (error) {
+        console.error('Error updating vault:', error)
+        return
+      }
+
       if (data) {
-        setVaults(vaults.map(v => v.id === selectedVault.id ? data : v))
-        setSelectedVault(data)
+        const updatedVault = { ...data, item_count: editingVault.item_count }
+        setVaults(vaults.map(v => v.id === editingVault.id ? updatedVault : v))
+        setShowForm(false)
+        setEditingVault(null)
       }
     } catch (error) {
       console.error('Error updating vault:', error)
     }
   }
 
-  const handleDeleteVault = async (vaultId: string) => {
+  const handleDeleteVault = (vaultId: string) => {
+    setVaultToDelete(vaultId)
+    setShowDeleteModal(true)
+  }
+
+  const confirmDeleteVault = async () => {
+    if (!vaultToDelete) return
+
     try {
-      await supabase
+      const { error } = await supabase
         .from('vaults')
         .delete()
-        .eq('id', vaultId)
+        .eq('id', vaultToDelete)
       
-      setVaults(vaults.filter(v => v.id !== vaultId))
-      if (selectedVault?.id === vaultId) {
+      if (error) {
+        console.error('Error deleting vault:', error)
+        return
+      }
+      
+      setVaults(vaults.filter(v => v.id !== vaultToDelete))
+      if (selectedVault?.id === vaultToDelete) {
         setSelectedVault(null)
       }
+      
+      setShowDeleteModal(false)
+      setVaultToDelete(null)
     } catch (error) {
       console.error('Error deleting vault:', error)
     }
   }
 
   const handleVaultSelect = (vault: Vault) => {
-    setSelectedVault(vault)
-    loadVaultItems(vault.id)
+    router.push(`/vaults/${vault.id}`)
   }
 
   const handleVaultEdit = (vault: Vault) => {
-    setSelectedVault(vault)
+    setEditingVault(vault)
+    setShowForm(true)
   }
 
   const handleUploadFiles = async (files: File[]) => {
@@ -254,36 +341,7 @@ export default function VaultsPage() {
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()
-    router.push("/auth/login")
-  }
-
-  const getVaultStats = () => {
-    const totalVaults = vaults.length
-    const encryptedVaults = vaults.filter(v => v.is_encrypted).length
-    const sharedVaults = vaults.filter(v => v.is_shared).length
-    const favoriteVaults = vaults.filter(v => v.is_favorite).length
-    const totalItems = vaults.reduce((sum, v) => sum + v.item_count, 0)
-    const recentlyAccessed = vaults.filter(v => {
-      if (!v.last_accessed) return false
-      return new Date(v.last_accessed) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
-    }).length
-
-    return {
-      totalVaults,
-      encryptedVaults,
-      sharedVaults,
-      favoriteVaults,
-      totalItems,
-      recentlyAccessed,
-      vaultsByCategory: {
-        share_after_death: vaults.filter(v => v.category === 'share_after_death').length,
-        delete_after_death: vaults.filter(v => v.category === 'delete_after_death').length,
-        sign_off_after_death: vaults.filter(v => v.category === 'sign_off_after_death').length
-      },
-      securityScore: 85, // Mock data
-      storageUsed: totalItems * 1024 * 1024, // Mock calculation
-      storageLimit: 10 * 1024 * 1024 * 1024 // 10GB
-    }
+    router.push("/login")
   }
 
   if (loading) {
@@ -301,41 +359,119 @@ export default function VaultsPage() {
     >
       <div className="p-6">
         {/* Header */}
-        <div className="flex justify-between items-center mb-6">
-          <div>
+        <div className="mb-6">
+          <div className="flex justify-between items-center mb-4">
             <h1 className="text-3xl font-bold">Vaults</h1>
-            <p className="text-muted-foreground">
-              Secure storage for your digital assets and important information.
-            </p>
+            <Button 
+              onClick={() => {
+                setEditingVault(null)
+                setShowForm(true)
+              }}
+              className="h-12 w-12 rounded-full p-0"
+            >
+              <span className="text-2xl">+</span>
+            </Button>
           </div>
-          <Button onClick={() => console.log('Create vault')}>
-            Create Vault
-          </Button>
-        </div>
-
-        {/* Stats and Vault List */}
-        <div className="space-y-6">
-          <VaultStats stats={getVaultStats()} />
           
-          {/* Search */}
+          {/* Category Tabs - Centered */}
+          <div className="flex justify-center gap-2 mb-4">
+            <Button
+              variant={selectedCategory === 'share_after_death' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setSelectedCategory(selectedCategory === 'share_after_death' ? null : 'share_after_death')}
+              className="rounded-lg"
+            >
+              Share ({vaults.filter(v => v.category === 'share_after_death').length})
+            </Button>
+            <Button
+              variant={selectedCategory === 'delete_after_death' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setSelectedCategory(selectedCategory === 'delete_after_death' ? null : 'delete_after_death')}
+              className="rounded-lg"
+            >
+              Delete ({vaults.filter(v => v.category === 'delete_after_death').length})
+            </Button>
+            <Button
+              variant={selectedCategory === 'sign_off_after_death' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setSelectedCategory(selectedCategory === 'sign_off_after_death' ? null : 'sign_off_after_death')}
+              className="rounded-lg"
+            >
+              Pro ({vaults.filter(v => v.category === 'sign_off_after_death').length})
+            </Button>
+          </div>
+          
+          {/* Search Bar */}
           <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
             <Input
               placeholder="Search vaults..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 h-11 bg-background-secondary border-border rounded-xl"
             />
           </div>
-
-          {/* Vault List */}
-          <VaultList
-            vaults={vaults}
-            onVaultSelect={handleVaultSelect}
-            onVaultEdit={handleVaultEdit}
-            onVaultDelete={handleDeleteVault}
-            searchTerm={searchTerm}
-            onSearchChange={setSearchTerm}
-          />
         </div>
+
+        {/* Vault Form Modal */}
+        <Dialog open={showForm} onOpenChange={(open) => {
+          setShowForm(open)
+          if (!open) setEditingVault(null)
+        }}>
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+            <DialogTitle className="sr-only">
+              {editingVault ? 'Edit Vault' : 'Create New Vault'}
+            </DialogTitle>
+            <VaultForm
+              initialData={editingVault || undefined}
+              onSubmit={editingVault ? handleUpdateVault : handleAddVault}
+              onCancel={() => {
+                setShowForm(false)
+                setEditingVault(null)
+              }}
+            />
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete Confirmation Modal */}
+        <Dialog open={showDeleteModal} onOpenChange={setShowDeleteModal}>
+          <DialogContent className="max-w-md">
+            <DialogTitle>Delete Vault</DialogTitle>
+            <div className="space-y-4">
+              <p className="text-muted-foreground">
+                Are you sure you want to delete this vault? This action cannot be undone and all items will be permanently deleted.
+              </p>
+              <div className="flex justify-end gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowDeleteModal(false)
+                    setVaultToDelete(null)
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={confirmDeleteVault}
+                >
+                  Delete Vault
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Vault List */}
+        <VaultList
+          vaults={vaults}
+          onVaultSelect={handleVaultSelect}
+          onVaultEdit={handleVaultEdit}
+          onVaultDelete={handleDeleteVault}
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
+          selectedCategory={selectedCategory}
+        />
       </div>
     </DashboardLayout>
   )

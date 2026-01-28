@@ -16,7 +16,7 @@ export default function SupportPage() {
     const getUser = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
-        router.push("/auth/login")
+        router.push("/login")
         return
       }
       setUser(user)
@@ -36,7 +36,7 @@ export default function SupportPage() {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!session?.user) {
-        router.push("/auth/login")
+        router.push("/login")
       } else {
         setUser(session.user)
       }
@@ -47,7 +47,7 @@ export default function SupportPage() {
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()
-    router.push("/auth/login")
+    router.push("/login")
   }
 
   if (loading) {

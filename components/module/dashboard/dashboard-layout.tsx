@@ -11,7 +11,7 @@ interface DashboardLayoutProps {
 
 export function DashboardLayout({ children, userName, onSignOut }: DashboardLayoutProps) {
   return (
-    <div className="flex h-screen bg-background">
+    <div className="flex h-screen">
       <Sidebar userName={userName} onSignOut={onSignOut} />
       <main className="flex-1 overflow-auto">
         <div className="h-full">

@@ -7,23 +7,19 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { 
   Search, 
-  Plus, 
+  FolderOpen, 
+  Users, 
+  Calendar, 
+  Clock, 
+  CheckCircle, 
+  AlertCircle, 
+  Eye, 
   Edit, 
   Trash2, 
-  Eye, 
-  Users, 
-  FileText, 
-  Shield, 
-  Archive,
-  Heart,
-  Globe,
-  Key,
-  MapPin,
+  MoreVertical,
+  Shield,
   DollarSign,
-  Calendar,
-  CheckCircle,
-  Clock,
-  AlertCircle
+  Plus
 } from "lucide-react"
 
 interface Heir {
@@ -191,7 +187,7 @@ export function InheritanceList({
           
           <select
             value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as any)}
+            onChange={(e) => setSortBy(e.target.value as 'name' | 'percentage' | 'value' | 'status')}
             className="px-3 py-2 border border-input rounded-md text-sm"
           >
             <option value="name">Sort by Name</option>

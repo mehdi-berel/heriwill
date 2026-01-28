@@ -4,9 +4,13 @@ import { useState, useEffect } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { DashboardLayout } from "@/components/module/dashboard/dashboard-layout"
 import { VaultDetail } from "@/components/module/vaults/vault-detail"
+import { VaultForm } from "@/components/module/vaults/vault-form"
+import { VaultAssign } from "@/components/module/vaults/vault-assign"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, Edit, Trash2, Upload, Download, Settings } from "lucide-react"
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
+import { ArrowLeft, Edit, Trash2, Upload, Download, Settings, Users, Scale } from "lucide-react"
 import { supabase } from "@/lib/supabase"
+import { vaultItemActions } from "@/app/actions/vaults"
 
 interface Vault {
   id: string
@@ -51,6 +55,9 @@ export default function VaultDetailPage() {
   const [loading, setLoading] = useState(true)
   const [vault, setVault] = useState<Vault | null>(null)
   const [vaultItems, setVaultItems] = useState<VaultItem[]>([])
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [showAssignModal, setShowAssignModal] = useState(false)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
   const router = useRouter()
   const params = useParams()
   const vaultId = params.id as string
@@ -64,7 +71,7 @@ export default function VaultDetailPage() {
     const getUser = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
-        router.push("/auth/login")
+        router.push("/login")
         return
       }
       setUser(user)
@@ -91,7 +98,7 @@ export default function VaultDetailPage() {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!session?.user) {
-        router.push("/auth/login")
+        router.push("/login")
       } else {
         setUser(session.user)
         if (vaultId) {
@@ -121,55 +128,58 @@ export default function VaultDetailPage() {
 
   const loadVaultItems = async (vaultId: string) => {
     try {
-      // Mock data for now - in real app, fetch from vault_items table
-      const mockItems: VaultItem[] = [
-        {
-          id: '1',
-          name: 'Family Photos',
-          type: 'image',
-          size: 1024 * 1024 * 50, // 50MB
-          created_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-          updated_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-          is_encrypted: true,
-          tags: ['family', 'photos', 'memories']
-        },
-        {
-          id: '2',
-          name: 'Bank Account Information',
-          type: 'bank',
-          size: 1024, // 1KB
-          created_at: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
-          updated_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-          is_encrypted: true,
-          tags: ['financial', 'banking']
-        },
-        {
-          id: '3',
-          name: 'Insurance Policies',
-          type: 'document',
-          size: 1024 * 2, // 2KB
-          created_at: new Date(Date.now() - 21 * 24 * 60 * 60 * 1000).toISOString(),
-          updated_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-          is_encrypted: true,
-          tags: ['insurance', 'policies']
-        }
-      ]
-      setVaultItems(mockItems)
+      const items = await vaultItemActions.getVaultItems(vaultId)
+      
+      // Map database fields to component interface
+      const mappedItems: VaultItem[] = items.map((item: any) => ({
+        id: item.id,
+        name: item.title_encrypted || 'Untitled',
+        type: item.item_type as VaultItem['type'],
+        size: item.file_size || 0,
+        created_at: item.created_at,
+        updated_at: item.updated_at,
+        is_encrypted: true,
+        tags: item.tags || []
+      }))
+      
+      setVaultItems(mappedItems)
     } catch (error) {
       console.error('Error loading vault items:', error)
+      setVaultItems([])
     }
   }
 
   const handleEdit = () => {
-    router.push(`/vaults/${vaultId}/edit`)
+    setShowEditModal(true)
   }
 
-  const handleDelete = async () => {
-    if (!confirm('Are you sure you want to delete this vault? This action cannot be undone and all items will be permanently deleted.')) {
-      return
-    }
-
+  const handleEditSubmit = async (formData: any) => {
     try {
+      await supabase
+        .from('vaults')
+        .update(formData)
+        .eq('id', vaultId)
+      
+      await loadVault(vaultId)
+      setShowEditModal(false)
+    } catch (error) {
+      console.error('Error updating vault:', error)
+    }
+  }
+
+  const handleDelete = () => {
+    setShowDeleteModal(true)
+  }
+
+  const confirmDelete = async () => {
+    try {
+      // Delete vault items first
+      await supabase
+        .from('vault_items')
+        .delete()
+        .eq('vault_id', vaultId)
+      
+      // Delete vault
       await supabase
         .from('vaults')
         .delete()
@@ -178,36 +188,62 @@ export default function VaultDetailPage() {
       router.push("/vaults")
     } catch (error) {
       console.error('Error deleting vault:', error)
+      alert('Failed to delete vault. Please try again.')
     }
   }
 
-  const handleUploadFiles = async (files: File[]) => {
-    if (!vault) return
+  const handleAssignHeirs = () => {
+    setShowAssignModal(true)
+  }
 
-    // In a real app, this would upload files to storage
-    console.log('Uploading files to vault:', vaultId, files)
-    
-    // Mock adding items
-    const newItems: VaultItem[] = files.map((file, index) => ({
-      id: `new-${Date.now()}-${index}`,
-      name: file.name,
-      type: 'other' as const,
-      size: file.size,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      is_encrypted: vault.is_encrypted,
-      tags: []
-    }))
+  const handleSaveHeirAssignment = async (heirIds: string[]) => {
+    try {
+      // Update vault with assigned heir IDs
+      await supabase
+        .from('vaults')
+        .update({ 
+          access_control: {
+            ...vault?.access_control,
+            allowedHeirs: heirIds
+          }
+        })
+        .eq('id', vaultId)
+      
+      await loadVault(vaultId)
+      setShowAssignModal(false)
+    } catch (error) {
+      console.error('Error assigning heirs:', error)
+      alert('Failed to assign heirs. Please try again.')
+    }
+  }
 
-    setVaultItems([...vaultItems, ...newItems])
-    
-    // Update vault item count
-    if (vault) {
-      setVault({
-        ...vault,
-        item_count: vault.item_count + files.length,
-        last_accessed: new Date().toISOString()
-      })
+  const handleSaveItem = async (itemData: any) => {
+    if (!vault || !user) return
+
+    try {
+      if (itemData.id) {
+        // Update existing item
+        await vaultItemActions.updateVaultItem(itemData.id, {
+          title_encrypted: itemData.title,
+          item_type: itemData.type,
+          tags: itemData.tags
+        })
+      } else {
+        // Create new item
+        await vaultItemActions.createVaultItem({
+          user_id: user.id,
+          vault_id: vaultId,
+          title_encrypted: itemData.title,
+          item_type: itemData.type,
+          tags: itemData.tags || [],
+          metadata: itemData.metadata || {}
+        })
+      }
+      
+      // Reload items
+      await loadVaultItems(vaultId)
+    } catch (error) {
+      console.error('Error saving item:', error)
     }
   }
 
@@ -217,21 +253,17 @@ export default function VaultDetailPage() {
   }
 
   const handleDeleteItem = async (itemId: string) => {
-    setVaultItems(vaultItems.filter(item => item.id !== itemId))
-    
-    // Update vault item count
-    if (vault) {
-      setVault({
-        ...vault,
-        item_count: Math.max(0, vault.item_count - 1),
-        last_accessed: new Date().toISOString()
-      })
+    try {
+      await vaultItemActions.deleteVaultItem(itemId)
+      await loadVaultItems(vaultId)
+    } catch (error) {
+      console.error('Error deleting item:', error)
     }
   }
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()
-    router.push("/auth/login")
+    router.push("/login")
   }
 
   if (loading) {
@@ -276,16 +308,27 @@ export default function VaultDetailPage() {
               <p className="text-muted-foreground">{vault.description}</p>
             </div>
           </div>
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center gap-2">
+            {vault.category === 'sign_off_after_death' ? (
+              <Button variant="outline" onClick={handleAssignHeirs}>
+                <Scale className="h-4 w-4 mr-2" />
+                Assign Notary
+              </Button>
+            ) : vault.category !== 'delete_after_death' && (
+              <Button variant="outline" onClick={handleAssignHeirs}>
+                <Users className="h-4 w-4 mr-2" />
+                Assign Heirs
+              </Button>
+            )}
             <Button variant="outline" onClick={handleEdit}>
               <Edit className="h-4 w-4 mr-2" />
               Edit
             </Button>
-            <Button variant="outline" onClick={() => console.log('Share vault')}>
-              <Settings className="h-4 w-4 mr-2" />
-              Share
-            </Button>
-            <Button variant="destructive" onClick={handleDelete}>
+            <Button 
+              variant="ghost" 
+              onClick={handleDelete}
+              className="bg-red-500 hover:bg-red-600 text-white"
+            >
               <Trash2 className="h-4 w-4 mr-2" />
               Delete
             </Button>
@@ -297,11 +340,74 @@ export default function VaultDetailPage() {
           vault={vault}
           items={vaultItems}
           onBack={() => router.push("/vaults")}
-          onEdit={handleEdit}
-          onUpload={handleUploadFiles}
+          onEdit={() => setShowEditModal(true)}
+          onUpload={handleSaveItem}
           onDownloadItem={handleDownloadItem}
           onDeleteItem={handleDeleteItem}
         />
+
+        {/* Edit Modal */}
+        <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogTitle>Edit Vault</DialogTitle>
+            {vault && (
+              <VaultForm
+                initialData={{
+                  name: vault.name,
+                  description: vault.description,
+                  category: vault.category,
+                  is_encrypted: vault.is_encrypted,
+                  tags: vault.tags
+                }}
+                onSubmit={handleEditSubmit}
+                onCancel={() => setShowEditModal(false)}
+              />
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Assign Heirs/Notary Modal */}
+        <Dialog open={showAssignModal} onOpenChange={setShowAssignModal}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogTitle>{vault?.category === 'sign_off_after_death' ? 'Assign Notary to Vault' : 'Assign Heirs to Vault'}</DialogTitle>
+            {vault && (
+              <VaultAssign
+                vaultId={vault.id}
+                vaultName={vault.name}
+                vaultCategory={vault.category}
+                assignedHeirIds={vault.access_control.allowedHeirs}
+                onAssignHeirs={handleSaveHeirAssignment}
+                onClose={() => setShowAssignModal(false)}
+              />
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete Confirmation Modal */}
+        <Dialog open={showDeleteModal} onOpenChange={setShowDeleteModal}>
+          <DialogContent className="max-w-md">
+            <DialogTitle>Delete Vault</DialogTitle>
+            <div className="space-y-4">
+              <p className="text-muted-foreground">
+                Are you sure you want to delete this vault? This action cannot be undone and all items will be permanently deleted.
+              </p>
+              <div className="flex justify-end gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowDeleteModal(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  className="bg-red-500 hover:bg-red-600 text-white"
+                  onClick={confirmDelete}
+                >
+                  Delete Vault
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   )

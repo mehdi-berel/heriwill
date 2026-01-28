@@ -1,22 +1,28 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
-import { 
-  Home, 
-  FileText, 
-  Users, 
-  Shield, 
-  FolderOpen, 
-  Settings, 
-  HelpCircle,
+import { supabase } from "@/lib/supabase"
+import {
+  Home,
+  Users,
+  FileText,
+  Scale,
   LogOut,
-  BookOpen,
-  Archive,
+  Lock,
+  Gift,
+  Power,
+  Package,
+  Settings,
+  HelpCircle,
   UserCheck,
-  Heart
+  ChevronLeft,
+  ChevronRight,
+  Heart,
+  ScrollText
 } from "lucide-react"
 
 const navigation = [
@@ -24,145 +30,195 @@ const navigation = [
     name: "Home",
     href: "/",
     icon: Home,
-    current: false,
+    description: "Overview",
   },
   {
     name: "Vaults",
     href: "/vaults",
-    icon: Users,
-    current: false,
+    icon: Lock,
+    description: "Secure storage",
   },
   {
     name: "Heirs",
     href: "/heirs",
-    icon: UserCheck,
-    current: false,
+    icon: Users,
+    description: "Beneficiaries",
+  },
+  {
+    name: "Inheritance",
+    href: "/inheritance",
+    icon: Gift,
+    description: "Legacy plan",
+  },
+  {
+    name: "Sign-Off",
+    href: "/sign-off",
+    icon: Power,
+    description: "Death detection",
   },
   {
     name: "Assets",
     href: "/assets",
-    icon: FolderOpen,
-    current: false,
+    icon: Package,
+    description: "Digital items",
+    isPro: true,
   },
   {
     name: "Legal",
     href: "/Legal",
-    icon: Archive,
-    current: false,
-  },
-  {
-    name: "Legacy",
-    href: "/legacy",
-    icon: Heart,
-    current: false,
-  },
-    {
-    name: "Inheritance",
-    href: "/inheritance",
     icon: FileText,
-    current: false,
+    description: "Documents",
+    isPro: true,
   },
   {
-    name: "Settings",
-    href: "/settings",
-    icon: Settings,
-    current: false,
-  },
-  {
-    name: "Help & Support",
-    href: "/help",
-    icon: HelpCircle,
-    current: false,
+    name: "Notary",
+    href: "/notary",
+    icon: Scale,
+    description: "Legal witnesses",
+    isPro: true,
   },
 ]
 
 interface SidebarProps {
-  userName?: string
   onSignOut?: () => void
 }
 
-export function Sidebar({ userName, onSignOut }: SidebarProps) {
+export function Sidebar({ onSignOut }: SidebarProps) {
   const pathname = usePathname()
+  const [isHovered, setIsHovered] = useState(false)
+  const [isProUser, setIsProUser] = useState(false)
+
+  useEffect(() => {
+    const checkProStatus = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return
+
+        const { data: profile } = await supabase
+          .from('users')
+          .select('subscription_tier')
+          .eq('id', user.id)
+          .single()
+
+        setIsProUser((profile as any)?.subscription_tier === 'pro')
+      } catch (error) {
+        console.error('Error checking pro status:', error)
+      }
+    }
+
+    checkProStatus()
+  }, [])
+
+  // Filter navigation items based on pro status
+  const filteredNavigation = navigation.filter(item => {
+    if ((item as any).isPro && !isProUser) {
+      return false
+    }
+    return true
+  })
 
   return (
-    <div className="flex h-full w-64 flex-col bg-background-card">
+    <div 
+      className={cn(
+        "flex h-full flex-col bg-black/30 backdrop-blur-xl border-r border-border-default/50 transition-all duration-200 relative",
+        isHovered ? "w-64" : "w-20"
+      )}
+      style={{ transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)' }}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
       {/* Logo */}
-      <div className="flex h-16 items-center px-6 border-b border-border-separator">
-        <div className="flex items-center space-x-3">
-          <div className="h-8 w-8 bg-primary-600 rounded-xl shadow-lg shadow-primary-600/30 flex items-center justify-center">
-            <div className="h-4 w-4 bg-white rounded-sm"></div>
+      <div className="flex h-14 items-center px-4 border-b border-border-separator justify-between">
+        <div className={cn(
+          "flex items-center gap-2.5 transition-all duration-300",
+          !isHovered && "justify-center w-full"
+        )}>
+          <div className="relative h-8 w-8 flex-shrink-0">
+            <Image
+              src="/heriwill-transparent.png"
+              alt="Heriwill Logo"
+              fill
+              className="object-contain"
+              priority
+            />
           </div>
-          <span className="text-lg font-bold text-text-primary">Heriwill Pro</span>
-        </div>
-      </div>
-
-      {/* User Info Card */}
-      <div className="px-4 py-4">
-        <div className="bg-background-elevated rounded-xl p-4 border border-border-muted">
-          <div className="flex items-center space-x-3">
-            <div className="h-10 w-10 bg-gradient-purple rounded-full flex items-center justify-center">
-              <span className="text-white font-semibold text-sm">
-                {userName?.charAt(0)?.toUpperCase() || "U"}
-              </span>
+          {isHovered && (
+            <div className="flex items-baseline gap-1 overflow-hidden">
+              <span className="text-base font-bold text-text-primary tracking-tight">Heriwill</span>
+              <span className="text-[9px] text-primary-400 font-bold uppercase tracking-wider">Pro</span>
             </div>
-            <div className="flex-1 min-w-0">
-              <div className="text-sm font-semibold text-text-primary truncate">
-                {userName || "User"}
-              </div>
-              <div className="text-xs text-text-accent">Premium Plan</div>
-            </div>
-          </div>
+          )}
         </div>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-4 pb-4">
-        <div className="space-y-1">
-          {navigation.map((item) => {
+      <nav className="flex-1 px-2 pb-3 overflow-y-auto scrollbar-thin scrollbar-thumb-border-light scrollbar-track-transparent">
+        <div className="space-y-1 py-2">
+          {filteredNavigation.map((item: { name: string; href: string; icon: React.ComponentType<{ className?: string }> }) => {
             const isActive = pathname === item.href
             return (
               <Link
                 key={item.name}
                 href={item.href}
                 className={cn(
-                  "group flex items-center rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200",
+                  "group relative flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm font-medium transition-all duration-200",
                   isActive
-                    ? "bg-primary-600/10 text-primary-400 border border-primary-600/20"
-                    : "text-text-muted hover:bg-background-elevated hover:text-text-primary"
+                    ? "bg-primary-600/10 text-primary-400 shadow-sm"
+                    : "text-text-muted hover:bg-background-hover hover:text-text-secondary",
+                  !isHovered && "justify-center"
                 )}
+                title={!isHovered ? item.name : undefined}
               >
+                {isActive && isHovered && (
+                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-primary-500 rounded-r-full" />
+                )}
                 <div className={cn(
-                  "mr-3 h-8 w-8 rounded-lg flex items-center justify-center transition-all duration-200",
-                  isActive
-                    ? "bg-primary-600 text-white"
-                    : "bg-background-card text-text-muted group-hover:bg-background-elevated group-hover:text-primary-400"
+                  "flex items-center justify-center transition-all duration-200 transform-gpu will-change-transform",
+                  isActive ? "scale-110" : "group-hover:scale-105"
                 )}>
-                  <item.icon className="h-4 w-4" />
+                  <item.icon className={cn(
+                    "h-4 w-4 transition-colors duration-200",
+                    isActive ? "text-primary-400" : "text-text-tertiary group-hover:text-text-muted"
+                  )} />
                 </div>
-                <span className="font-medium">{item.name}</span>
-                {isActive && (
-                  <div className="ml-auto h-2 w-2 bg-primary-400 rounded-full"></div>
+                {isHovered && (
+                  <>
+                    <span className="flex-1">
+                      {item.name}
+                      {(item as any).isPro && (
+                        <span className="ml-1.5 text-[10px] text-primary-400 font-semibold">(pro)</span>
+                      )}
+                    </span>
+                    {isActive && (
+                      <div className="h-1.5 w-1.5 rounded-full bg-primary-400" />
+                    )}
+                  </>
                 )}
               </Link>
             )
           })}
         </div>
+
       </nav>
 
-      {/* Sign Out Card */}
-      <div className="p-4 border-t border-border-separator">
-        <div className="bg-background-elevated rounded-xl border border-border-muted">
-          <Button
-            variant="ghost"
-            className="w-full justify-start text-text-muted hover:text-status-error hover:bg-transparent transition-all duration-200 h-12 rounded-xl"
-            onClick={onSignOut}
-          >
-            <div className="mr-3 h-8 w-8 rounded-lg flex items-center justify-center bg-background-card group-hover:bg-background-elevated transition-all duration-200">
-              <LogOut className="h-4 w-4" />
-            </div>
-            <span className="font-medium">Sign Out</span>
-          </Button>
-        </div>
+      {/* Divider before sign out */}
+      <div className="mx-2 mb-2 h-px bg-gradient-to-r from-transparent via-border-default to-transparent opacity-50"></div>
+
+      {/* Sign Out */}
+      <div className="px-2 pb-2">
+        <button
+          onClick={onSignOut}
+          className={cn(
+            "group w-full flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm font-medium text-text-muted hover:bg-status-error/5 hover:text-status-error transition-all duration-200",
+            !isHovered && "justify-center"
+          )}
+          title={!isHovered ? "Sign Out" : undefined}
+        >
+          <div className="group-hover:scale-105 group-hover:rotate-6 transition-all duration-200">
+            <LogOut className="h-4 w-4" />
+          </div>
+          {isHovered && <span className="flex-1 text-left">Sign Out</span>}
+        </button>
       </div>
     </div>
   )

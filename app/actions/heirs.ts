@@ -8,22 +8,19 @@ export const heirActions = {
       .from('heirs')
       .insert({
         user_id: heirData.user_id,
-        full_name: heirData.full_name,
-        email: heirData.email,
-        phone: heirData.phone,
-        relationship: heirData.relationship,
+        full_name_encrypted: heirData.full_name,
+        email_encrypted: heirData.email,
+        phone_encrypted: heirData.phone || null,
+        relationship: heirData.relationship || null,
+        heir_type: heirData.heir_type || 'family',
         access_level: heirData.access_level || 'view',
-        verification_method: heirData.verification_method || 'email',
         invitation_status: 'pending',
         invitation_code: generateInvitationCode(),
-        notification_preferences: heirData.notification_preferences || {
-          email: true,
-          sms: false,
-          in_app: true
-        },
-        backup_contact: heirData.backup_contact || null,
-        special_instructions: heirData.special_instructions || '',
-        invited_at: new Date().toISOString()
+        invited_at: new Date().toISOString(),
+        invitation_expires_at: heirData.invitation_expires_at || null,
+        notify_on_activation: true,
+        notification_delay_days: 0,
+        is_active: true
       })
       .select()
       .single()
@@ -152,8 +149,8 @@ export const heirActions = {
     const { data: heirs } = await heirActions.getAllHeirs(userId)
     
     const filteredHeirs = heirs.filter(heir =>
-      heir.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      heir.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      heir.full_name_encrypted?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      heir.email_encrypted?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       heir.relationship?.toLowerCase().includes(searchTerm.toLowerCase())
     )
 

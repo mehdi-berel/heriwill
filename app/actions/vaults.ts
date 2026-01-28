@@ -195,19 +195,27 @@ export const vaultActions = {
 export const vaultItemActions = {
   // Create Vault Item
   createVaultItem: async (itemData: any) => {
+    // Generate unique storage path (required and must be unique)
+    const timestamp = Date.now()
+    const randomId = Math.random().toString(36).substring(2, 15)
+    const storagePath = itemData.storage_path || `${itemData.user_id}/${itemData.vault_id}/${timestamp}-${randomId}`
+    
     const { data, error } = await supabase
       .from('vault_items')
       .insert({
         user_id: itemData.user_id,
         vault_id: itemData.vault_id,
-        name: itemData.name,
-        type: itemData.type || 'other',
-        size: itemData.size || 0,
-        content: itemData.content || null,
-        file_path: itemData.file_path || null,
-        is_encrypted: itemData.is_encrypted || false,
+        title_encrypted: itemData.title_encrypted || itemData.title || 'Untitled',
+        item_type: itemData.item_type || itemData.type || 'other',
+        file_size: itemData.file_size || itemData.size || null,
+        storage_path: storagePath,
+        storage_bucket: itemData.storage_bucket || 'vault-items',
         tags: itemData.tags || [],
-        metadata: itemData.metadata || {}
+        metadata: itemData.metadata || {},
+        is_favorite: itemData.is_favorite || false,
+        password_strength: itemData.password_strength || null,
+        password_last_changed: itemData.password_last_changed || null,
+        requires_password_change: itemData.requires_password_change || false
       })
       .select()
       .single()

@@ -2,13 +2,15 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
+import { ProTierGuard } from "@/components/module/auth/pro-tier-guard"
 import { DashboardLayout } from "@/components/module/dashboard/dashboard-layout"
 import { AssetForm } from "@/components/module/assets/asset-form"
 import { AssetList } from "@/components/module/assets/asset-list"
-import { AssetStats } from "@/components/module/assets/asset-stats"
 import { AssetDetail } from "@/components/module/assets/asset-detail"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, Plus } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
+import { Search, Plus } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 
 interface Asset {
@@ -19,11 +21,23 @@ interface Asset {
   value?: number
   location?: string
   ownership_type: 'sole' | 'joint' | 'tenants_in_common' | 'community_property'
-  beneficiaries: string[]
-  documents: string[]
-  notes?: string
+  vault_id?: string | null
+  heir_ids?: string[] | null
   created_at: string
   updated_at: string
+}
+
+interface Vault {
+  id: string
+  name: string
+  icon?: string
+  category: string
+}
+
+interface Heir {
+  id: string
+  full_name_encrypted: string
+  relationship?: string
 }
 
 export default function AssetsPage() {
@@ -31,16 +45,22 @@ export default function AssetsPage() {
   const [profile, setProfile] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [assets, setAssets] = useState<Asset[]>([])
+  const [vaults, setVaults] = useState<Vault[]>([])
+  const [heirs, setHeirs] = useState<Heir[]>([])
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null)
-  const [viewMode, setViewMode] = useState<'stats' | 'list' | 'add' | 'detail'>('stats')
   const [searchTerm, setSearchTerm] = useState('')
+  const [selectedType, setSelectedType] = useState<'all' | 'real_estate' | 'vehicle' | 'bank_account' | 'investment' | 'insurance' | 'personal_property' | 'business' | 'other'>('all')
+  const [showForm, setShowForm] = useState(false)
+  const [editingAsset, setEditingAsset] = useState<Asset | null>(null)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [assetToDelete, setAssetToDelete] = useState<string | null>(null)
   const router = useRouter()
 
   useEffect(() => {
     const getUser = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
-        router.push("/auth/login")
+        router.push("/login")
         return
       }
       setUser(user)
@@ -54,8 +74,12 @@ export default function AssetsPage() {
       
       setProfile(profileData)
       
-      // Load assets data
-      await loadAssets(user.id)
+      // Load assets, vaults, and heirs data
+      await Promise.all([
+        loadAssets(user.id),
+        loadVaults(user.id),
+        loadHeirs(user.id)
+      ])
       
       setLoading(false)
     }
@@ -64,7 +88,7 @@ export default function AssetsPage() {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!session?.user) {
-        router.push("/auth/login")
+        router.push("/login")
       } else {
         setUser(session.user)
         loadAssets(session.user.id)
@@ -76,88 +100,65 @@ export default function AssetsPage() {
 
   const loadAssets = async (userId: string) => {
     try {
-      // Mock data for now - in real app, fetch from assets table
-      const mockAssets: Asset[] = [
-        {
-          id: '1',
-          name: 'Primary Residence',
-          type: 'real_estate',
-          description: 'Family home with 4 bedrooms, 3 bathrooms, and a large backyard',
-          value: 750000,
-          location: '123 Main St, Anytown, ST 12345',
-          ownership_type: 'joint',
-          beneficiaries: ['John Doe', 'Jane Doe'],
-          documents: ['Deed', 'Property Tax Records', 'Insurance Policy'],
-          notes: 'Purchased in 2015, fully paid off',
-          created_at: new Date(Date.now() - 365 * 8 * 24 * 60 * 60 * 1000).toISOString(),
-          updated_at: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
-        },
-        {
-          id: '2',
-          name: '2018 Honda Accord',
-          type: 'vehicle',
-          description: 'Well-maintained sedan with low mileage',
-          value: 25000,
-          location: 'Garage at Primary Residence',
-          ownership_type: 'sole',
-          beneficiaries: ['John Doe'],
-          documents: ['Vehicle Title', 'Registration', 'Insurance'],
-          notes: 'Regular maintenance performed',
-          created_at: new Date(Date.now() - 365 * 6 * 24 * 60 * 60 * 1000).toISOString(),
-          updated_at: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString()
-        },
-        {
-          id: '3',
-          name: 'Chase Checking Account',
-          type: 'bank_account',
-          description: 'Primary checking account for daily transactions',
-          value: 15000,
-          location: 'Chase Bank - Downtown Branch',
-          ownership_type: 'joint',
-          beneficiaries: ['John Doe', 'Jane Doe'],
-          documents: ['Account Statements', 'Account Agreement'],
-          notes: 'Joint account with spouse',
-          created_at: new Date(Date.now() - 365 * 10 * 24 * 60 * 60 * 1000).toISOString(),
-          updated_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
-        },
-        {
-          id: '4',
-          name: 'Vanguard Index Fund Portfolio',
-          type: 'investment',
-          description: 'Diversified portfolio of index funds for retirement',
-          value: 250000,
-          location: 'Vanguard Brokerage Account',
-          ownership_type: 'joint',
-          beneficiaries: ['John Doe', 'Jane Doe'],
-          documents: ['Investment Statements', 'Tax Forms'],
-          notes: 'Long-term investment strategy',
-          created_at: new Date(Date.now() - 365 * 5 * 24 * 60 * 60 * 1000).toISOString(),
-          updated_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString()
-        },
-        {
-          id: '5',
-          name: 'Term Life Insurance Policy',
-          type: 'insurance',
-          description: '20-year term life insurance policy',
-          value: 500000,
-          location: 'State Farm Insurance',
-          ownership_type: 'sole',
-          beneficiaries: ['Jane Doe'],
-          documents: ['Insurance Policy', 'Beneficiary Designation'],
-          notes: 'Premium paid annually',
-          created_at: new Date(Date.now() - 365 * 3 * 24 * 60 * 60 * 1000).toISOString(),
-          updated_at: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString()
-        }
-      ]
-      setAssets(mockAssets)
+      const { data, error } = await supabase
+        .from('assets')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+
+      if (error) {
+        console.error('Error loading assets:', error)
+        return
+      }
+
+      setAssets(data || [])
     } catch (error) {
       console.error('Error loading assets:', error)
     }
   }
 
+  const loadVaults = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('vaults')
+        .select('id, name, icon, category')
+        .eq('user_id', userId)
+        .order('name', { ascending: true })
+
+      if (error) {
+        console.error('Error loading vaults:', error)
+        return
+      }
+
+      setVaults(data || [])
+    } catch (error) {
+      console.error('Error loading vaults:', error)
+    }
+  }
+
+  const loadHeirs = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('heirs')
+        .select('id, full_name_encrypted, relationship')
+        .eq('user_id', userId)
+        .eq('is_active', true)
+        .order('full_name_encrypted', { ascending: true })
+
+      if (error) {
+        console.error('Error loading heirs:', error)
+        return
+      }
+
+      setHeirs(data || [])
+    } catch (error) {
+      console.error('Error loading heirs:', error)
+    }
+  }
+
   const handleAddAsset = async (assetData: any) => {
     try {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('assets')
         .insert({
           user_id: user.id,
@@ -167,16 +168,21 @@ export default function AssetsPage() {
           value: assetData.value || null,
           location: assetData.location || null,
           ownership_type: assetData.ownership_type,
-          beneficiaries: assetData.beneficiaries || [],
-          documents: assetData.documents || [],
-          notes: assetData.notes || null
+          vault_id: assetData.vault_id || null,
+          heir_ids: assetData.heir_ids || []
         })
         .select()
         .single()
 
+      if (error) {
+        console.error('Error adding asset:', error)
+        return
+      }
+
       if (data) {
         setAssets([data, ...assets])
-        setViewMode('list')
+        setShowForm(false)
+        setEditingAsset(null)
       }
     } catch (error) {
       console.error('Error adding asset:', error)
@@ -184,10 +190,10 @@ export default function AssetsPage() {
   }
 
   const handleUpdateAsset = async (assetData: any) => {
-    if (!selectedAsset) return
+    if (!editingAsset) return
 
     try {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('assets')
         .update({
           name: assetData.name,
@@ -196,84 +202,60 @@ export default function AssetsPage() {
           value: assetData.value || null,
           location: assetData.location || null,
           ownership_type: assetData.ownership_type,
-          beneficiaries: assetData.beneficiaries || [],
-          documents: assetData.documents || [],
-          notes: assetData.notes || null
+          vault_id: assetData.vault_id || null,
+          heir_ids: assetData.heir_ids || []
         })
-        .eq('id', selectedAsset.id)
+        .eq('id', editingAsset.id)
         .select()
         .single()
 
+      if (error) {
+        console.error('Error updating asset:', error)
+        return
+      }
+
       if (data) {
-        setAssets(assets.map(a => a.id === selectedAsset.id ? data : a))
-        setSelectedAsset(data)
+        setAssets(assets.map(a => a.id === editingAsset.id ? data : a))
+        setShowForm(false)
+        setEditingAsset(null)
       }
     } catch (error) {
       console.error('Error updating asset:', error)
     }
   }
 
-  const handleDeleteAsset = async (assetId: string) => {
+  const handleDeleteAsset = async () => {
+    if (!assetToDelete) return
+
     try {
-      await supabase
+      const { error } = await supabase
         .from('assets')
         .delete()
-        .eq('id', assetId)
+        .eq('id', assetToDelete)
       
-      setAssets(assets.filter(a => a.id !== assetId))
-      if (selectedAsset?.id === assetId) {
-        setSelectedAsset(null)
-        setViewMode('list')
+      if (error) {
+        console.error('Error deleting asset:', error)
+        return
       }
+
+      setAssets(assets.filter(a => a.id !== assetToDelete))
+      setShowDeleteModal(false)
+      setAssetToDelete(null)
     } catch (error) {
       console.error('Error deleting asset:', error)
     }
   }
 
-  const handleAssetSelect = (asset: Asset) => {
-    setSelectedAsset(asset)
-    setViewMode('detail')
-  }
-
   const handleAssetEdit = (asset: Asset) => {
-    setSelectedAsset(asset)
-    setViewMode('add')
+    setEditingAsset(asset)
+    setShowForm(true)
   }
 
-  const handleUploadDocument = async (files: File[]) => {
-    if (!selectedAsset) return
-
-    // In a real app, this would upload files to storage
-    console.log('Uploading documents for asset:', selectedAsset.id, files)
-    
-    // Mock adding documents
-    const newDocuments = files.map((file, index) => file.name)
-    
-    const updatedAsset = {
-      ...selectedAsset,
-      documents: [...selectedAsset.documents, ...newDocuments]
-    }
-    
-    setSelectedAsset(updatedAsset)
-    setAssets(assets.map(a => a.id === selectedAsset.id ? updatedAsset : a))
+  const handleAssetDelete = (assetId: string) => {
+    setAssetToDelete(assetId)
+    setShowDeleteModal(true)
   }
 
-  const handleDownloadDocument = async (docName: string) => {
-    // In a real app, this would download the file
-    console.log('Downloading document:', docName)
-  }
-
-  const handleDeleteDocument = async (docName: string) => {
-    if (!selectedAsset) return
-
-    const updatedAsset = {
-      ...selectedAsset,
-      documents: selectedAsset.documents.filter(doc => doc !== docName)
-    }
-    
-    setSelectedAsset(updatedAsset)
-    setAssets(assets.map(a => a.id === selectedAsset.id ? updatedAsset : a))
-  }
 
   const getAssetStats = () => {
     const totalAssets = assets.length
@@ -288,9 +270,9 @@ export default function AssetsPage() {
     const otherCount = assets.filter(a => a.type === 'other').length
     const soleOwnershipCount = assets.filter(a => a.ownership_type === 'sole').length
     const jointOwnershipCount = assets.filter(a => a.ownership_type === 'joint').length
-    const withBeneficiariesCount = assets.filter(a => a.beneficiaries.length > 0).length
+    const withHeirsCount = assets.filter(a => a.heir_ids && a.heir_ids.length > 0).length
     const withLocationCount = assets.filter(a => a.location).length
-    const withDocumentsCount = assets.filter(a => a.documents.length > 0).length
+    const inVaultsCount = assets.filter(a => a.vault_id).length
     const averageValue = totalAssets > 0 ? totalValue / totalAssets : 0
 
     const highestValueAsset = assets.length > 0 
@@ -310,9 +292,9 @@ export default function AssetsPage() {
       otherCount,
       soleOwnershipCount,
       jointOwnershipCount,
-      withBeneficiariesCount,
+      withHeirsCount,
       withLocationCount,
-      withDocumentsCount,
+      inVaultsCount,
       averageValue,
       highestValueAsset: highestValueAsset && highestValueAsset.value 
         ? {
@@ -326,7 +308,7 @@ export default function AssetsPage() {
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()
-    router.push("/auth/login")
+    router.push("/login")
   }
 
   if (loading) {
@@ -337,85 +319,131 @@ export default function AssetsPage() {
     )
   }
 
+  const filteredAssets = assets.filter(asset => {
+    const matchesSearch = asset.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         asset.description?.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesType = selectedType === 'all' || asset.type === selectedType
+    return matchesSearch && matchesType
+  })
+
+  const stats = getAssetStats()
+
   return (
-    <DashboardLayout 
-      userName={profile?.full_name || user?.email} 
-      onSignOut={handleSignOut}
-    >
-      <div className="p-6">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            <h1 className="text-3xl font-bold">Assets</h1>
-            <p className="text-muted-foreground">
-              Manage your real assets for inheritance planning
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <Button
-              variant={viewMode === 'stats' ? 'default' : 'outline'}
-              onClick={() => setViewMode('stats')}
-            >
-              Stats
-            </Button>
-            <Button
-              variant={viewMode === 'list' ? 'default' : 'outline'}
-              onClick={() => setViewMode('list')}
-            >
-              List
-            </Button>
-            <Button onClick={() => setViewMode('add')}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Asset
-            </Button>
-          </div>
+    <ProTierGuard pageName="Assets">
+      <DashboardLayout 
+        userName={profile?.full_name || user?.email} 
+        onSignOut={handleSignOut}
+      >
+        <div className="p-6 space-y-6">
+        {/* Header with Title and Add Button */}
+        <div className="flex justify-between items-center">
+          <h1 className="text-3xl font-bold text-text-primary">Assets</h1>
+          
+          <Button 
+            onClick={() => {
+              setEditingAsset(null)
+              setShowForm(true)
+            }}
+            className="bg-gradient-purple hover:opacity-90"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add Asset
+          </Button>
         </div>
 
-        {/* Content based on view mode */}
-        {viewMode === 'stats' && (
-          <AssetStats 
-            stats={getAssetStats()} 
-            assets={assets}
-            onAssetSelect={handleAssetSelect}
-            onAssetEdit={handleAssetEdit}
-            onAssetDelete={handleDeleteAsset}
-          />
-        )}
+        {/* Type Filter Tabs - Centered */}
+        <div className="flex justify-center gap-2">
+          {[
+            { value: 'all', label: 'All Assets' },
+            { value: 'real_estate', label: 'Real Estate' },
+            { value: 'vehicle', label: 'Vehicles' },
+            { value: 'bank_account', label: 'Bank Accounts' },
+            { value: 'investment', label: 'Investments' },
+            { value: 'insurance', label: 'Insurance' },
+            { value: 'personal_property', label: 'Personal Property' },
+            { value: 'business', label: 'Business' },
+            { value: 'other', label: 'Other' },
+          ].map((type) => (
+            <button
+              key={type.value}
+              onClick={() => setSelectedType(type.value as any)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
+                selectedType === type.value
+                  ? 'bg-primary-600/10 text-primary-400 border border-primary-600/20'
+                  : 'text-text-muted hover:bg-background-hover hover:text-text-secondary'
+              }`}
+            >
+              {type.label}
+            </button>
+          ))}
+        </div>
 
-        {viewMode === 'list' && (
-          <AssetList
-            assets={assets}
-            onAssetSelect={handleAssetSelect}
-            onAssetEdit={handleAssetEdit}
-            onAssetDelete={handleDeleteAsset}
-            searchTerm={searchTerm}
-            onSearchChange={setSearchTerm}
+        {/* Search Bar */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-tertiary" />
+          <Input
+            placeholder="Search assets..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
           />
-        )}
+        </div>
 
-        {viewMode === 'add' && (
-          <AssetForm
-            onSubmit={selectedAsset ? handleUpdateAsset : handleAddAsset}
-            onCancel={() => {
-              setViewMode('list')
-              setSelectedAsset(null)
-            }}
-            initialData={selectedAsset || undefined}
-          />
-        )}
+        {/* Asset List */}
+        <AssetList
+          assets={filteredAssets}
+          onAssetEdit={handleAssetEdit}
+          onAssetDelete={handleAssetDelete}
+        />
 
-        {viewMode === 'detail' && selectedAsset && (
-          <AssetDetail
-            asset={selectedAsset}
-            onBack={() => setViewMode('list')}
-            onEdit={() => setViewMode('add')}
-            onDelete={() => handleDeleteAsset(selectedAsset.id)}
-            onUploadDocument={handleUploadDocument}
-            onDownloadDocument={handleDownloadDocument}
-            onDeleteDocument={handleDeleteDocument}
-          />
-        )}
+        {/* Add/Edit Asset Modal */}
+        <Dialog open={showForm} onOpenChange={setShowForm}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogTitle>{editingAsset ? 'Edit Asset' : 'Add New Asset'}</DialogTitle>
+            <AssetForm
+              onSubmit={editingAsset ? handleUpdateAsset : handleAddAsset}
+              onCancel={() => {
+                setShowForm(false)
+                setEditingAsset(null)
+              }}
+              initialData={editingAsset || undefined}
+              vaults={vaults}
+              heirs={heirs}
+              isEditing={!!editingAsset}
+            />
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete Confirmation Modal */}
+        <Dialog open={showDeleteModal} onOpenChange={setShowDeleteModal}>
+          <DialogContent>
+            <DialogTitle>Delete Asset</DialogTitle>
+            <div className="space-y-4">
+              <p className="text-text-secondary">
+                Are you sure you want to delete this asset? This action cannot be undone.
+              </p>
+              <div className="flex justify-end gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowDeleteModal(false)
+                    setAssetToDelete(null)
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleDeleteAsset}
+                  className="bg-status-error hover:bg-status-error/90"
+                >
+                  Delete
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
+    </ProTierGuard>
   )
 }

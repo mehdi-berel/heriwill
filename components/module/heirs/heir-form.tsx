@@ -7,14 +7,12 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { 
-  UserPlus, 
-  Mail, 
-  Phone, 
-  Users, 
-  Shield, 
-  Key,
-  Calendar,
-  MessageSquare
+  User, 
+  Heart, 
+  Eye, 
+  EyeOff, 
+  Save, 
+  X 
 } from "lucide-react"
 
 interface HeirFormData {
@@ -22,19 +20,8 @@ interface HeirFormData {
   email: string
   phone: string
   relationship: string
+  heir_type: 'family' | 'friend' | 'professional' | 'organization'
   access_level: 'full' | 'partial' | 'view'
-  notification_preferences: {
-    email: boolean
-    sms: boolean
-    in_app: boolean
-  }
-  backup_contact: {
-    name: string
-    phone: string
-    relationship: string
-  }
-  special_instructions: string
-  verification_method: 'email' | 'phone' | 'id_document' | 'other'
   invitation_expires_at?: string
 }
 
@@ -51,19 +38,8 @@ export function HeirForm({ onSubmit, onCancel, initialData, isEditing = false }:
     email: initialData?.email || '',
     phone: initialData?.phone || '',
     relationship: initialData?.relationship || '',
+    heir_type: initialData?.heir_type || 'family',
     access_level: initialData?.access_level || 'view',
-    notification_preferences: {
-      email: initialData?.notification_preferences?.email ?? true,
-      sms: initialData?.notification_preferences?.sms ?? false,
-      in_app: initialData?.notification_preferences?.in_app ?? true
-    },
-    backup_contact: {
-      name: initialData?.backup_contact?.name || '',
-      phone: initialData?.backup_contact?.phone || '',
-      relationship: initialData?.backup_contact?.relationship || ''
-    },
-    special_instructions: initialData?.special_instructions || '',
-    verification_method: initialData?.verification_method || 'email',
     invitation_expires_at: initialData?.invitation_expires_at || ''
   })
 
@@ -94,7 +70,7 @@ export function HeirForm({ onSubmit, onCancel, initialData, isEditing = false }:
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center space-x-2">
-          <UserPlus className="h-5 w-5" />
+          <User className="h-5 w-5" />
           <span>{isEditing ? 'Edit Heir' : 'Add New Heir'}</span>
         </CardTitle>
         <CardDescription>
@@ -115,7 +91,7 @@ export function HeirForm({ onSubmit, onCancel, initialData, isEditing = false }:
                 <Input
                   id="full_name"
                   value={formData.full_name}
-                  onChange={(e) => setFormData(prev => ({ ...prev, full_name: e.target.value }))}
+                  onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
                   placeholder="Enter full legal name"
                   required
                 />
@@ -126,7 +102,7 @@ export function HeirForm({ onSubmit, onCancel, initialData, isEditing = false }:
                   id="email"
                   type="email"
                   value={formData.email}
-                  onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   placeholder="heir@example.com"
                   required
                 />
@@ -137,7 +113,7 @@ export function HeirForm({ onSubmit, onCancel, initialData, isEditing = false }:
                   id="phone"
                   type="tel"
                   value={formData.phone}
-                  onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                   placeholder="+1 (555) 123-4567"
                 />
               </div>
@@ -146,7 +122,7 @@ export function HeirForm({ onSubmit, onCancel, initialData, isEditing = false }:
                 <Input
                   id="relationship"
                   value={formData.relationship}
-                  onChange={(e) => setFormData(prev => ({ ...prev, relationship: e.target.value }))}
+                  onChange={(e) => setFormData({ ...formData, relationship: e.target.value })}
                   placeholder="e.g., Spouse, Child, Sibling, Friend"
                   required
                 />
@@ -154,10 +130,36 @@ export function HeirForm({ onSubmit, onCancel, initialData, isEditing = false }:
             </div>
           </div>
 
+          {/* Heir Type */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-medium flex items-center space-x-2">
+              <Heart className="h-5 w-5" />
+              <span>Heir Type</span>
+            </h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {[
+                { value: 'family', label: 'Family' },
+                { value: 'friend', label: 'Friend' },
+                { value: 'professional', label: 'Professional' },
+                { value: 'organization', label: 'Organization' }
+              ].map((type) => (
+                <Button
+                  key={type.value}
+                  type="button"
+                  variant={formData.heir_type === type.value ? 'default' : 'outline'}
+                  onClick={() => setFormData({ ...formData, heir_type: type.value as any })}
+                  className="rounded-lg"
+                >
+                  {type.label}
+                </Button>
+              ))}
+            </div>
+          </div>
+
           {/* Access Level */}
           <div className="space-y-4">
             <h3 className="text-lg font-medium flex items-center space-x-2">
-              <Key className="h-5 w-5" />
+              <Eye className="h-5 w-5" />
               <span>Access Level</span>
             </h3>
             <div className="space-y-3">
@@ -173,7 +175,7 @@ export function HeirForm({ onSubmit, onCancel, initialData, isEditing = false }:
                       ? 'border-primary bg-primary/5'
                       : 'border-gray-200 hover:border-gray-300'
                   }`}
-                  onClick={() => setFormData(prev => ({ ...prev, access_level: level.value as any }))}
+                  onClick={() => setFormData({ ...formData, access_level: level.value as 'full' | 'partial' | 'view' })}
                 >
                   <div className="flex items-center justify-between">
                     <div>
@@ -189,148 +191,11 @@ export function HeirForm({ onSubmit, onCancel, initialData, isEditing = false }:
             </div>
           </div>
 
-          {/* Verification Method */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium flex items-center space-x-2">
-              <Shield className="h-5 w-5" />
-              <span>Verification Method</span>
-            </h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              {[
-                { value: 'email', label: 'Email', icon: Mail },
-                { value: 'phone', label: 'Phone', icon: Phone },
-                { value: 'id_document', label: 'ID Document', icon: Users },
-                { value: 'other', label: 'Other', icon: MessageSquare }
-              ].map((method) => (
-                <Button
-                  key={method.value}
-                  type="button"
-                  variant={formData.verification_method === method.value ? 'default' : 'outline'}
-                  onClick={() => setFormData(prev => ({ ...prev, verification_method: method.value as any }))}
-                  className="flex items-center space-x-2"
-                >
-                  <method.icon className="h-4 w-4" />
-                  <span>{method.label}</span>
-                </Button>
-              ))}
-            </div>
-          </div>
-
-          {/* Notification Preferences */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium">Notification Preferences</h3>
-            <div className="space-y-3">
-              <div className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  id="email_notifications"
-                  checked={formData.notification_preferences.email}
-                  onChange={(e) => setFormData(prev => ({
-                    ...prev,
-                    notification_preferences: { ...prev.notification_preferences, email: e.target.checked }
-                  }))}
-                  className="rounded"
-                />
-                <Label htmlFor="email_notifications" className="flex items-center space-x-2">
-                  <Mail className="h-4 w-4" />
-                  <span>Email notifications</span>
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  id="sms_notifications"
-                  checked={formData.notification_preferences.sms}
-                  onChange={(e) => setFormData(prev => ({
-                    ...prev,
-                    notification_preferences: { ...prev.notification_preferences, sms: e.target.checked }
-                  }))}
-                  className="rounded"
-                />
-                <Label htmlFor="sms_notifications" className="flex items-center space-x-2">
-                  <Phone className="h-4 w-4" />
-                  <span>SMS notifications</span>
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  id="in_app_notifications"
-                  checked={formData.notification_preferences.in_app}
-                  onChange={(e) => setFormData(prev => ({
-                    ...prev,
-                    notification_preferences: { ...prev.notification_preferences, in_app: e.target.checked }
-                  }))}
-                  className="rounded"
-                />
-                <Label htmlFor="in_app_notifications">In-app notifications</Label>
-              </div>
-            </div>
-          </div>
-
-          {/* Backup Contact */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium">Backup Contact (Optional)</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <Label htmlFor="backup_name">Contact Name</Label>
-                <Input
-                  id="backup_name"
-                  value={formData.backup_contact.name}
-                  onChange={(e) => setFormData(prev => ({
-                    ...prev,
-                    backup_contact: { ...prev.backup_contact, name: e.target.value }
-                  }))}
-                  placeholder="Backup contact name"
-                />
-              </div>
-              <div>
-                <Label htmlFor="backup_phone">Contact Phone</Label>
-                <Input
-                  id="backup_phone"
-                  type="tel"
-                  value={formData.backup_contact.phone}
-                  onChange={(e) => setFormData(prev => ({
-                    ...prev,
-                    backup_contact: { ...prev.backup_contact, phone: e.target.value }
-                  }))}
-                  placeholder="Backup contact phone"
-                />
-              </div>
-              <div>
-                <Label htmlFor="backup_relationship">Relationship</Label>
-                <Input
-                  id="backup_relationship"
-                  value={formData.backup_contact.relationship}
-                  onChange={(e) => setFormData(prev => ({
-                    ...prev,
-                    backup_contact: { ...prev.backup_contact, relationship: e.target.value }
-                  }))}
-                  placeholder="Relationship to heir"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Special Instructions */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium">Special Instructions</h3>
-            <div>
-              <Label htmlFor="instructions">Additional notes or instructions for this heir</Label>
-              <Input
-                id="instructions"
-                value={formData.special_instructions}
-                onChange={(e) => setFormData(prev => ({ ...prev, special_instructions: e.target.value }))}
-                placeholder="Any special instructions or notes"
-              />
-            </div>
-          </div>
-
           {/* Invitation Expiration */}
           {!isEditing && (
             <div className="space-y-4">
               <h3 className="text-lg font-medium flex items-center space-x-2">
-                <Calendar className="h-5 w-5" />
+                <Save className="h-5 w-5" />
                 <span>Invitation Settings</span>
               </h3>
               <div>
@@ -339,7 +204,7 @@ export function HeirForm({ onSubmit, onCancel, initialData, isEditing = false }:
                   id="expires_at"
                   type="datetime-local"
                   value={formData.invitation_expires_at}
-                  onChange={(e) => setFormData(prev => ({ ...prev, invitation_expires_at: e.target.value }))}
+                  onChange={(e) => setFormData({ ...formData, invitation_expires_at: e.target.value })}
                 />
                 <p className="text-xs text-muted-foreground mt-1">
                   Leave empty for no expiration

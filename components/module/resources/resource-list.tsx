@@ -7,8 +7,6 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { 
   Search, 
-  Plus, 
-  Filter, 
   BookOpen, 
   FileText, 
   Video, 
@@ -92,19 +90,6 @@ export function ResourceList({
     }
   }
 
-  const getCategoryLabel = (category: string) => {
-    switch (category) {
-      case 'legal': return 'Legal'
-      case 'financial': return 'Financial'
-      case 'healthcare': return 'Healthcare'
-      case 'digital': return 'Digital'
-      case 'family': return 'Family'
-      case 'business': return 'Business'
-      case 'personal': return 'Personal'
-      case 'emergency': return 'Emergency'
-      default: return 'Other'
-    }
-  }
 
   const getTypeLabel = (type: string) => {
     switch (type) {
@@ -251,7 +236,7 @@ export function ResourceList({
           
           <select
             value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as any)}
+            onChange={(e) => setSortBy(e.target.value as 'date' | 'title' | 'difficulty' | 'completed')}
             className="px-3 py-2 border border-input rounded-md text-sm"
           >
             <option value="date">Sort by Date</option>

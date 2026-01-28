@@ -63,7 +63,7 @@ export default function HeirDetailPage() {
     const getUser = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
-        router.push("/auth/login")
+        router.push("/login")
         return
       }
       setUser(user)
@@ -90,7 +90,7 @@ export default function HeirDetailPage() {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!session?.user) {
-        router.push("/auth/login")
+        router.push("/login")
       } else {
         setUser(session.user)
         if (heirId) {
@@ -194,7 +194,7 @@ export default function HeirDetailPage() {
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()
-    router.push("/auth/login")
+    router.push("/login")
   }
 
   if (loading) {
@@ -236,34 +236,25 @@ export default function HeirDetailPage() {
             </Button>
             <div>
               <h1 className="text-2xl font-bold">{heir.full_name}</h1>
-              <p className="text-muted-foreground">{heir.relationship}</p>
+              <p className="text-muted-foreground">{heir.email}</p>
             </div>
           </div>
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center gap-2">
             <Button variant="outline" onClick={handleEdit}>
               <Edit className="h-4 w-4 mr-2" />
               Edit
             </Button>
-            {heir.invitation_status === 'pending' && (
-              <Button variant="outline" onClick={handleResendInvitation}>
-                <Mail className="h-4 w-4 mr-2" />
-                Resend
-              </Button>
-            )}
-            {heir.invitation_status === 'accepted' && (
-              <Button variant="outline" onClick={handleRevokeAccess}>
-                <Shield className="h-4 w-4 mr-2" />
-                Revoke
-              </Button>
-            )}
-            <Button variant="destructive" onClick={handleDelete}>
+            <Button 
+              variant="ghost" 
+              onClick={handleDelete}
+              className="bg-red-500 hover:bg-red-600 text-white"
+            >
               <Trash2 className="h-4 w-4 mr-2" />
               Delete
             </Button>
           </div>
         </div>
 
-        {/* Heir Detail Component */}
         <HeirDetail
           heir={heir}
           activities={activities}

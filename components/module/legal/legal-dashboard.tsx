@@ -3,23 +3,15 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Progress } from "@/components/ui/progress"
 import { 
   FileText, 
   Shield, 
-  AlertTriangle, 
-  CheckCircle, 
-  Clock, 
   Scale,
   Gavel,
-  TrendingUp,
-  Calendar,
   User,
   FileCheck,
   Upload,
-  Eye,
-  Download,
-  AlertCircle
+  Download
 } from "lucide-react"
 
 interface LegalStats {
@@ -95,7 +87,6 @@ export function LegalDashboard({
 
   const complianceLevel = getComplianceLevel(stats.complianceScore)
   const uploadProgress = stats.totalDocuments > 0 ? (stats.uploadedDocuments / stats.totalDocuments) * 100 : 0
-  const approvalProgress = stats.uploadedDocuments > 0 ? (stats.approvedDocuments / stats.uploadedDocuments) * 100 : 0
 
   return (
     <div className="space-y-6">
@@ -156,42 +147,6 @@ export function LegalDashboard({
         </Card>
       </div>
 
-      {/* Progress Overview */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <TrendingUp className="h-5 w-5" />
-            <span>Progress Overview</span>
-          </CardTitle>
-          <CardDescription>
-            Track your legal document completion and compliance
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span>Document Upload Progress</span>
-              <span>{Math.round(uploadProgress)}%</span>
-            </div>
-            <Progress value={uploadProgress} className="h-2" />
-          </div>
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span>Approval Progress</span>
-              <span>{Math.round(approvalProgress)}%</span>
-            </div>
-            <Progress value={approvalProgress} className="h-2" />
-          </div>
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span>Notarization Progress</span>
-              <span>{stats.totalDocuments > 0 ? Math.round((stats.notarizedDocuments / stats.totalDocuments) * 100) : 0}%</span>
-            </div>
-            <Progress value={stats.totalDocuments > 0 ? (stats.notarizedDocuments / stats.totalDocuments) * 100 : 0} className="h-2" />
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Document Types */}
       <Card>
         <CardHeader>
@@ -225,78 +180,6 @@ export function LegalDashboard({
         </CardContent>
       </Card>
 
-      {/* Alerts and Actions */}
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <AlertTriangle className="h-5 w-5 text-yellow-600" />
-              <span>Alerts</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {stats.overdueDocuments > 0 && (
-              <div className="flex items-center space-x-2 p-3 bg-red-50 dark:bg-red-950/20 rounded-lg">
-                <AlertCircle className="h-4 w-4 text-red-600" />
-                <span className="text-sm text-red-800">
-                  {stats.overdueDocuments} document{stats.overdueDocuments !== 1 ? 's' : ''} overdue
-                </span>
-              </div>
-            )}
-            {stats.pendingNotarization > 0 && (
-              <div className="flex items-center space-x-2 p-3 bg-yellow-50 dark:bg-yellow-950/20 rounded-lg">
-                <Clock className="h-4 w-4 text-yellow-600" />
-                <span className="text-sm text-yellow-800">
-                  {stats.pendingNotarization} document{stats.pendingNotarization !== 1 ? 's' : ''} need notarization
-                </span>
-              </div>
-            )}
-            {stats.expiredDocuments > 0 && (
-              <div className="flex items-center space-x-2 p-3 bg-orange-50 dark:bg-orange-950/20 rounded-lg">
-                <Calendar className="h-4 w-4 text-orange-600" />
-                <span className="text-sm text-orange-800">
-                  {stats.expiredDocuments} document{stats.expiredDocuments !== 1 ? 's' : ''} expired
-                </span>
-              </div>
-            )}
-            {stats.overdueDocuments === 0 && stats.pendingNotarization === 0 && stats.expiredDocuments === 0 && (
-              <div className="flex items-center space-x-2 p-3 bg-green-50 dark:bg-green-950/20 rounded-lg">
-                <CheckCircle className="h-4 w-4 text-green-600" />
-                <span className="text-sm text-green-800">All documents up to date</span>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Calendar className="h-5 w-5" />
-              <span>Upcoming</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {stats.nextDueDate && (
-              <div className="flex items-center justify-between">
-                <span className="text-sm">Next due date</span>
-                <span className="font-medium">{new Date(stats.nextDueDate).toLocaleDateString()}</span>
-              </div>
-            )}
-            <div className="flex items-center justify-between">
-              <span className="text-sm">Recent uploads</span>
-              <span className="font-medium">{stats.recentActivity.uploads}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm">Recent approvals</span>
-              <span className="font-medium">{stats.recentActivity.approvals}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm">Recent notarizations</span>
-              <span className="font-medium">{stats.recentActivity.notarizations}</span>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
 
       {/* Quick Actions */}
       <Card>

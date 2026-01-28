@@ -7,7 +7,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
 import { 
   User, 
   Shield, 
@@ -20,13 +19,13 @@ import {
   Key,
   CheckCircle,
   Mail,
-  Smartphone,
-  Settings
+  Smartphone
 } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 
 export default function SettingsPage() {
-  const [user, setUser] = useState<any>(null)
+  const [user, setUser] = useState<{ id: string; email?: string } | null>(null)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [profile, setProfile] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('profile')
@@ -66,7 +65,6 @@ export default function SettingsPage() {
 
   const [showCurrentPassword, setShowCurrentPassword] = useState(false)
   const [showNewPassword, setShowNewPassword] = useState(false)
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [isChangingPassword, setIsChangingPassword] = useState(false)
   const [passwordStatus, setPasswordStatus] = useState<'idle' | 'changing' | 'success' | 'error'>('idle')
   const [isSaving, setIsSaving] = useState(false)
@@ -76,7 +74,7 @@ export default function SettingsPage() {
     const getUser = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
-        router.push("/auth/login")
+        router.push("/login")
         return
       }
       setUser(user)
@@ -96,7 +94,7 @@ export default function SettingsPage() {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!session?.user) {
-        router.push("/auth/login")
+        router.push("/login")
       } else {
         setUser(session.user)
       }
@@ -105,14 +103,14 @@ export default function SettingsPage() {
     return () => subscription.unsubscribe()
   }, [router])
 
-  const handleInputChange = (field: string, value: any) => {
+  const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
     }))
   }
 
-  const handleNestedChange = (category: string, field: string, value: any) => {
+  const handleNestedChange = (category: string, field: string, value: string | boolean | number) => {
     setFormData(prev => ({
       ...prev,
       [category]: {
@@ -200,7 +198,7 @@ export default function SettingsPage() {
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()
-    router.push("/auth/login")
+    router.push("/login")
   }
 
   if (loading) {

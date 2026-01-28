@@ -2,12 +2,12 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
+import { ProTierGuard } from "@/components/module/auth/pro-tier-guard"
 import { DashboardLayout } from "@/components/module/dashboard/dashboard-layout"
-import { LegalDashboard } from "@/components/module/legal/legal-dashboard"
-import { LegalDocumentCard } from "@/components/module/legal/legal-document-card"
-import { NotaryRequirements } from "@/components/module/legal/notary-requirements"
+import { LegalDocumentForm } from "@/components/module/legal/legal-document-form"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Search, FileText, Shield, Gavel, User, Scale, FileCheck, Edit, Trash2, Lock, Upload, Download, CheckCircle } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 
 interface LegalDocument {
@@ -64,23 +64,52 @@ interface NotaryRequirement {
   updated_at: string
 }
 
-type ViewMode = 'dashboard' | 'documents' | 'notary'
-
 export default function LegalPage() {
   const [user, setUser] = useState<any>(null)
   const [profile, setProfile] = useState<any>(null)
   const [loading, setLoading] = useState(true)
-  const [viewMode, setViewMode] = useState<ViewMode>('dashboard')
   const [documents, setDocuments] = useState<LegalDocument[]>([])
-  const [notaryRequirements, setNotaryRequirements] = useState<NotaryRequirement[]>([])
   const [searchTerm, setSearchTerm] = useState('')
+  const [selectedType, setSelectedType] = useState<'will' | 'trust' | 'power_of_attorney' | 'healthcare_directive' | 'life_insurance' | 'deed' | 'other' | null>(null)
+  const [showForm, setShowForm] = useState(false)
+  const [editingDocument, setEditingDocument] = useState<LegalDocument | null>(null)
   const router = useRouter()
+
+  const handleSaveDocument = async (formData: any, file?: File) => {
+    try {
+      // In a real app, this would save to Supabase
+      const newDocument: LegalDocument = {
+        id: Date.now().toString(),
+        title: formData.title,
+        document_type: formData.document_type,
+        description: formData.description,
+        is_required: formData.is_required,
+        is_uploaded: !!file,
+        file_url: file ? URL.createObjectURL(file) : undefined,
+        file_size: file?.size,
+        notarized: false,
+        status: 'pending',
+        priority: formData.is_required ? 'high' : 'medium',
+        instructions: formData.instructions,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        tags: formData.tags
+      }
+      
+      setDocuments([newDocument, ...documents])
+      setShowForm(false)
+      setEditingDocument(null)
+    } catch (error) {
+      console.error('Error saving document:', error)
+      throw error
+    }
+  }
 
   useEffect(() => {
     const getUser = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
-        router.push("/auth/login")
+        router.push("/login")
         return
       }
       setUser(user)
@@ -95,10 +124,7 @@ export default function LegalPage() {
       setProfile(profileData)
       
       // Load legal data
-      await Promise.all([
-        loadDocuments(user.id),
-        loadNotaryRequirements(user.id)
-      ])
+      await loadDocuments(user.id)
       
       setLoading(false)
     }
@@ -107,11 +133,10 @@ export default function LegalPage() {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!session?.user) {
-        router.push("/auth/login")
+        router.push("/login")
       } else {
         setUser(session.user)
         loadDocuments(session.user.id)
-        loadNotaryRequirements(session.user.id)
       }
     })
 
@@ -161,57 +186,6 @@ export default function LegalPage() {
     }
   }
 
-  const loadNotaryRequirements = async (userId: string) => {
-    try {
-      // Mock data for now
-      const mockRequirements: NotaryRequirement[] = [
-        {
-          id: '1',
-          title: 'Will Notarization',
-          description: 'Last Will and Testament must be notarized for legal validity',
-          document_types: ['will'],
-          is_required: true,
-          status: 'pending',
-          due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-          verification_method: 'in_person',
-          instructions: 'Visit a licensed notary public with valid identification and witnesses',
-          resources: [
-            {
-              title: 'Find a Notary Near You',
-              url: 'https://www.nationalnotary.org',
-              description: 'Official directory of notaries in your area'
-            }
-          ],
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        },
-        {
-          id: '2',
-          title: 'Power of Attorney Notarization',
-          description: 'Power of Attorney documents require notarization',
-          document_types: ['power_of_attorney'],
-          is_required: true,
-          status: 'completed',
-          completed_date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-          verification_method: 'in_person',
-          notary_details: {
-            name: 'Jane Smith',
-            commission_number: 'CA-123456',
-            location: 'Los Angeles, CA',
-            contact: 'jane@notary.com',
-            seal: 'CA-Notary-Seal-123'
-          },
-          instructions: 'Document has been successfully notarized',
-          resources: [],
-          created_at: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
-          updated_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString()
-        }
-      ]
-      setNotaryRequirements(mockRequirements)
-    } catch (error) {
-      console.error('Error loading notary requirements:', error)
-    }
-  }
 
   const handleDocumentUpload = async (documentId: string, file: File) => {
     try {
@@ -254,51 +228,40 @@ export default function LegalPage() {
     }
   }
 
-  const getLegalStats = () => {
-    const totalDocuments = documents.length
-    const requiredDocuments = documents.filter(d => d.is_required).length
-    const uploadedDocuments = documents.filter(d => d.is_uploaded).length
-    const approvedDocuments = documents.filter(d => d.status === 'approved').length
-    const notarizedDocuments = documents.filter(d => d.notarized).length
-    const expiredDocuments = documents.filter(d => {
-      return d.expiry_date && new Date(d.expiry_date) < new Date()
-    }).length
-    const pendingNotarization = documents.filter(d => d.is_uploaded && !d.notarized).length
-    const overdueDocuments = documents.filter(d => {
-      return d.is_required && !d.is_uploaded
-    }).length
-
-    return {
-      totalDocuments,
-      requiredDocuments,
-      uploadedDocuments,
-      approvedDocuments,
-      notarizedDocuments,
-      expiredDocuments,
-      pendingNotarization,
-      overdueDocuments,
-      documentsByType: {
-        will: documents.filter(d => d.document_type === 'will').length,
-        trust: documents.filter(d => d.document_type === 'trust').length,
-        power_of_attorney: documents.filter(d => d.document_type === 'power_of_attorney').length,
-        healthcare_directive: documents.filter(d => d.document_type === 'healthcare_directive').length,
-        life_insurance: documents.filter(d => d.document_type === 'life_insurance').length,
-        deed: documents.filter(d => d.document_type === 'deed').length,
-        other: documents.filter(d => d.document_type === 'other').length
-      },
-      complianceScore: Math.round((approvedDocuments / requiredDocuments) * 100),
-      nextDueDate: documents.find(d => d.expiry_date)?.expiry_date,
-      recentActivity: {
-        uploads: 2,
-        approvals: 1,
-        notarizations: 1
-      }
+  const getDocumentIcon = (type: string) => {
+    switch (type) {
+      case 'will': return <FileText className="h-6 w-6 text-white" />
+      case 'trust': return <Shield className="h-6 w-6 text-white" />
+      case 'power_of_attorney': return <Gavel className="h-6 w-6 text-white" />
+      case 'healthcare_directive': return <User className="h-6 w-6 text-white" />
+      case 'life_insurance': return <Scale className="h-6 w-6 text-white" />
+      case 'deed': return <FileCheck className="h-6 w-6 text-white" />
+      default: return <FileText className="h-6 w-6 text-white" />
     }
   }
 
+  const getDocumentColor = (type: string) => {
+    return 'rgb(124, 58, 237)' // purple for all
+  }
+
+  const formatFileSize = (bytes?: number) => {
+    if (!bytes) return 'Unknown'
+    const k = 1024
+    const sizes = ['Bytes', 'KB', 'MB', 'GB']
+    const i = Math.floor(Math.log(bytes) / Math.log(k))
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+  }
+
+  const filteredDocuments = documents.filter(doc => {
+    const matchesSearch = doc.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         doc.description.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesType = selectedType === null || doc.document_type === selectedType
+    return matchesSearch && matchesType
+  })
+
   const handleSignOut = async () => {
     await supabase.auth.signOut()
-    router.push("/auth/login")
+    router.push("/login")
   }
 
   if (loading) {
@@ -310,101 +273,213 @@ export default function LegalPage() {
   }
 
   return (
-    <DashboardLayout 
-      userName={profile?.full_name || user?.email} 
-      onSignOut={handleSignOut}
-    >
+    <ProTierGuard pageName="Legal Documents">
+      <DashboardLayout 
+        userName={profile?.full_name || user?.email} 
+        onSignOut={handleSignOut}
+      >
       <div className="p-6">
         {/* Header */}
-        <div className="flex justify-between items-center mb-6">
-          <div>
+        <div className="mb-6">
+          <div className="flex justify-between items-center mb-4">
             <h1 className="text-3xl font-bold">Legal Documents</h1>
-            <p className="text-muted-foreground">
-              Manage your legal documents and notary requirements.
-            </p>
+            <Button 
+              onClick={() => {
+                setEditingDocument(null)
+                setShowForm(true)
+              }}
+              className="h-12 w-12 rounded-full p-0"
+            >
+              <span className="text-2xl">+</span>
+            </Button>
           </div>
-          <div className="flex gap-2">
+          
+          {/* Category Tabs - Centered */}
+          <div className="flex justify-center gap-2 mb-4">
             <Button
-              variant={viewMode === 'dashboard' ? 'default' : 'outline'}
-              onClick={() => setViewMode('dashboard')}
+              variant={selectedType === 'will' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setSelectedType(selectedType === 'will' ? null : 'will')}
+              className="rounded-lg"
             >
-              Dashboard
+              Will ({documents.filter(d => d.document_type === 'will').length})
             </Button>
             <Button
-              variant={viewMode === 'documents' ? 'default' : 'outline'}
-              onClick={() => setViewMode('documents')}
+              variant={selectedType === 'trust' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setSelectedType(selectedType === 'trust' ? null : 'trust')}
+              className="rounded-lg"
             >
-              Documents
+              Trust ({documents.filter(d => d.document_type === 'trust').length})
             </Button>
             <Button
-              variant={viewMode === 'notary' ? 'default' : 'outline'}
-              onClick={() => setViewMode('notary')}
+              variant={selectedType === 'power_of_attorney' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setSelectedType(selectedType === 'power_of_attorney' ? null : 'power_of_attorney')}
+              className="rounded-lg"
             >
-              Notary
+              POA ({documents.filter(d => d.document_type === 'power_of_attorney').length})
             </Button>
+            <Button
+              variant={selectedType === 'healthcare_directive' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setSelectedType(selectedType === 'healthcare_directive' ? null : 'healthcare_directive')}
+              className="rounded-lg"
+            >
+              Healthcare ({documents.filter(d => d.document_type === 'healthcare_directive').length})
+            </Button>
+          </div>
+          
+          {/* Search Bar */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+            <Input
+              placeholder="Search documents..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 h-11 bg-background-secondary border-border rounded-xl"
+            />
           </div>
         </div>
 
-        {/* Content based on view mode */}
-        {viewMode === 'dashboard' && (
-          <LegalDashboard
-            stats={getLegalStats()}
-            onUploadDocument={() => setViewMode('documents')}
-            onViewAllDocuments={() => setViewMode('documents')}
-            onViewNotaryRequirements={() => setViewMode('notary')}
-          />
-        )}
-
-        {viewMode === 'documents' && (
-          <div className="space-y-6">
-            {/* Search and Filter */}
-            <div className="flex gap-4">
-              <div className="flex-1 relative">
-                <Input
-                  placeholder="Search documents..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
+        {/* Documents List */}
+        <div className="space-y-6">
+          {filteredDocuments.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 px-8">
+              <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center mb-6">
+                <FileText className="h-12 w-12 text-primary" />
               </div>
+              <h3 className="text-xl font-bold mb-2">No documents found</h3>
+              <p className="text-muted-foreground text-center mb-8 max-w-md">
+                {searchTerm || selectedType !== null 
+                  ? 'Try adjusting your search or filters.' 
+                  : 'Create your first legal document to get started.'}
+              </p>
             </div>
+          ) : (
+            <div className="space-y-3">
+              {filteredDocuments.map((document) => (
+                <div
+                  key={document.id}
+                  className="flex items-center p-4 bg-background-card border border-border rounded-xl cursor-pointer hover:border-primary/50 transition-all group"
+                  onClick={() => console.log('View document:', document)}
+                >
+                  {/* Icon Container */}
+                  <div 
+                    className="w-12 h-12 rounded-full flex items-center justify-center mr-3 flex-shrink-0"
+                    style={{ backgroundColor: getDocumentColor(document.document_type) }}
+                  >
+                    {getDocumentIcon(document.document_type)}
+                  </div>
 
-            {/* Documents Grid */}
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {documents
-                .filter(doc => 
-                  doc.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                  doc.description.toLowerCase().includes(searchTerm.toLowerCase())
-                )
-                .map((document) => (
-                  <LegalDocumentCard
-                    key={document.id}
-                    document={document}
-                    onView={(doc) => console.log('View document:', doc)}
-                    onEdit={(doc) => console.log('Edit document:', doc)}
-                    onDelete={(id) => setDocuments(documents.filter(d => d.id !== id))}
-                    onUpload={handleDocumentUpload}
-                    onDownload={handleDocumentDownload}
-                    onNotarize={handleDocumentNotarize}
-                  />
-                ))}
+                  {/* Content */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <h3 className="text-base font-semibold truncate">{document.title}</h3>
+                      {document.is_uploaded && (
+                        <div className="px-1.5 py-0.5 rounded bg-success/20 flex items-center">
+                          <CheckCircle className="h-3 w-3 text-success" />
+                        </div>
+                      )}
+                      {document.notarized && (
+                        <div className="px-1.5 py-0.5 rounded bg-blue-500/20 flex items-center">
+                          <Lock className="h-3 w-3 text-blue-500" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                      <FileText className="h-3.5 w-3.5" />
+                      <span className="capitalize">{document.document_type.replace('_', ' ')}</span>
+                      {document.file_size && (
+                        <>
+                          <span>•</span>
+                          <span>{formatFileSize(document.file_size)}</span>
+                        </>
+                      )}
+                      <span>•</span>
+                      <span className="capitalize">{document.status}</span>
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex items-center gap-2 ml-2">
+                    {!document.is_uploaded && (
+                      <div className="relative">
+                        <input
+                          type="file"
+                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                          onClick={(e) => e.stopPropagation()}
+                          onChange={(e) => {
+                            e.stopPropagation()
+                            const file = e.target.files?.[0]
+                            if (file) handleDocumentUpload(document.id, file)
+                          }}
+                          accept=".pdf,.doc,.docx,.txt"
+                        />
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-9 w-9 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <Upload className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
+                    {document.is_uploaded && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-9 w-9 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleDocumentDownload(document.id)
+                        }}
+                      >
+                        <Download className="h-4 w-4" />
+                      </Button>
+                    )}
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-9 w-9 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setEditingDocument(document)
+                        setShowForm(true)
+                      }}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-9 w-9 p-0 opacity-0 group-hover:opacity-100 transition-opacity bg-red-500/10 hover:bg-red-500/20"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setDocuments(documents.filter(d => d.id !== document.id))
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4 text-red-500" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
             </div>
-          </div>
-        )}
+          )}
+        </div>
 
-        {viewMode === 'notary' && (
-          <NotaryRequirements
-            requirements={notaryRequirements}
-            onRequirementComplete={(id) => {
-              setNotaryRequirements(reqs => 
-                reqs.map(req => 
-                  req.id === id ? { ...req, status: 'completed' as const } : req
-                )
-              )
-            }}
-            onRequirementView={(req) => console.log('View requirement:', req)}
-          />
-        )}
+        {/* Document Form Modal */}
+        <LegalDocumentForm
+          isOpen={showForm}
+          onClose={() => {
+            setShowForm(false)
+            setEditingDocument(null)
+          }}
+          onSave={handleSaveDocument}
+          initialData={editingDocument || undefined}
+        />
       </div>
     </DashboardLayout>
+    </ProTierGuard>
   )
 }

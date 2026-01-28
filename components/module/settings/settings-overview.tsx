@@ -3,43 +3,24 @@
 import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { 
   User, 
   Shield, 
   Bell, 
   Globe, 
-  CreditCard, 
-  Smartphone, 
-  Mail, 
-  Lock, 
   Eye, 
   EyeOff,
   Key,
   Download,
-  Upload,
   Trash2,
-  Plus,
-  Settings,
-  HelpCircle,
-  AlertTriangle,
-  CheckCircle,
-  Clock,
-  Calendar,
-  Phone,
-  MapPin,
-  FileText,
-  Users,
-  Heart,
-  Archive,
-  LogOut
+  AlertTriangle
 } from "lucide-react"
 
 interface SettingsOverviewProps {
   userId: string
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   profile: any
 }
 
@@ -79,14 +60,14 @@ export function SettingsOverview({ userId, profile }: SettingsOverviewProps) {
     }
   })
 
-  const handleInputChange = (field: string, value: any) => {
+  const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
     }))
   }
 
-  const handleNestedChange = (category: string, field: string, value: any) => {
+  const handleNestedChange = (category: string, field: string, value: string | boolean | number) => {
     setFormData(prev => ({
       ...prev,
       [category]: {
