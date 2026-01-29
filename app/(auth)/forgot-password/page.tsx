@@ -11,6 +11,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { supabase } from "@/lib/supabase"
 import { Mail, AlertCircle, CheckCircle, ArrowLeft } from "lucide-react"
 
+// Force dynamic rendering to avoid prerendering issues with Supabase
+export const dynamic = 'force-dynamic'
+
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("")
   const [loading, setLoading] = useState(false)
