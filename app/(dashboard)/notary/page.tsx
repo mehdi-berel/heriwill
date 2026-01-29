@@ -5,11 +5,32 @@ import { useRouter } from "next/navigation"
 import { ProTierGuard } from "@/components/module/auth/pro-tier-guard"
 import { DashboardLayout } from "@/components/module/dashboard/dashboard-layout"
 import { NotarySelector } from "@/components/module/notary/notary-selector"
-import { Card, CardContent } from "@/components/ui/card"
-import { Plus, Search } from "lucide-react"
+import { Search } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { supabase } from "@/lib/supabase"
+import { User } from "@supabase/supabase-js"
+
+interface UserProfile {
+  full_name?: string
+  email?: string
+  subscription_tier?: string
+}
+
+interface NotaryData {
+  name: string
+  firm_name?: string
+  email: string
+  phone: string
+  address: string
+  city: string
+  state: string
+  zip_code: string
+  license_number?: string
+  specialization?: string
+  notes?: string
+  is_primary: boolean
+}
 
 interface Notary {
   id: string
@@ -31,8 +52,8 @@ interface Notary {
 }
 
 export default function NotaryPage() {
-  const [user, setUser] = useState<any>(null)
-  const [profile, setProfile] = useState<any>(null)
+  const [user, setUser] = useState<User | null>(null)
+  const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [notaries, setNotaries] = useState<Notary[]>([])
   const [searchTerm, setSearchTerm] = useState('')
@@ -101,7 +122,7 @@ export default function NotaryPage() {
     router.push("/login")
   }
 
-  const handleAddNotary = async (notaryData: any) => {
+  const handleAddNotary = async (notaryData: NotaryData) => {
     try {
       const { data, error } = await supabase
         .from('notaries')
@@ -122,7 +143,7 @@ export default function NotaryPage() {
     }
   }
 
-  const handleUpdateNotary = async (notaryId: string, notaryData: any) => {
+  const handleUpdateNotary = async (notaryId: string, notaryData: Partial<NotaryData>) => {
     try {
       const { error } = await supabase
         .from('notaries')
@@ -181,8 +202,6 @@ export default function NotaryPage() {
       </div>
     )
   }
-
-  const hasPrimaryNotary = notaries.some(n => n.is_primary)
 
   return (
     <ProTierGuard pageName="Notary Services">

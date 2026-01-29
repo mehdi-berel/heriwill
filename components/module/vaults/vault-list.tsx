@@ -1,17 +1,12 @@
 "use client"
 
-import { useState } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
 import { 
   FolderOpen, 
   Lock, 
   Share2, 
   Trash2, 
   Edit,
-  MoreVertical,
   Shield
 } from "lucide-react"
 
@@ -38,7 +33,6 @@ interface VaultListProps {
   onVaultEdit: (vault: Vault) => void
   onVaultDelete: (vaultId: string) => void
   searchTerm?: string
-  onSearchChange?: (term: string) => void
   selectedCategory?: 'share_after_death' | 'delete_after_death' | 'sign_off_after_death' | null
 }
 
@@ -48,7 +42,6 @@ export function VaultList({
   onVaultEdit, 
   onVaultDelete, 
   searchTerm = '',
-  onSearchChange,
   selectedCategory = null
 }: VaultListProps) {
 
@@ -70,14 +63,6 @@ export function VaultList({
     }
   }
 
-  const getCategoryColor = (category: string) => {
-    switch (category) {
-      case 'share_after_death': return 'bg-blue-100 text-blue-800'
-      case 'delete_after_death': return 'bg-red-100 text-red-800'
-      case 'sign_off_after_death': return 'bg-green-100 text-green-800'
-      default: return 'bg-gray-100 text-gray-800'
-    }
-  }
 
   return (
     <div className="space-y-6">

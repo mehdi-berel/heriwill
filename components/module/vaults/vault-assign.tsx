@@ -1,11 +1,11 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Users, UserPlus, UserCheck, Search, Scale } from "lucide-react"
+import { Users, Search, Scale } from "lucide-react"
 import { Input } from "@/components/ui/input"
 
 interface Heir {
@@ -37,7 +37,6 @@ interface VaultAssignProps {
 }
 
 export function VaultAssign({ 
-  vaultId, 
   vaultName,
   vaultCategory = 'share_after_death',
   assignedHeirIds, 
@@ -52,11 +51,7 @@ export function VaultAssign({
   
   const isNotaryMode = vaultCategory === 'sign_off_after_death'
 
-  useEffect(() => {
-    loadHeirs()
-  }, [])
-
-  const loadHeirs = async () => {
+  const loadHeirs = useCallback(async () => {
     try {
       if (isNotaryMode) {
         // Load notaries from Supabase
@@ -100,7 +95,14 @@ export function VaultAssign({
       console.error('Error loading data:', error)
       setLoading(false)
     }
-  }
+  }, [isNotaryMode])
+
+  useEffect(() => {
+    const initializeData = async () => {
+      await loadHeirs()
+    }
+    initializeData()
+  }, [loadHeirs])
 
   const filteredHeirs = heirs.filter(heir =>
     heir.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||

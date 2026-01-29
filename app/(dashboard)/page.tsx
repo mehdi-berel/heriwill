@@ -1,12 +1,19 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
 import { DashboardLayout } from "@/components/module/dashboard/dashboard-layout"
 import { DashboardOverview } from "@/components/module/dashboard/dashboard-overview"
 import { supabase } from "@/lib/supabase"
-import type { Database } from "@/types/database"
+import { User } from "@supabase/supabase-js"
+
+interface UserProfile {
+  user_id: string
+  full_name?: string
+  email?: string
+  avatar_url?: string
+  subscription_tier?: string
+}
 
 interface DashboardStats {
   totalAssets: number
@@ -18,8 +25,8 @@ interface DashboardStats {
 }
 
 export default function HomePage() {
-  const [user, setUser] = useState<any>(null)
-  const [profile, setProfile] = useState<any>(null)
+  const [user, setUser] = useState<User | null>(null)
+  const [profile, setProfile] = useState<UserProfile | null>(null)
   const [stats, setStats] = useState<DashboardStats>({
     totalAssets: 0,
     totalBeneficiaries: 0,
@@ -30,6 +37,86 @@ export default function HomePage() {
   })
   const [loading, setLoading] = useState(true)
   const router = useRouter()
+
+  const loadProfile = useCallback(async (userId: string) => {
+    const { data } = await supabase
+      .from('user_profiles')
+      .select('*')
+      .eq('user_id', userId)
+      .single()
+    setProfile(data)
+  }, [])
+
+  const calculateSecurityScore = useCallback((
+    vaultsCount: number,
+    heirsCount: number,
+    assetsCount: number
+  ): number => {
+    let score = 0
+    
+    // Base score for having vaults (max 30 points)
+    if (vaultsCount > 0) {
+      score += Math.min(30, vaultsCount * 10)
+    }
+    
+    // Points for having heirs (max 25 points)
+    if (heirsCount > 0) {
+      score += Math.min(25, heirsCount * 12)
+    }
+    
+    // Points for having assets (max 45 points)
+    if (assetsCount > 0) {
+      score += Math.min(45, assetsCount * 15)
+    }
+    
+    return Math.min(100, score)
+  }, [])
+
+  const loadStats = useCallback(async (userId: string) => {
+    try {
+      const { data: vaults } = await supabase
+        .from('vaults')
+        .select('*')
+        .eq('user_id', userId)
+
+      const { data: heirs } = await supabase
+        .from('heirs')
+        .select('*')
+        .eq('user_id', userId)
+
+      const { data: assets } = await supabase
+        .from('assets')
+        .select('*')
+        .eq('user_id', userId)
+
+      const vaultsCount = vaults?.length || 0
+      const heirsCount = heirs?.length || 0
+      const assetsCount = assets?.length || 0
+
+      const completedSections = [
+        vaultsCount > 0,
+        heirsCount > 0,
+        assetsCount > 0
+      ].filter(Boolean).length
+
+      const securityScore = calculateSecurityScore(
+        vaultsCount,
+        heirsCount,
+        assetsCount
+      )
+
+      setStats({
+        totalAssets: assetsCount,
+        totalBeneficiaries: heirsCount,
+        completedSections,
+        totalSections: 6,
+        securityScore,
+        pendingTasks: 6 - completedSections
+      })
+    } catch (error) {
+      console.error('Error loading stats:', error)
+    }
+  }, [calculateSecurityScore])
 
   useEffect(() => {
     const getUser = async () => {
@@ -62,103 +149,7 @@ export default function HomePage() {
     })
 
     return () => subscription.unsubscribe()
-  }, [router])
-
-  const loadProfile = async (userId: string) => {
-    const { data } = await supabase
-      .from('user_profiles')
-      .select('*')
-      .eq('user_id', userId)
-      .single()
-    setProfile(data)
-  }
-
-  const loadStats = async (userId: string) => {
-    try {
-      // Load vaults count
-      const { data: vaults } = await supabase
-        .from('vaults')
-        .select('id')
-        .eq('user_id', userId)
-
-      // Load heirs count
-      const { data: heirs } = await supabase
-        .from('heirs')
-        .select('id')
-        .eq('user_id', userId)
-
-      // Load assets count
-      const { data: assets } = await supabase
-        .from('assets')
-        .select('id')
-        .eq('user_id', userId)
-
-      // Load vault items count
-      const { data: vaultItems } = await supabase
-        .from('vault_items')
-        .select('id')
-        .eq('user_id', userId)
-
-      // Load inheritance plans
-      const { data: plans } = await supabase
-        .from('inheritance_plans')
-        .select('id, is_triggered, is_active')
-        .eq('user_id', userId)
-
-      const activePlans = plans?.filter((p: any) => p.is_active && !p.is_triggered).length || 0
-      const completedSections = plans?.filter((p: any) => p.is_triggered).length || 0
-
-      // Calculate security score
-      const securityScore = calculateSecurityScore(
-        vaults?.length || 0,
-        heirs?.length || 0,
-        assets?.length || 0,
-        vaultItems?.length || 0
-      )
-
-      setStats({
-        totalAssets: assets?.length || 0,
-        totalBeneficiaries: heirs?.length || 0,
-        completedSections,
-        totalSections: (vaults?.length || 0) + (heirs?.length || 0) + (assets?.length || 0),
-        securityScore,
-        pendingTasks: activePlans
-      })
-    } catch (error) {
-      console.error('Error loading stats:', error)
-    }
-  }
-
-  const calculateSecurityScore = (
-    vaultsCount: number,
-    heirsCount: number,
-    assetsCount: number,
-    vaultItemsCount: number
-  ): number => {
-    let score = 0
-    
-    // Base score for having vaults (max 30 points)
-    if (vaultsCount > 0) {
-      score += Math.min(30, vaultsCount * 10)
-    }
-    
-    // Points for having heirs (max 25 points)
-    if (heirsCount > 0) {
-      score += Math.min(25, heirsCount * 12)
-    }
-    
-    // Points for having assets (max 20 points)
-    if (assetsCount > 0) {
-      score += Math.min(20, assetsCount * 10)
-    }
-    
-    // Points for vault items (max 25 points)
-    if (vaultItemsCount > 0) {
-      score += Math.min(25, vaultItemsCount * 2)
-    }
-    
-    return Math.min(100, score)
-  }
+  }, [router, loadProfile, loadStats, calculateSecurityScore])
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()

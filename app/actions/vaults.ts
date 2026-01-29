@@ -1,32 +1,62 @@
 import { supabase } from '../../lib/supabase'
+import type { Database } from '../../lib/database.types'
+
+type VaultRow = Database['public']['Tables']['vaults']['Row']
+type VaultInsert = Database['public']['Tables']['vaults']['Insert']
+type VaultUpdate = Database['public']['Tables']['vaults']['Update']
+type VaultItemRow = Database['public']['Tables']['vault_items']['Row']
+type VaultItemInsert = Database['public']['Tables']['vault_items']['Insert']
+type VaultItemUpdate = Database['public']['Tables']['vault_items']['Update']
+
+interface VaultData {
+  user_id: string
+  name: string
+  description?: string
+  category?: string
+  is_encrypted?: boolean
+  is_favorite?: boolean
+  tags?: string[]
+  access_control?: Record<string, unknown>
+  death_settings?: Record<string, unknown>
+}
+
+interface VaultUpdateData {
+  name?: string
+  description?: string
+  category?: string
+  is_encrypted?: boolean
+  is_favorite?: boolean
+  tags?: string[]
+  access_control?: Record<string, unknown>
+  death_settings?: Record<string, unknown>
+}
+
+interface VaultItemData {
+  user_id: string
+  vault_id: string
+  title_encrypted?: string
+  title?: string
+  item_type?: string
+  type?: string
+  file_size?: number
+  size?: number
+  storage_path?: string
+  storage_bucket?: string
+  tags?: string[]
+  metadata?: Record<string, unknown>
+  is_favorite?: boolean
+  password_strength?: string | null
+  password_last_changed?: string | null
+  requires_password_change?: boolean
+}
 
 // Vault Management Actions
 export const vaultActions = {
   // Create Vault
-  createVault: async (vaultData: any) => {
+  createVault: async (vaultData: VaultInsert) => {
     const { data, error } = await supabase
       .from('vaults')
-      .insert({
-        user_id: vaultData.user_id,
-        name: vaultData.name,
-        description: vaultData.description,
-        category: vaultData.category || 'share_after_death',
-        is_encrypted: vaultData.is_encrypted || false,
-        is_favorite: vaultData.is_favorite || false,
-        tags: vaultData.tags || [],
-        access_control: vaultData.access_control || {
-          allowedHeirs: [],
-          allowedUsers: [],
-          requireApproval: true
-        },
-        death_settings: vaultData.death_settings || {
-          notifySMS: [],
-          notifyEmail: [],
-          instructions: '',
-          notifyContacts: true,
-          triggerAfterDays: 30
-        }
-      })
+      .insert(vaultData)
       .select()
       .single()
 
@@ -35,7 +65,7 @@ export const vaultActions = {
   },
 
   // Update Vault
-  updateVault: async (vaultId: string, updateData: any) => {
+  updateVault: async (vaultId: string, updateData: VaultUpdate) => {
     const { data, error } = await supabase
       .from('vaults')
       .update(updateData)
@@ -131,18 +161,17 @@ export const vaultActions = {
 
   // Get Vault Statistics
   getVaultStats: async (userId: string) => {
-    const { data: vaults } = await vaultActions.getAllVaults(userId)
+    const vaults = await vaultActions.getAllVaults(userId)
     
     const stats = {
       totalVaults: vaults.length,
-      encryptedVaults: vaults.filter(v => v.is_encrypted).length,
-      sharedVaults: vaults.filter(v => v.is_shared).length,
-      favoriteVaults: vaults.filter(v => v.is_favorite).length,
-      totalItems: vaults.reduce((sum, v) => {
-        // This would need to be calculated from vault_items table
+      encryptedVaults: vaults.filter((v: VaultRow) => v.is_encrypted).length,
+      sharedVaults: vaults.filter((v: VaultRow) => v.is_shared).length,
+      favoriteVaults: vaults.filter((v: VaultRow) => v.is_favorite).length,
+      totalItems: vaults.reduce((sum: number, v: VaultRow) => {
         return sum + (v.item_count || 0)
       }, 0),
-      recentlyAccessed: vaults.filter(v => {
+      recentlyAccessed: vaults.filter((v: VaultRow) => {
         return v.last_accessed && 
           new Date(v.last_accessed) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
       }).length
@@ -153,12 +182,12 @@ export const vaultActions = {
 
   // Search and Filter
   searchVaults: async (userId: string, searchTerm: string) => {
-    const { data: vaults } = await vaultActions.getAllVaults(userId)
+    const vaults = await vaultActions.getAllVaults(userId)
     
-    const filteredVaults = vaults.filter(vault =>
+    const filteredVaults = vaults.filter((vault: VaultRow) =>
       vault.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       vault.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      vault.tags?.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
+      vault.tags?.some((tag: string) => tag.toLowerCase().includes(searchTerm.toLowerCase()))
     )
 
     return filteredVaults
@@ -166,35 +195,35 @@ export const vaultActions = {
 
   // Filter by Category
   getVaultsByCategory: async (userId: string, category: string) => {
-    const { data: vaults } = await vaultActions.getAllVaults(userId)
+    const vaults = await vaultActions.getAllVaults(userId)
     
-    return vaults.filter(vault => vault.category === category)
+    return vaults.filter((vault: VaultRow) => vault.category === category)
   },
 
   // Filter by Status
   getFavoriteVaults: async (userId: string) => {
-    const { data: vaults } = await vaultActions.getAllVaults(userId)
+    const vaults = await vaultActions.getAllVaults(userId)
     
-    return vaults.filter(vault => vault.is_favorite)
+    return vaults.filter((vault: VaultRow) => vault.is_favorite)
   },
 
   getEncryptedVaults: async (userId: string) => {
-    const { data: vaults } = await vaultActions.getAllVaults(userId)
+    const vaults = await vaultActions.getAllVaults(userId)
     
-    return vaults.filter(vault => vault.is_encrypted)
+    return vaults.filter((vault: VaultRow) => vault.is_encrypted)
   },
 
   getSharedVaults: async (userId: string) => {
-    const { data: vaults } = await vaultActions.getAllVaults(userId)
+    const vaults = await vaultActions.getAllVaults(userId)
     
-    return vaults.filter(vault => vault.is_shared)
+    return vaults.filter((vault: VaultRow) => vault.is_shared)
   }
 }
 
 // Vault Items Actions
 export const vaultItemActions = {
   // Create Vault Item
-  createVaultItem: async (itemData: any) => {
+  createVaultItem: async (itemData: VaultItemInsert) => {
     // Generate unique storage path (required and must be unique)
     const timestamp = Date.now()
     const randomId = Math.random().toString(36).substring(2, 15)
@@ -213,7 +242,7 @@ export const vaultItemActions = {
         tags: itemData.tags || [],
         metadata: itemData.metadata || {},
         is_favorite: itemData.is_favorite || false,
-        password_strength: itemData.password_strength || null,
+        password_strength: itemData.password_strength ? parseInt(itemData.password_strength) : null,
         password_last_changed: itemData.password_last_changed || null,
         requires_password_change: itemData.requires_password_change || false
       })
@@ -225,10 +254,20 @@ export const vaultItemActions = {
   },
 
   // Update Vault Item
-  updateVaultItem: async (itemId: string, updateData: any) => {
+  updateVaultItem: async (itemId: string, updateData: VaultItemUpdate) => {
+    const updatePayload: VaultItemUpdate = {}
+    if (updateData.title_encrypted) updatePayload.title_encrypted = updateData.title_encrypted
+    if (updateData.item_type) updatePayload.item_type = updateData.item_type
+    if (updateData.tags) updatePayload.tags = updateData.tags
+    if (updateData.metadata) updatePayload.metadata = updateData.metadata
+    if (updateData.is_favorite !== undefined) updatePayload.is_favorite = updateData.is_favorite
+    if (updateData.password_strength) updatePayload.password_strength = parseInt(updateData.password_strength)
+    if (updateData.password_last_changed) updatePayload.password_last_changed = updateData.password_last_changed
+    if (updateData.requires_password_change !== undefined) updatePayload.requires_password_change = updateData.requires_password_change
+
     const { data, error } = await supabase
       .from('vault_items')
-      .update(updateData)
+      .update(updatePayload)
       .eq('id', itemId)
       .select()
       .single()
@@ -273,11 +312,11 @@ export const vaultItemActions = {
 
   // Search Vault Items
   searchVaultItems: async (vaultId: string, searchTerm: string) => {
-    const { data: items } = await vaultItemActions.getVaultItems(vaultId)
+    const items = await vaultItemActions.getVaultItems(vaultId)
     
-    const filteredItems = items.filter(item =>
-      item.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.tags?.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
+    const filteredItems = items.filter((item: VaultItemRow) =>
+      item.title_encrypted?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.tags?.some((tag: string) => tag.toLowerCase().includes(searchTerm.toLowerCase()))
     )
 
     return filteredItems
@@ -285,9 +324,9 @@ export const vaultItemActions = {
 
   // Filter by Type
   getVaultItemsByType: async (vaultId: string, type: string) => {
-    const { data: items } = await vaultItemActions.getVaultItems(vaultId)
+    const items = await vaultItemActions.getVaultItems(vaultId)
     
-    return items.filter(item => item.type === type)
+    return items.filter((item: VaultItemRow) => item.item_type === type)
   },
 
   // Update Vault Item Count

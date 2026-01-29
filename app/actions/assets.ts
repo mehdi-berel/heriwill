@@ -1,9 +1,31 @@
 import { supabase } from '../../lib/supabase'
+import type { Database } from '../../lib/database.types'
+
+type DigitalAssetRow = Database['public']['Tables']['digital_assets']['Row']
+type DigitalAssetInsert = Database['public']['Tables']['digital_assets']['Insert']
+type DigitalAssetUpdate = Database['public']['Tables']['digital_assets']['Update']
+
+interface DigitalAssetData {
+  user_id: string
+  name: string
+  type?: string
+  url?: string
+  username?: string
+  encryptedPassword?: string
+  notes?: string
+  beneficiaryId?: string | null
+  instructions?: string
+  status?: string
+}
+
+interface DigitalAssetUpdateData {
+  [key: string]: unknown
+}
 
 // Digital Assets Management Actions
 export const digitalAssetActions = {
   // Create Digital Asset
-  createDigitalAsset: async (assetData: any) => {
+  createDigitalAsset: async (assetData: DigitalAssetData) => {
     const { data, error } = await supabase
       .from('digital_assets')
       .insert({
@@ -28,7 +50,7 @@ export const digitalAssetActions = {
   },
 
   // Update Digital Asset
-  updateDigitalAsset: async (assetId: string, updateData: any) => {
+  updateDigitalAsset: async (assetId: string, updateData: DigitalAssetUpdateData) => {
     const { data, error } = await supabase
       .from('digital_assets')
       .update({
@@ -66,7 +88,7 @@ export const digitalAssetActions = {
   },
 
   // Get All Digital Assets for User
-  getAllDigitalAssets: async (userId: string) => {
+  getAllDigitalAssets: async (userId: string): Promise<DigitalAssetRow[]> => {
     const { data, error } = await supabase
       .from('digital_assets')
       .select('*')
@@ -124,26 +146,26 @@ export const digitalAssetActions = {
 
   // Get Digital Asset Statistics
   getDigitalAssetStats: async (userId: string) => {
-    const { data: assets } = await digitalAssetActions.getAllDigitalAssets(userId)
+    const assets = await digitalAssetActions.getAllDigitalAssets(userId)
     
     const stats = {
       totalAssets: assets.length,
-      activeAssets: assets.filter(a => a.status === 'active').length,
-      inactiveAssets: assets.filter(a => a.status === 'inactive').length,
-      archivedAssets: assets.filter(a => a.status === 'archived').length,
-      socialMediaAssets: assets.filter(a => a.type === 'social_media').length,
-      emailAssets: assets.filter(a => a.type === 'email').length,
-      cloudStorageAssets: assets.filter(a => a.type === 'cloud_storage').length,
-      cryptoWalletAssets: assets.filter(a => a.type === 'crypto_wallet').length,
-      domainAssets: assets.filter(a => a.type === 'domain').length,
-      bankAccountAssets: assets.filter(a => a.type === 'bank_account').length,
-      subscriptionAssets: assets.filter(a => a.type === 'subscription').length,
-      otherAssets: assets.filter(a => a.type === 'other').length,
-      withBeneficiary: assets.filter(a => a.beneficiary_id).length,
-      withUsername: assets.filter(a => a.username).length,
-      withPassword: assets.filter(a => a.encrypted_password).length,
-      withUrl: assets.filter(a => a.url).length,
-      withNotes: assets.filter(a => a.notes).length
+      activeAssets: assets.filter((a: DigitalAssetRow) => a.status === 'active').length,
+      inactiveAssets: assets.filter((a: DigitalAssetRow) => a.status === 'inactive').length,
+      archivedAssets: assets.filter((a: DigitalAssetRow) => a.status === 'archived').length,
+      socialMediaAssets: assets.filter((a: DigitalAssetRow) => a.type === 'social_media').length,
+      emailAssets: assets.filter((a: DigitalAssetRow) => a.type === 'email').length,
+      cloudStorageAssets: assets.filter((a: DigitalAssetRow) => a.type === 'cloud_storage').length,
+      cryptoWalletAssets: assets.filter((a: DigitalAssetRow) => a.type === 'crypto_wallet').length,
+      domainAssets: assets.filter((a: DigitalAssetRow) => a.type === 'domain').length,
+      bankAccountAssets: assets.filter((a: DigitalAssetRow) => a.type === 'bank_account').length,
+      subscriptionAssets: assets.filter((a: DigitalAssetRow) => a.type === 'subscription').length,
+      otherAssets: assets.filter((a: DigitalAssetRow) => a.type === 'other').length,
+      withBeneficiary: assets.filter((a: DigitalAssetRow) => a.beneficiary_id).length,
+      withUsername: assets.filter((a: DigitalAssetRow) => a.username).length,
+      withPassword: assets.filter((a: DigitalAssetRow) => a.encrypted_password).length,
+      withUrl: assets.filter((a: DigitalAssetRow) => a.url).length,
+      withNotes: assets.filter((a: DigitalAssetRow) => a.notes).length
     }
 
     return stats
@@ -151,9 +173,9 @@ export const digitalAssetActions = {
 
   // Search Digital Assets
   searchDigitalAssets: async (userId: string, searchTerm: string) => {
-    const { data: assets } = await digitalAssetActions.getAllDigitalAssets(userId)
+    const assets = await digitalAssetActions.getAllDigitalAssets(userId)
     
-    const filteredAssets = assets.filter(asset =>
+    const filteredAssets = assets.filter((asset: DigitalAssetRow) =>
       asset.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       asset.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       asset.url?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -165,29 +187,29 @@ export const digitalAssetActions = {
 
   // Filter by Type
   getDigitalAssetsByType: async (userId: string, type: string) => {
-    const { data: assets } = await digitalAssetActions.getAllDigitalAssets(userId)
+    const assets = await digitalAssetActions.getAllDigitalAssets(userId)
     
-    return assets.filter(asset => asset.type === type)
+    return assets.filter((asset: DigitalAssetRow) => asset.type === type)
   },
 
   // Filter by Status
   getDigitalAssetsByStatus: async (userId: string, status: string) => {
-    const { data: assets } = await digitalAssetActions.getAllDigitalAssets(userId)
+    const assets = await digitalAssetActions.getAllDigitalAssets(userId)
     
-    return assets.filter(asset => asset.status === status)
+    return assets.filter((asset: DigitalAssetRow) => asset.status === status)
   },
 
   // Filter by Beneficiary
   getDigitalAssetsByBeneficiary: async (userId: string, beneficiaryId: string) => {
-    const { data: assets } = await digitalAssetActions.getAllDigitalAssets(userId)
+    const assets = await digitalAssetActions.getAllDigitalAssets(userId)
     
-    return assets.filter(asset => asset.beneficiary_id === beneficiaryId)
+    return assets.filter((asset: DigitalAssetRow) => asset.beneficiary_id === beneficiaryId)
   },
 
   // Get Assets Without Beneficiary
   getAssetsWithoutBeneficiary: async (userId: string) => {
-    const { data: assets } = await digitalAssetActions.getAllDigitalAssets(userId)
+    const assets = await digitalAssetActions.getAllDigitalAssets(userId)
     
-    return assets.filter(asset => !asset.beneficiary_id)
+    return assets.filter((asset: DigitalAssetRow) => !asset.beneficiary_id)
   }
 }

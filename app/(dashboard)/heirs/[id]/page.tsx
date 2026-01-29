@@ -1,12 +1,20 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { DashboardLayout } from "@/components/module/dashboard/dashboard-layout"
 import { HeirDetail } from "@/components/module/heirs/heir-detail"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, Edit, Trash2, Shield, Mail, Phone } from "lucide-react"
+import { ArrowLeft, Edit, Trash2 } from "lucide-react"
 import { supabase } from "@/lib/supabase"
+import { User } from "@supabase/supabase-js"
+
+interface UserProfile {
+  id: string
+  full_name?: string
+  email?: string
+  subscription_tier?: string
+}
 
 interface Heir {
   id: string
@@ -41,18 +49,56 @@ interface HeirActivity {
   type: 'login' | 'vault_access' | 'settings_change' | 'verification_completed'
   description: string
   timestamp: string
-  metadata?: Record<string, any>
+  metadata?: Record<string, unknown>
 }
 
 export default function HeirDetailPage() {
-  const [user, setUser] = useState<any>(null)
-  const [profile, setProfile] = useState<any>(null)
+  const [user, setUser] = useState<User | null>(null)
+  const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [heir, setHeir] = useState<Heir | null>(null)
   const [activities, setActivities] = useState<HeirActivity[]>([])
   const router = useRouter()
   const params = useParams()
   const heirId = params.id as string
+
+  const loadHeir = useCallback(async (id: string) => {
+    try {
+      const { data } = await supabase
+        .from('heirs')
+        .select('*')
+        .eq('id', id)
+        .single()
+
+      setHeir(data)
+    } catch (error) {
+      console.error('Error loading heir:', error)
+      router.push("/heirs")
+    }
+  }, [router])
+
+  const loadHeirActivities = useCallback(async () => {
+    try {
+      // Mock data for now - in real app, fetch from activities table
+      const mockActivities: HeirActivity[] = [
+        {
+          id: '1',
+          type: 'login',
+          description: 'Logged into account',
+          timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()
+        },
+        {
+          id: '2',
+          type: 'vault_access',
+          description: 'Accessed "Family Photos" vault',
+          timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+        }
+      ]
+      setActivities(mockActivities)
+    } catch (error) {
+      console.error('Error loading heir activities:', error)
+    }
+  }, [])
 
   useEffect(() => {
     if (!heirId) {
@@ -80,7 +126,7 @@ export default function HeirDetailPage() {
       // Load heir data
       await Promise.all([
         loadHeir(heirId),
-        loadHeirActivities(heirId)
+        loadHeirActivities()
       ])
       
       setLoading(false)
@@ -95,51 +141,13 @@ export default function HeirDetailPage() {
         setUser(session.user)
         if (heirId) {
           loadHeir(heirId)
-          loadHeirActivities(heirId)
+          loadHeirActivities()
         }
       }
     })
 
     return () => subscription.unsubscribe()
-  }, [router, heirId])
-
-  const loadHeir = async (id: string) => {
-    try {
-      const { data } = await supabase
-        .from('heirs')
-        .select('*')
-        .eq('id', id)
-        .single()
-
-      setHeir(data)
-    } catch (error) {
-      console.error('Error loading heir:', error)
-      router.push("/heirs")
-    }
-  }
-
-  const loadHeirActivities = async (heirId: string) => {
-    try {
-      // Mock data for now - in real app, fetch from activities table
-      const mockActivities: HeirActivity[] = [
-        {
-          id: '1',
-          type: 'login',
-          description: 'Logged into account',
-          timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()
-        },
-        {
-          id: '2',
-          type: 'vault_access',
-          description: 'Accessed "Family Photos" vault',
-          timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
-        }
-      ]
-      setActivities(mockActivities)
-    } catch (error) {
-      console.error('Error loading heir activities:', error)
-    }
-  }
+  }, [router, heirId, loadHeir, loadHeirActivities])
 
   const handleEdit = () => {
     router.push(`/heirs/${heirId}/edit`)
@@ -211,7 +219,7 @@ export default function HeirDetailPage() {
         <div className="text-center">
           <h2 className="text-2xl font-bold mb-4">Heir not found</h2>
           <p className="text-muted-foreground mb-4">
-            The heir you're looking for doesn't exist or you don't have permission to view it.
+            The heir you&apos;re looking for doesn&apos;t exist or you don&apos;t have permission to view it.
           </p>
           <Button onClick={() => router.push("/heirs")}>
             Back to Heirs

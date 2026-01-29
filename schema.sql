@@ -221,7 +221,7 @@ CREATE TABLE public.users (
   updated_at timestamp with time zone NOT NULL DEFAULT now(),
   last_login timestamp with time zone,
   email_verified boolean DEFAULT false,
-  subscription_tier text DEFAULT 'free'::text CHECK (subscription_tier = ANY (ARRAY['free'::text, 'premium'::text])),
+  subscription_tier text DEFAULT 'free'::text CHECK (subscription_tier = ANY (ARRAY['free'::text, 'premium'::text, 'pro'::text])),
   subscription_status text DEFAULT 'inactive'::text CHECK (subscription_status = ANY (ARRAY['active'::text, 'inactive'::text, 'cancelled'::text, 'past_due'::text])),
   subscription_expires_at timestamp with time zone,
   global_trigger_method text DEFAULT 'inactivity'::text CHECK (global_trigger_method = ANY (ARRAY['inactivity'::text, 'death_certificate'::text, 'manual_trigger'::text, 'scheduled'::text, 'trusted_contact'::text, 'heir_notification'::text])),

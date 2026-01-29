@@ -9,14 +9,32 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Check, Sparkles, Crown, ArrowLeft, Loader2 } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { getOfferings, purchasePackage } from "@/lib/revenuecat"
+import { User } from "@supabase/supabase-js"
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+import type { Package } from "@revenuecat/purchases-js"
+
+interface UserProfile {
+  id: string
+  full_name?: string
+  email?: string
+  subscription_tier?: string
+  subscription_status?: string
+  subscription_expires_at?: string
+}
+
+// Remove local Package interface if importing from library, or keep if library not available
+// interface Package {
+//   identifier: string
+//   [key: string]: unknown
+// }
 
 export default function UpgradePage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const selectedPlan = searchParams.get('plan') as 'premium' | 'pro' | null
 
-  const [user, setUser] = useState<any>(null)
-  const [profile, setProfile] = useState<any>(null)
+  const [user, setUser] = useState<User | null>(null)
+  const [profile, setProfile] = useState<UserProfile | null>(null)
   const [currentPlan, setCurrentPlan] = useState<'free' | 'premium' | 'pro'>('free')
   const [loading, setLoading] = useState(true)
   const [purchasing, setPurchasing] = useState<string | null>(null)
@@ -38,7 +56,7 @@ export default function UpgradePage() {
         .single()
       
       setProfile(profileData)
-      setCurrentPlan((profileData as any)?.subscription_tier || 'free')
+      setCurrentPlan((profileData?.subscription_tier as 'free' | 'premium' | 'pro') || 'free')
       setLoading(false)
     }
 
@@ -70,24 +88,27 @@ export default function UpgradePage() {
       }
 
       // Purchase the package
-      const customerInfo = await purchasePackage(packageToPurchase)
+      await purchasePackage(packageToPurchase)
       
       // Update Supabase with new subscription tier
-      await supabase
-        .from('users')
-        .update({ 
-          subscription_tier: plan,
-          subscription_status: 'active',
-          subscription_expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
-        } as any)
-        .eq('id', user.id)
+      if (user) {
+        await supabase
+          .from('users')
+          .update({ 
+            subscription_tier: plan,
+            subscription_status: 'active',
+            subscription_expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+          } as any)
+          .eq('id', user.id)
+      }
 
       // Success! Redirect to dashboard
       alert(`Successfully upgraded to ${plan.charAt(0).toUpperCase() + plan.slice(1)}!`)
       router.push('/dashboard')
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Purchase failed. Please try again.'
       console.error('Purchase error:', error)
-      alert(error.message || 'Purchase failed. Please try again.')
+      alert(errorMessage)
     } finally {
       setPurchasing(null)
     }

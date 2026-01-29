@@ -17,37 +17,27 @@ import {
   ExternalLink, 
   Clock, 
   CheckCircle, 
-  AlertCircle, 
-  FileText, 
   Video, 
   Users, 
   Shield, 
-  Settings, 
   Download, 
-  Upload,
   Star,
-  TrendingUp,
-  Calendar,
-  Filter,
   Grid3X3,
   List,
-  ChevronRight,
-  ArrowRight,
   Headphones,
-  Globe,
   Zap,
-  Heart,
-  Archive,
-  Key,
-  Lock,
-  Eye,
-  EyeOff,
   Plus
 } from "lucide-react"
 
+interface UserProfile {
+  full_name?: string
+  email?: string
+  subscription_tier?: string
+}
+
 interface SupportOverviewProps {
-  userId: string
-  profile: any
+  userId?: string
+  profile?: UserProfile
 }
 
 interface FAQ {
@@ -89,7 +79,7 @@ interface Ticket {
   assignedTo?: string
 }
 
-export function SupportOverview({ userId, profile }: SupportOverviewProps) {
+export function SupportOverview({}: SupportOverviewProps) {
   const [activeTab, setActiveTab] = useState('help')
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('all')

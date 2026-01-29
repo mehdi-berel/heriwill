@@ -1,4 +1,41 @@
 import { supabase } from '../../lib/supabase'
+import type { Database } from '../../lib/database.types'
+
+type UserRow = Database['public']['Tables']['users']['Row']
+type UserUpdate = Database['public']['Tables']['users']['Update']
+
+interface UserUpdateData {
+  [key: string]: unknown
+}
+
+interface SubscriptionData {
+  tier: string
+  status: string
+  expiresAt: string
+}
+
+interface TriggerData {
+  method: string
+  settings?: Record<string, unknown>
+  scheduledDate?: string
+  trustedContactHeirId?: string
+  trustedContactEmail?: string
+  trustedContactPhone?: string
+}
+
+interface EmergencyContactData {
+  email?: string
+  phone?: string
+}
+
+interface ActivityData {
+  user_id: string
+  type: string
+  description?: string
+  ipAddress?: string
+  userAgent?: string
+  metadata?: Record<string, unknown>
+}
 
 // User Management Actions
 export const userActions = {
@@ -15,7 +52,7 @@ export const userActions = {
   },
 
   // Update User Profile
-  updateUserProfile: async (userId: string, updateData: any) => {
+  updateUserProfile: async (userId: string, updateData: UserUpdateData) => {
     const { data, error } = await supabase
       .from('users')
       .update({
@@ -46,12 +83,12 @@ export const userActions = {
   },
 
   // Update Subscription
-  updateSubscription: async (userId: string, subscriptionData: any) => {
+  updateSubscription: async (userId: string, subscriptionData: SubscriptionData) => {
     const { data } = await supabase
       .from('users')
       .update({
-        subscription_tier: subscriptionData.tier,
-        subscription_status: subscriptionData.status,
+        subscription_tier: subscriptionData.tier as any,
+        subscription_status: subscriptionData.status as any,
         subscription_expires_at: subscriptionData.expiresAt,
         updated_at: new Date().toISOString()
       })
@@ -63,12 +100,12 @@ export const userActions = {
   },
 
   // Update Global Trigger Settings
-  updateGlobalTrigger: async (userId: string, triggerData: any) => {
+  updateGlobalTrigger: async (userId: string, triggerData: TriggerData) => {
     const { data } = await supabase
       .from('users')
       .update({
-        global_trigger_method: triggerData.method,
-        global_trigger_settings: triggerData.settings,
+        global_trigger_method: triggerData.method as any,
+        global_trigger_settings: triggerData.settings as any,
         global_scheduled_date: triggerData.scheduledDate,
         trusted_contact_email: triggerData.trustedContactEmail,
         trusted_contact_phone: triggerData.trustedContactPhone,
@@ -83,7 +120,7 @@ export const userActions = {
   },
 
   // Update Emergency Contact
-  updateEmergencyContact: async (userId: string, contactData: any) => {
+  updateEmergencyContact: async (userId: string, contactData: EmergencyContactData) => {
     const { data } = await supabase
       .from('users')
       .update({
@@ -179,16 +216,17 @@ export const userActions = {
       .select('count')
       .eq('user_id', userId)
 
+    const userData = user as any
     const stats = {
       totalVaults: vaults?.length || 0,
       totalHeirs: heirs?.length || 0,
       totalPlans: plans?.length || 0,
-      subscriptionTier: user?.subscription_tier || 'free',
-      subscriptionStatus: user?.subscription_status || 'inactive',
-      isAccountLocked: user?.account_locked || false,
-      isEmailVerified: user?.email_verified || false,
-      lastActivity: user?.last_activity,
-      lastLogin: user?.last_login
+      subscriptionTier: userData?.subscription_tier || 'free',
+      subscriptionStatus: userData?.subscription_status || 'inactive',
+      isAccountLocked: userData?.account_locked || false,
+      isEmailVerified: userData?.email_verified || false,
+      lastActivity: userData?.last_activity,
+      lastLogin: userData?.last_login
     }
 
     return stats
@@ -198,16 +236,19 @@ export const userActions = {
 // User Activity Actions
 export const userActivityActions = {
   // Log User Activity
-  logActivity: async (activityData: any) => {
+  logActivity: async (activityData: ActivityData) => {
     const { data, error } = await supabase
       .from('user_activity')
       .insert({
         user_id: activityData.user_id,
         activity_type: activityData.type,
-        description: activityData.description,
+        // description: activityData.description, // Not in schema based on MCP, check if needed or add to metadata
         ip_address: activityData.ipAddress,
         user_agent: activityData.userAgent,
-        metadata: activityData.metadata || {},
+        metadata: {
+          ...activityData.metadata,
+          description: activityData.description
+        },
         created_at: new Date().toISOString()
       })
       .select()

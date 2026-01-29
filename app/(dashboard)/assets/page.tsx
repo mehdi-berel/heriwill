@@ -1,17 +1,35 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { ProTierGuard } from "@/components/module/auth/pro-tier-guard"
 import { DashboardLayout } from "@/components/module/dashboard/dashboard-layout"
 import { AssetForm } from "@/components/module/assets/asset-form"
 import { AssetList } from "@/components/module/assets/asset-list"
-import { AssetDetail } from "@/components/module/assets/asset-detail"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { Search, Plus } from "lucide-react"
 import { supabase } from "@/lib/supabase"
+import { User } from "@supabase/supabase-js"
+
+interface UserProfile {
+  id: string
+  full_name?: string
+  email?: string
+  subscription_tier?: string
+}
+
+interface AssetFormData {
+  name: string
+  type: string
+  description?: string
+  value?: number
+  location?: string
+  ownership_type: string
+  vault_id?: string | null
+  heir_ids?: string[]
+}
 
 interface Asset {
   id: string
@@ -41,13 +59,12 @@ interface Heir {
 }
 
 export default function AssetsPage() {
-  const [user, setUser] = useState<any>(null)
-  const [profile, setProfile] = useState<any>(null)
+  const [user, setUser] = useState<User | null>(null)
+  const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [assets, setAssets] = useState<Asset[]>([])
   const [vaults, setVaults] = useState<Vault[]>([])
   const [heirs, setHeirs] = useState<Heir[]>([])
-  const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedType, setSelectedType] = useState<'all' | 'real_estate' | 'vehicle' | 'bank_account' | 'investment' | 'insurance' | 'personal_property' | 'business' | 'other'>('all')
   const [showForm, setShowForm] = useState(false)
@@ -55,6 +72,64 @@ export default function AssetsPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [assetToDelete, setAssetToDelete] = useState<string | null>(null)
   const router = useRouter()
+
+  const loadAssets = useCallback(async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('assets')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+
+      if (error) {
+        console.error('Error loading assets:', error)
+        return
+      }
+
+      setAssets(data || [])
+    } catch (error) {
+      console.error('Error loading assets:', error)
+    }
+  }, [])
+
+  const loadVaults = useCallback(async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('vaults')
+        .select('id, name, icon, category')
+        .eq('user_id', userId)
+        .order('name', { ascending: true })
+
+      if (error) {
+        console.error('Error loading vaults:', error)
+        return
+      }
+
+      setVaults(data || [])
+    } catch (error) {
+      console.error('Error loading vaults:', error)
+    }
+  }, [])
+
+  const loadHeirs = useCallback(async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('heirs')
+        .select('id, full_name_encrypted, relationship')
+        .eq('user_id', userId)
+        .eq('is_active', true)
+        .order('full_name_encrypted', { ascending: true })
+
+      if (error) {
+        console.error('Error loading heirs:', error)
+        return
+      }
+
+      setHeirs(data || [])
+    } catch (error) {
+      console.error('Error loading heirs:', error)
+    }
+  }, [])
 
   useEffect(() => {
     const getUser = async () => {
@@ -96,67 +171,9 @@ export default function AssetsPage() {
     })
 
     return () => subscription.unsubscribe()
-  }, [router])
+  }, [router, loadAssets, loadVaults, loadHeirs])
 
-  const loadAssets = async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('assets')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-
-      if (error) {
-        console.error('Error loading assets:', error)
-        return
-      }
-
-      setAssets(data || [])
-    } catch (error) {
-      console.error('Error loading assets:', error)
-    }
-  }
-
-  const loadVaults = async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('vaults')
-        .select('id, name, icon, category')
-        .eq('user_id', userId)
-        .order('name', { ascending: true })
-
-      if (error) {
-        console.error('Error loading vaults:', error)
-        return
-      }
-
-      setVaults(data || [])
-    } catch (error) {
-      console.error('Error loading vaults:', error)
-    }
-  }
-
-  const loadHeirs = async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('heirs')
-        .select('id, full_name_encrypted, relationship')
-        .eq('user_id', userId)
-        .eq('is_active', true)
-        .order('full_name_encrypted', { ascending: true })
-
-      if (error) {
-        console.error('Error loading heirs:', error)
-        return
-      }
-
-      setHeirs(data || [])
-    } catch (error) {
-      console.error('Error loading heirs:', error)
-    }
-  }
-
-  const handleAddAsset = async (assetData: any) => {
+  const handleAddAsset = async (assetData: AssetFormData) => {
     try {
       const { data, error } = await supabase
         .from('assets')
@@ -189,7 +206,7 @@ export default function AssetsPage() {
     }
   }
 
-  const handleUpdateAsset = async (assetData: any) => {
+  const handleUpdateAsset = async (assetData: AssetFormData) => {
     if (!editingAsset) return
 
     try {
@@ -256,56 +273,6 @@ export default function AssetsPage() {
     setShowDeleteModal(true)
   }
 
-
-  const getAssetStats = () => {
-    const totalAssets = assets.length
-    const totalValue = assets.reduce((sum, asset) => sum + (asset.value || 0), 0)
-    const realEstateCount = assets.filter(a => a.type === 'real_estate').length
-    const vehicleCount = assets.filter(a => a.type === 'vehicle').length
-    const bankAccountCount = assets.filter(a => a.type === 'bank_account').length
-    const investmentCount = assets.filter(a => a.type === 'investment').length
-    const insuranceCount = assets.filter(a => a.type === 'insurance').length
-    const personalPropertyCount = assets.filter(a => a.type === 'personal_property').length
-    const businessCount = assets.filter(a => a.type === 'business').length
-    const otherCount = assets.filter(a => a.type === 'other').length
-    const soleOwnershipCount = assets.filter(a => a.ownership_type === 'sole').length
-    const jointOwnershipCount = assets.filter(a => a.ownership_type === 'joint').length
-    const withHeirsCount = assets.filter(a => a.heir_ids && a.heir_ids.length > 0).length
-    const withLocationCount = assets.filter(a => a.location).length
-    const inVaultsCount = assets.filter(a => a.vault_id).length
-    const averageValue = totalAssets > 0 ? totalValue / totalAssets : 0
-
-    const highestValueAsset = assets.length > 0 
-      ? assets.reduce((max, asset) => (asset.value || 0) > (max.value || 0) ? asset : max)
-      : undefined
-
-    return {
-      totalAssets,
-      totalValue,
-      realEstateCount,
-      vehicleCount,
-      bankAccountCount,
-      investmentCount,
-      insuranceCount,
-      personalPropertyCount,
-      businessCount,
-      otherCount,
-      soleOwnershipCount,
-      jointOwnershipCount,
-      withHeirsCount,
-      withLocationCount,
-      inVaultsCount,
-      averageValue,
-      highestValueAsset: highestValueAsset && highestValueAsset.value 
-        ? {
-            name: highestValueAsset.name,
-            value: highestValueAsset.value,
-            type: highestValueAsset.type
-          }
-        : undefined
-    }
-  }
-
   const handleSignOut = async () => {
     await supabase.auth.signOut()
     router.push("/login")
@@ -325,8 +292,6 @@ export default function AssetsPage() {
     const matchesType = selectedType === 'all' || asset.type === selectedType
     return matchesSearch && matchesType
   })
-
-  const stats = getAssetStats()
 
   return (
     <ProTierGuard pageName="Assets">
@@ -366,7 +331,7 @@ export default function AssetsPage() {
           ].map((type) => (
             <button
               key={type.value}
-              onClick={() => setSelectedType(type.value as any)}
+              onClick={() => setSelectedType(type.value as 'all' | Asset['type'])}
               className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
                 selectedType === type.value
                   ? 'bg-primary-600/10 text-primary-400 border border-primary-600/20'

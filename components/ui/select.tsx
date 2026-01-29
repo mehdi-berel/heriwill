@@ -19,9 +19,6 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
       }
     }
 
-    // Remove onValueChange from props to prevent warning
-    const { onValueChange: _removed, ...selectProps } = props as Record<string, unknown>
-
     return (
       <select
         ref={ref}
@@ -30,7 +27,7 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
           className
         )}
         onChange={handleChange}
-        {...selectProps}
+        {...props}
       >
         {children}
       </select>
@@ -45,7 +42,7 @@ const SelectTrigger = ({ children }: { children?: React.ReactNode }) => {
 }
 
 // SelectValue is now a no-op for API compatibility
-const SelectValue = () => {
+const SelectValue = ({ placeholder }: { placeholder?: string }) => {
   return null
 }
 

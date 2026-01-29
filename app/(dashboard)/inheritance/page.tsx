@@ -5,10 +5,19 @@ import { useRouter } from "next/navigation"
 import { DashboardLayout } from "@/components/module/dashboard/dashboard-layout"
 import { InheritancePage } from "@/components/module/inheritance/inheritance-page"
 import { supabase } from "@/lib/supabase"
+import { User } from "@supabase/supabase-js"
+
+interface UserProfile {
+  id: string
+  full_name?: string
+  email?: string
+  avatar_url?: string
+  subscription_tier?: string
+}
 
 export default function InheritanceRoute() {
-  const [user, setUser] = useState<any>(null)
-  const [profile, setProfile] = useState<any>(null)
+  const [user, setUser] = useState<User | null>(null)
+  const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const router = useRouter()
 

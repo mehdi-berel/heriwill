@@ -17,9 +17,7 @@ import {
   Share2,
   Calendar,
   Clock,
-  CheckCircle,
   AlertCircle,
-  Key,
   Shield,
   Archive,
   Globe,
@@ -29,7 +27,6 @@ import {
   Search,
   List,
   Grid3X3,
-  Filter,
   SortAsc,
   SortDesc,
   Users
@@ -181,7 +178,10 @@ export function VaultDetails({
   ]
 
   const now = useMemo(() => new Date(), [])
-  const sevenDaysFromNow = useMemo(() => new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), [])
+  const sevenDaysFromNow = useMemo(() => {
+    const nowDate = new Date()
+    return new Date(nowDate.getTime() + 7 * 24 * 60 * 60 * 1000)
+  }, [])
   
   const isExpired = vault.expiresAt && new Date(vault.expiresAt) < now
   const isExpiringSoon = vault.expiresAt && new Date(vault.expiresAt) < sevenDaysFromNow

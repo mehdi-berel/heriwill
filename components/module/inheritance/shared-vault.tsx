@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { 
-  FolderOpen, 
   Lock, 
   Unlock, 
   Eye, 
@@ -15,7 +14,6 @@ import {
   Share2, 
   AlertCircle, 
   Calendar, 
-  User, 
   Shield, 
   Search, 
   MoreVertical,
@@ -120,7 +118,10 @@ export function SharedVault({
   }
 
   const now = useMemo(() => new Date(), [])
-  const sevenDaysFromNow = useMemo(() => new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), [])
+  const sevenDaysFromNow = useMemo(() => {
+    const nowDate = new Date()
+    return new Date(nowDate.getTime() + 7 * 24 * 60 * 60 * 1000)
+  }, [])
   
   const isExpired = vault.expiresAt && new Date(vault.expiresAt) < now
   const isExpiringSoon = vault.expiresAt && new Date(vault.expiresAt) < sevenDaysFromNow

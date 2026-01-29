@@ -51,8 +51,9 @@ export default function SignupPage() {
       } else if (data.user) {
         router.push("/")
       }
-    } catch (error: any) {
-      setError(error.message)
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Signup failed. Please try again."
+      setError(errorMessage)
     } finally {
       setLoading(false)
     }

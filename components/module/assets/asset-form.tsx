@@ -20,20 +20,6 @@ import {
   DollarSign
 } from "lucide-react"
 
-interface Asset {
-  id: string
-  name: string
-  type: 'real_estate' | 'vehicle' | 'bank_account' | 'investment' | 'insurance' | 'personal_property' | 'business' | 'other'
-  description?: string
-  value?: number
-  location?: string
-  ownership_type: 'sole' | 'joint' | 'tenants_in_common' | 'community_property'
-  vault_id?: string | null
-  heir_ids?: string[]
-  created_at: string
-  updated_at: string
-}
-
 interface Vault {
   id: string
   name: string
@@ -68,7 +54,7 @@ interface AssetFormProps {
   isEditing?: boolean
 }
 
-export function AssetForm({ initialData, vaults, heirs, onSubmit, onCancel, isEditing = false }: AssetFormProps) {
+export function AssetForm({ initialData, onSubmit, onCancel, isEditing = false }: AssetFormProps) {
   const [formData, setFormData] = useState({
     name: initialData?.name || '',
     type: initialData?.type || 'other',
@@ -107,11 +93,6 @@ export function AssetForm({ initialData, vaults, heirs, onSubmit, onCancel, isEd
     { value: 'community_property', label: 'Community Property' }
   ]
 
-  const selectedAssetType = assetTypes.find(t => t.value === formData.type)
-  const getAssetIcon = (type: string) => {
-    const assetType = assetTypes.find(t => t.value === type)
-    return assetType?.icon || FileText
-  }
 
   return (
     <div className="w-full">
@@ -197,7 +178,7 @@ export function AssetForm({ initialData, vaults, heirs, onSubmit, onCancel, isEd
               <Label htmlFor="ownership_type">Ownership Type</Label>
               <Select
                 value={formData.ownership_type}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, ownership_type: value as any }))}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, ownership_type: value }))}
               >
                 <SelectTrigger>
                   <SelectValue />

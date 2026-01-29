@@ -17,8 +17,6 @@ import {
   Calendar, 
   Users, 
   Shield, 
-  AlertCircle, 
-  CheckCircle, 
   Share2, 
   Copy, 
   ExternalLink, 
@@ -51,7 +49,7 @@ interface VaultItem {
   sharedWith: string[]
   permissions: string[]
   checksum?: string
-  metadata?: Record<string, any>
+  metadata?: Record<string, unknown>
 }
 
 interface ItemDetailsProps {

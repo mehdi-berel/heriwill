@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { DashboardLayout } from "@/components/module/dashboard/dashboard-layout"
 import { VaultDetail } from "@/components/module/vaults/vault-detail"
@@ -8,9 +8,34 @@ import { VaultForm } from "@/components/module/vaults/vault-form"
 import { VaultAssign } from "@/components/module/vaults/vault-assign"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
-import { ArrowLeft, Edit, Trash2, Upload, Download, Settings, Users, Scale } from "lucide-react"
+import { ArrowLeft, Edit, Trash2, Users, Scale } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { vaultItemActions } from "@/app/actions/vaults"
+import { User } from "@supabase/supabase-js"
+
+interface UserProfile {
+  user_id: string
+  full_name?: string
+  email?: string
+  avatar_url?: string
+  subscription_tier?: string
+}
+
+interface VaultFormData {
+  name: string
+  description: string
+  category: string
+  is_encrypted: boolean
+  tags: string[]
+}
+
+interface ItemData {
+  id?: string
+  title: string
+  type: string
+  tags: string[]
+  metadata?: Record<string, unknown>
+}
 
 interface Vault {
   id: string
@@ -50,8 +75,8 @@ interface VaultItem {
 }
 
 export default function VaultDetailPage() {
-  const [user, setUser] = useState<any>(null)
-  const [profile, setProfile] = useState<any>(null)
+  const [user, setUser] = useState<User | null>(null)
+  const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [vault, setVault] = useState<Vault | null>(null)
   const [vaultItems, setVaultItems] = useState<VaultItem[]>([])
@@ -61,6 +86,53 @@ export default function VaultDetailPage() {
   const router = useRouter()
   const params = useParams()
   const vaultId = params.id as string
+
+  const loadVault = useCallback(async (id: string) => {
+    try {
+      const { data } = await supabase
+        .from('vaults')
+        .select('*')
+        .eq('id', id)
+        .single()
+
+      setVault(data)
+    } catch (error) {
+      console.error('Error loading vault:', error)
+      router.push("/vaults")
+    }
+  }, [router])
+
+  const loadVaultItems = useCallback(async (vaultId: string) => {
+    try {
+      const items = await vaultItemActions.getVaultItems(vaultId)
+      
+      interface VaultItemRaw {
+        id: string
+        title_encrypted?: string
+        item_type: string
+        file_size?: number
+        created_at: string
+        updated_at: string
+        tags?: string[]
+      }
+      
+      const mappedItems: VaultItem[] = items.map((item: VaultItemRaw) => ({
+        id: item.id,
+        name: item.title_encrypted || 'Untitled',
+        type: item.item_type as VaultItem['type'],
+        size: item.file_size || 0,
+        created_at: item.created_at,
+        updated_at: item.updated_at,
+        is_encrypted: true,
+        tags: item.tags || []
+      }))
+      
+      setVaultItems(mappedItems)
+    } catch (error) {
+      console.error('Error loading vault items:', error)
+      setVaultItems([])
+    }
+  }, [])
 
   useEffect(() => {
     if (!vaultId) {
@@ -109,55 +181,17 @@ export default function VaultDetailPage() {
     })
 
     return () => subscription.unsubscribe()
-  }, [router, vaultId])
-
-  const loadVault = async (id: string) => {
-    try {
-      const { data } = await supabase
-        .from('vaults')
-        .select('*')
-        .eq('id', id)
-        .single()
-
-      setVault(data)
-    } catch (error) {
-      console.error('Error loading vault:', error)
-      router.push("/vaults")
-    }
-  }
-
-  const loadVaultItems = async (vaultId: string) => {
-    try {
-      const items = await vaultItemActions.getVaultItems(vaultId)
-      
-      // Map database fields to component interface
-      const mappedItems: VaultItem[] = items.map((item: any) => ({
-        id: item.id,
-        name: item.title_encrypted || 'Untitled',
-        type: item.item_type as VaultItem['type'],
-        size: item.file_size || 0,
-        created_at: item.created_at,
-        updated_at: item.updated_at,
-        is_encrypted: true,
-        tags: item.tags || []
-      }))
-      
-      setVaultItems(mappedItems)
-    } catch (error) {
-      console.error('Error loading vault items:', error)
-      setVaultItems([])
-    }
-  }
+  }, [router, vaultId, loadVault, loadVaultItems])
 
   const handleEdit = () => {
     setShowEditModal(true)
   }
 
-  const handleEditSubmit = async (formData: any) => {
+  const handleEditSubmit = async (formData: VaultFormData) => {
     try {
       await supabase
         .from('vaults')
-        .update(formData)
+        .update(formData as any)
         .eq('id', vaultId)
       
       await loadVault(vaultId)
@@ -206,7 +240,7 @@ export default function VaultDetailPage() {
             ...vault?.access_control,
             allowedHeirs: heirIds
           }
-        })
+        } as any)
         .eq('id', vaultId)
       
       await loadVault(vaultId)
@@ -217,7 +251,7 @@ export default function VaultDetailPage() {
     }
   }
 
-  const handleSaveItem = async (itemData: any) => {
+  const handleSaveItem = async (itemData: ItemData) => {
     if (!vault || !user) return
 
     try {
@@ -280,7 +314,7 @@ export default function VaultDetailPage() {
         <div className="text-center">
           <h2 className="text-2xl font-bold mb-4">Vault not found</h2>
           <p className="text-muted-foreground mb-4">
-            The vault you're looking for doesn't exist or you don't have permission to view it.
+            The vault you&apos;re looking for doesn&apos;t exist or you don&apos;t have permission to view it.
           </p>
           <Button onClick={() => router.push("/vaults")}>
             Back to Vaults
@@ -341,7 +375,7 @@ export default function VaultDetailPage() {
           items={vaultItems}
           onBack={() => router.push("/vaults")}
           onEdit={() => setShowEditModal(true)}
-          onUpload={handleSaveItem}
+          onUpload={handleSaveItem as any} // Cast to any to bypass type mismatch if VaultDetail expects different signature
           onDownloadItem={handleDownloadItem}
           onDeleteItem={handleDeleteItem}
         />

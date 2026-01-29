@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { 
   Search, 
-  FolderOpen, 
   Users, 
   Calendar, 
   Clock, 
@@ -16,7 +15,6 @@ import {
   Eye, 
   Edit, 
   Trash2, 
-  MoreVertical,
   Shield,
   DollarSign,
   Plus

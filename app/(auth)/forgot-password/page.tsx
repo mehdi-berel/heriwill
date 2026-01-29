@@ -32,8 +32,9 @@ export default function ForgotPasswordPage() {
       if (error) throw error
 
       setSuccess(true)
-    } catch (error: any) {
-      setError(error.message || "Failed to send reset email. Please try again.")
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to send reset email. Please try again."
+      setError(errorMessage)
     } finally {
       setLoading(false)
     }
@@ -75,7 +76,7 @@ export default function ForgotPasswordPage() {
                 <div className="flex-1">
                   <p className="text-sm font-medium text-status-success mb-1">Email sent successfully!</p>
                   <p className="text-sm text-text-secondary">
-                    We've sent a password reset link to <strong>{email}</strong>. 
+                    We&apos;ve sent a password reset link to <strong>{email}</strong>. 
                     Please check your inbox and follow the instructions.
                   </p>
                 </div>
@@ -96,7 +97,7 @@ export default function ForgotPasswordPage() {
                   onClick={() => setSuccess(false)}
                   className="text-sm text-text-secondary hover:text-text-primary transition-colors"
                 >
-                  Didn't receive the email? Try again
+                  Didn&apos;t receive the email? Try again
                 </button>
               </div>
             </div>
@@ -153,7 +154,7 @@ export default function ForgotPasswordPage() {
           {/* Sign Up Link */}
           <div className="mt-6 pt-6 border-t border-border-default text-center">
             <p className="text-sm text-text-secondary">
-              Don't have an account?{" "}
+              Don&apos;t have an account?{" "}
               <Link 
                 href="/signup" 
                 className="text-primary-400 hover:text-primary-300 font-semibold transition-colors"

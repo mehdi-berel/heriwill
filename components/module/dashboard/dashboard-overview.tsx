@@ -267,33 +267,6 @@ export function DashboardOverview({ stats, userName }: DashboardOverviewProps) {
 
   const appSetupCompleted = appSetupTasks.filter(t => t.isCompleted).length
 
-  const recentActivity = [
-    {
-      icon: CheckCircle,
-      iconColor: "text-green-600",
-      title: "Dashboard overview completed",
-      description: "Your dashboard is set up and ready",
-      time: "Just now",
-      badge: "Completed"
-    },
-    {
-      icon: FileText,
-      iconColor: "text-blue-600", 
-      title: "Inheritance plan started",
-      description: "Begin your inheritance preparation journey",
-      time: "2 days ago",
-      badge: "In Progress"
-    },
-    {
-      icon: Users,
-      iconColor: "text-purple-600",
-      title: "Beneficiaries added",
-      description: "Designated heirs for your assets",
-      time: "5 days ago", 
-      badge: "Updated"
-    }
-  ]
-
   return (
     <div className="p-6 space-y-6">
       {/* Header */}

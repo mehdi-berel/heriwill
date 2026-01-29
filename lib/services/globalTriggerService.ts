@@ -1,4 +1,7 @@
 import { supabase } from '@/lib/supabase';
+import type { Database } from '@/lib/database.types';
+
+type UserUpdate = Database['public']['Tables']['users']['Update'];
 
 export type GlobalTriggerMethod = 
   | 'inactivity' 
@@ -32,13 +35,13 @@ export async function saveGlobalTrigger(
   settings: Partial<GlobalTriggerSettings>
 ): Promise<void> {
   try {
-    const updateData: Record<string, unknown> = {};
+    const updateData: UserUpdate = {};
     
     if (settings.global_trigger_method) {
-      updateData.global_trigger_method = settings.global_trigger_method;
+      updateData.global_trigger_method = settings.global_trigger_method as any;
     }
     if (settings.global_trigger_settings) {
-      updateData.global_trigger_settings = settings.global_trigger_settings;
+      updateData.global_trigger_settings = settings.global_trigger_settings as any;
     }
     if (settings.global_scheduled_date !== undefined) {
       updateData.global_scheduled_date = settings.global_scheduled_date;
@@ -271,7 +274,7 @@ export async function confirmTrustedContactDeath(
       throw new Error('Heir not found');
     }
 
-    const userId = heirData.user_id;
+    const userId = (heirData as { user_id: string }).user_id;
 
     // Verify this heir is the trusted contact
     const globalTrigger = await getGlobalTrigger(userId);

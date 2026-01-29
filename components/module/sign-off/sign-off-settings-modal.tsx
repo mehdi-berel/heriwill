@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -29,7 +29,13 @@ export function SignOffSettingsModal({
   onSave 
 }: SignOffSettingsModalProps) {
   const [loading, setLoading] = useState(false)
-  const [heirs, setHeirs] = useState<any[]>([])
+  interface Heir {
+    id: string
+    full_name_encrypted?: string
+    email_encrypted?: string
+  }
+  
+  const [heirs, setHeirs] = useState<Heir[]>([])
   
   const [inactivityDays, setInactivityDays] = useState('90')
   const [reminderEnabled, setReminderEnabled] = useState(false)
@@ -42,16 +48,7 @@ export function SignOffSettingsModal({
   const [heirNotificationFrequency, setHeirNotificationFrequency] = useState('30')
   const [heirVerificationThreshold, setHeirVerificationThreshold] = useState('75')
 
-  useEffect(() => {
-    if (isOpen && method) {
-      loadSettings()
-      if (method === 'trusted_contact') {
-        loadHeirs()
-      }
-    }
-  }, [isOpen, method, userId])
-
-  const loadSettings = async () => {
+  const loadSettings = useCallback(async () => {
     try {
       const globalTrigger = await getGlobalTrigger(userId)
 
@@ -83,9 +80,9 @@ export function SignOffSettingsModal({
     } catch (error) {
       console.error('Error loading settings:', error)
     }
-  }
+  }, [userId])
 
-  const loadHeirs = async () => {
+  const loadHeirs = useCallback(async () => {
     try {
       const { data } = await supabase
         .from('heirs')
@@ -97,18 +94,32 @@ export function SignOffSettingsModal({
     } catch (error) {
       console.error('Error loading heirs:', error)
     }
-  }
+  }, [userId])
+
+  useEffect(() => {
+    if (isOpen && method) {
+      loadSettings()
+      if (method === 'trusted_contact') {
+        loadHeirs()
+      }
+    }
+  }, [isOpen, method, loadSettings, loadHeirs])
 
   const handleSave = async () => {
     try {
       setLoading(true)
 
-      let methodToSave: any = method
+      let methodToSave = method || ''
       if (method === 'scheduled_date') {
         methodToSave = 'scheduled'
       }
 
-      const settingsToSave: any = {
+      const settingsToSave: {
+        global_trigger_method: string
+        global_trigger_settings?: Record<string, unknown>
+        trusted_contact_heir_id?: string
+        global_scheduled_date?: string
+      } = {
         global_trigger_method: methodToSave,
         global_trigger_settings: {},
       }
@@ -130,7 +141,7 @@ export function SignOffSettingsModal({
         }
       }
 
-      await saveGlobalTrigger(userId, settingsToSave)
+      await saveGlobalTrigger(userId, settingsToSave as Parameters<typeof saveGlobalTrigger>[1])
 
       onSave()
       onClose()
@@ -273,7 +284,7 @@ export function SignOffSettingsModal({
           {method === 'manual_trigger' && (
             <div className="space-y-4">
               <p className="text-sm text-text-secondary">
-                With manual trigger, you will need to explicitly activate your inheritance plan when you're ready. 
+                With manual trigger, you will need to explicitly activate your inheritance plan when you&apos;re ready. 
                 This gives you complete control over when the process begins.
               </p>
               <div className="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">

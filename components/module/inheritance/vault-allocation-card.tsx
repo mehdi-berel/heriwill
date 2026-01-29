@@ -4,7 +4,7 @@ import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { FolderOpen, Users, Plus, Trash2, Edit, Shield } from "lucide-react"
+import { Plus, Shield } from "lucide-react"
 import { HeirAllocationRow } from "./heir-allocation-row"
 
 interface Vault {
@@ -47,7 +47,6 @@ export function VaultAllocationCard({
   vault,
   heirs,
   allocations,
-  onAddHeir,
   onUpdateAllocation,
   onRemoveAllocation
 }: VaultAllocationCardProps) {

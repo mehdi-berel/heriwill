@@ -1,13 +1,12 @@
 "use client"
 
-import { useState, useCallback, useRef } from "react"
+import { useState, useRef } from "react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Badge } from "@/components/ui/badge"
 import { 
   Save, 
   X, 
@@ -111,7 +110,7 @@ const getDefaultMetadata = (type: VaultItemType): VaultItemMetadata => {
   }
 }
 
-export function ItemForm({ isOpen, onClose, onSave, initialData, vaultId, vaultCategory }: ItemFormProps) {
+export function ItemForm({ isOpen, onClose, onSave, initialData, vaultCategory }: ItemFormProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
@@ -119,9 +118,6 @@ export function ItemForm({ isOpen, onClose, onSave, initialData, vaultId, vaultC
   const [isUploading, setIsUploading] = useState(false)
   const [uploadError, setUploadError] = useState('')
   
-  const [legalDocuments, setLegalDocuments] = useState<any[]>([])
-  const [assets, setAssets] = useState<any[]>([])
-  const [loadingData, setLoadingData] = useState(false)
   
   const [formData, setFormData] = useState<VaultItem>(() => ({
     title: initialData?.title || '',

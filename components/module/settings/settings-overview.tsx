@@ -24,7 +24,7 @@ interface SettingsOverviewProps {
   profile: any
 }
 
-export function SettingsOverview({ userId, profile }: SettingsOverviewProps) {
+export function SettingsOverview({ profile }: SettingsOverviewProps) {
   const [activeTab, setActiveTab] = useState('profile')
   const [showPassword, setShowPassword] = useState(false)
   const [showCurrentPassword, setShowCurrentPassword] = useState(false)

@@ -10,9 +10,7 @@ import {
   User, 
   Heart, 
   Eye, 
-  EyeOff, 
-  Save, 
-  X 
+  Save
 } from "lucide-react"
 
 interface HeirFormData {
@@ -54,15 +52,6 @@ export function HeirForm({ onSubmit, onCancel, initialData, isEditing = false }:
       case 'partial': return 'bg-blue-100 text-blue-800'
       case 'view': return 'bg-gray-100 text-gray-800'
       default: return 'bg-gray-100 text-gray-800'
-    }
-  }
-
-  const getAccessLevelDescription = (level: string) => {
-    switch (level) {
-      case 'full': return 'Complete access to all vaults and settings'
-      case 'partial': return 'Limited access to selected vaults'
-      case 'view': return 'Read-only access to designated content'
-      default: return 'Limited access'
     }
   }
 
@@ -147,7 +136,7 @@ export function HeirForm({ onSubmit, onCancel, initialData, isEditing = false }:
                   key={type.value}
                   type="button"
                   variant={formData.heir_type === type.value ? 'default' : 'outline'}
-                  onClick={() => setFormData({ ...formData, heir_type: type.value as any })}
+                  onClick={() => setFormData({ ...formData, heir_type: type.value as HeirFormData['heir_type'] })}
                   className="rounded-lg"
                 >
                   {type.label}

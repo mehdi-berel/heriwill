@@ -1,14 +1,30 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { ProTierGuard } from "@/components/module/auth/pro-tier-guard"
 import { DashboardLayout } from "@/components/module/dashboard/dashboard-layout"
 import { LegalDocumentForm } from "@/components/module/legal/legal-document-form"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Search, FileText, Shield, Gavel, User, Scale, FileCheck, Edit, Trash2, Lock, Upload, Download, CheckCircle } from "lucide-react"
+import { Search, FileText, Shield, Gavel, User as UserIcon, Scale, FileCheck, Edit, Trash2, Lock, Upload, Download, CheckCircle } from "lucide-react"
 import { supabase } from "@/lib/supabase"
+import { User } from "@supabase/supabase-js"
+
+interface UserProfile {
+  id: string
+  full_name?: string
+  subscription_tier?: string
+}
+
+interface DocumentFormData {
+  title: string
+  document_type: 'will' | 'trust' | 'power_of_attorney' | 'healthcare_directive' | 'life_insurance' | 'deed' | 'other'
+  description: string
+  is_required: boolean
+  instructions?: string
+  tags: string[]
+}
 
 interface LegalDocument {
   id: string
@@ -37,36 +53,9 @@ interface LegalDocument {
   tags: string[]
 }
 
-interface NotaryRequirement {
-  id: string
-  title: string
-  description: string
-  document_types: string[]
-  is_required: boolean
-  status: 'pending' | 'completed' | 'verified' | 'expired'
-  due_date?: string
-  completed_date?: string
-  verification_method: 'in_person' | 'online' | 'mobile'
-  notary_details?: {
-    name: string
-    commission_number: string
-    location: string
-    contact: string
-    seal: string
-  }
-  instructions: string
-  resources: {
-    title: string
-    url: string
-    description: string
-  }[]
-  created_at: string
-  updated_at: string
-}
-
 export default function LegalPage() {
-  const [user, setUser] = useState<any>(null)
-  const [profile, setProfile] = useState<any>(null)
+  const [user, setUser] = useState<User | null>(null)
+  const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [documents, setDocuments] = useState<LegalDocument[]>([])
   const [searchTerm, setSearchTerm] = useState('')
@@ -75,7 +64,49 @@ export default function LegalPage() {
   const [editingDocument, setEditingDocument] = useState<LegalDocument | null>(null)
   const router = useRouter()
 
-  const handleSaveDocument = async (formData: any, file?: File) => {
+  const loadDocuments = useCallback(async () => {
+    try {
+      // Mock data for now - in real app, fetch from database
+      const mockDocuments: LegalDocument[] = [
+        {
+          id: '1',
+          title: 'Last Will and Testament',
+          document_type: 'will',
+          description: 'Primary will document outlining asset distribution',
+          is_required: true,
+          is_uploaded: false,
+          notarized: false,
+          status: 'pending',
+          priority: 'critical',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          tags: ['estate', 'assets', 'beneficiaries']
+        },
+        {
+          id: '2',
+          title: 'Durable Power of Attorney',
+          document_type: 'power_of_attorney',
+          description: 'Legal authority for financial decisions',
+          is_required: true,
+          is_uploaded: true,
+          file_url: '/documents/poa.pdf',
+          file_size: 245000,
+          notarized: true,
+          notarized_date: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+          status: 'approved',
+          priority: 'high',
+          created_at: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
+          updated_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+          tags: ['financial', 'authority', 'legal']
+        }
+      ]
+      setDocuments(mockDocuments)
+    } catch (error) {
+      console.error('Error loading documents:', error)
+    }
+  }, [])
+
+  const handleSaveDocument = async (formData: DocumentFormData, file?: File) => {
     try {
       // In a real app, this would save to Supabase
       const newDocument: LegalDocument = {
@@ -124,7 +155,7 @@ export default function LegalPage() {
       setProfile(profileData)
       
       // Load legal data
-      await loadDocuments(user.id)
+      await loadDocuments()
       
       setLoading(false)
     }
@@ -136,56 +167,12 @@ export default function LegalPage() {
         router.push("/login")
       } else {
         setUser(session.user)
-        loadDocuments(session.user.id)
+        loadDocuments()
       }
     })
 
     return () => subscription.unsubscribe()
-  }, [router])
-
-  const loadDocuments = async (userId: string) => {
-    try {
-      // Mock data for now - in real app, fetch from database
-      const mockDocuments: LegalDocument[] = [
-        {
-          id: '1',
-          title: 'Last Will and Testament',
-          document_type: 'will',
-          description: 'Primary will document outlining asset distribution',
-          is_required: true,
-          is_uploaded: false,
-          notarized: false,
-          status: 'pending',
-          priority: 'critical',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          tags: ['estate', 'assets', 'beneficiaries']
-        },
-        {
-          id: '2',
-          title: 'Durable Power of Attorney',
-          document_type: 'power_of_attorney',
-          description: 'Legal authority for financial decisions',
-          is_required: true,
-          is_uploaded: true,
-          file_url: '/documents/poa.pdf',
-          file_size: 1024 * 500, // 500KB
-          upload_date: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-          notarized: true,
-          notarized_date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-          status: 'approved',
-          priority: 'high',
-          created_at: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
-          updated_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-          tags: ['financial', 'authority', 'legal']
-        }
-      ]
-      setDocuments(mockDocuments)
-    } catch (error) {
-      console.error('Error loading documents:', error)
-    }
-  }
-
+  }, [router, loadDocuments])
 
   const handleDocumentUpload = async (documentId: string, file: File) => {
     try {
@@ -219,28 +206,19 @@ export default function LegalPage() {
     }
   }
 
-  const handleDocumentNotarize = async (documentId: string) => {
-    try {
-      // In a real app, mark for notarization
-      console.log('Marking document for notarization:', documentId)
-    } catch (error) {
-      console.error('Error marking for notarization:', error)
-    }
-  }
-
   const getDocumentIcon = (type: string) => {
     switch (type) {
       case 'will': return <FileText className="h-6 w-6 text-white" />
       case 'trust': return <Shield className="h-6 w-6 text-white" />
       case 'power_of_attorney': return <Gavel className="h-6 w-6 text-white" />
-      case 'healthcare_directive': return <User className="h-6 w-6 text-white" />
+      case 'healthcare_directive': return <UserIcon className="h-6 w-6 text-white" />
       case 'life_insurance': return <Scale className="h-6 w-6 text-white" />
       case 'deed': return <FileCheck className="h-6 w-6 text-white" />
       default: return <FileText className="h-6 w-6 text-white" />
     }
   }
 
-  const getDocumentColor = (type: string) => {
+  const getDocumentColor = () => {
     return 'rgb(124, 58, 237)' // purple for all
   }
 

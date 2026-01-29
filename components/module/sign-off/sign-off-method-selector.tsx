@@ -8,7 +8,7 @@ interface SignOffMethod {
   id: string
   title: string
   description: string
-  icon: any
+  icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>
   color: string
   badge?: string
   recommended?: boolean

@@ -5,10 +5,19 @@ import { useRouter } from "next/navigation"
 import { DashboardLayout } from "@/components/module/dashboard/dashboard-layout"
 import { SupportOverview } from "@/components/module/support/support-overview"
 import { supabase } from "@/lib/supabase"
+import { User } from "@supabase/supabase-js"
+
+interface UserProfile {
+  user_id: string
+  full_name?: string
+  email?: string
+  avatar_url?: string
+  subscription_tier?: string
+}
 
 export default function SupportPage() {
-  const [user, setUser] = useState<any>(null)
-  const [profile, setProfile] = useState<any>(null)
+  const [user, setUser] = useState<User | null>(null)
+  const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const router = useRouter()
 
@@ -63,7 +72,7 @@ export default function SupportPage() {
       userName={profile?.full_name || user?.email} 
       onSignOut={handleSignOut}
     >
-      <SupportOverview userId={user.id} profile={profile} />
+      <SupportOverview userId={user?.id || ''} profile={profile || undefined} />
     </DashboardLayout>
   )
 }

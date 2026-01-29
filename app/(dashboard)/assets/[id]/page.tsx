@@ -1,15 +1,29 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { DashboardLayout } from "@/components/module/dashboard/dashboard-layout"
 import { AssetDetail } from "@/components/module/assets/asset-detail"
 import { AssetForm } from "@/components/module/assets/asset-form"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
-import { ArrowLeft, Edit, Trash2 } from "lucide-react"
+import { ArrowLeft } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { physicalAssetActions } from "@/app/actions/physical-assets"
+import { User } from "@supabase/supabase-js"
+
+interface AssetFormData {
+  name: string
+  type: 'real_estate' | 'vehicle' | 'bank_account' | 'investment' | 'insurance' | 'personal_property' | 'business' | 'other'
+  description?: string
+  value?: number
+  location?: string
+  ownership_type: 'sole' | 'joint' | 'tenants_in_common' | 'community_property'
+  vault_id?: string
+  heir_ids?: string[]
+  documents?: string[]
+  notes?: string
+}
 
 interface Asset {
   id: string
@@ -43,7 +57,7 @@ export default function AssetDetailPage() {
   const params = useParams()
   const assetId = params.id as string
 
-  const [user, setUser] = useState<any>(null)
+  useState<User | null>(null)
   const [asset, setAsset] = useState<Asset | null>(null)
   const [vaults, setVaults] = useState<Vault[]>([])
   const [heirs, setHeirs] = useState<Heir[]>([])
@@ -51,33 +65,7 @@ export default function AssetDetailPage() {
   const [showEditModal, setShowEditModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
 
-  useEffect(() => {
-    const getUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      
-      if (!session) {
-        router.push("/login")
-        return
-      }
-
-      setUser(session.user)
-      await loadAsset(assetId)
-      await loadVaults(session.user.id)
-      await loadHeirs(session.user.id)
-    }
-
-    getUser()
-
-    const { data: subscription } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!session) {
-        router.push("/login")
-      }
-    })
-
-    return () => subscription.subscription.unsubscribe()
-  }, [router, assetId])
-
-  const loadAsset = async (id: string) => {
+  const loadAsset = useCallback(async (id: string) => {
     try {
       const data = await physicalAssetActions.getAssetById(id)
       setAsset(data)
@@ -87,9 +75,9 @@ export default function AssetDetailPage() {
       setLoading(false)
       router.push("/assets")
     }
-  }
+  }, [router])
 
-  const loadVaults = async (userId: string) => {
+  const loadVaults = useCallback(async (userId: string) => {
     try {
       const { data, error } = await supabase
         .from('vaults')
@@ -106,9 +94,9 @@ export default function AssetDetailPage() {
     } catch (error) {
       console.error('Error loading vaults:', error)
     }
-  }
+  }, [])
 
-  const loadHeirs = async (userId: string) => {
+  const loadHeirs = useCallback(async (userId: string) => {
     try {
       const { data, error } = await supabase
         .from('heirs')
@@ -126,7 +114,32 @@ export default function AssetDetailPage() {
     } catch (error) {
       console.error('Error loading heirs:', error)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    const getUser = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      
+      if (!session) {
+        router.push("/login")
+        return
+      }
+
+      await loadAsset(assetId)
+      await loadVaults(session.user.id)
+      await loadHeirs(session.user.id)
+    }
+
+    getUser()
+
+    const { data: subscription } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!session) {
+        router.push("/login")
+      }
+    })
+
+    return () => subscription.subscription.unsubscribe()
+  }, [router, assetId, loadAsset, loadVaults, loadHeirs])
 
   const handleEdit = () => {
     setShowEditModal(true)
@@ -136,7 +149,7 @@ export default function AssetDetailPage() {
     setShowDeleteModal(true)
   }
 
-  const handleEditSubmit = async (assetData: any) => {
+  const handleEditSubmit = async (assetData: AssetFormData) => {
     if (!asset) return
 
     try {

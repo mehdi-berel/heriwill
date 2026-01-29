@@ -1,12 +1,12 @@
 "use client"
 
 import { useState } from "react"
+import Image from "next/image"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { 
-  ArrowLeft,
   Edit,
   Trash2,
   Eye,
@@ -217,10 +217,12 @@ export function ItemDetails({ item, isOpen, onClose, onEdit, onDelete }: ItemDet
               <Card>
                 <CardContent className="p-4">
                   {item.type === 'image' && (
-                    <div className="mb-4">
-                      <img 
+                    <div className="mb-4 relative w-full" style={{ minHeight: '200px' }}>
+                      <Image 
                         src={item.metadata.fileUrl}
-                        alt={item.metadata.fileName}
+                        alt={item.metadata.fileName || 'Image'}
+                        width={800}
+                        height={600}
                         className="w-full h-auto max-h-96 object-contain rounded-lg"
                       />
                     </div>

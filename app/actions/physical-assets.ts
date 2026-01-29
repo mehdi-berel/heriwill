@@ -1,9 +1,41 @@
 import { supabase } from '../../lib/supabase'
+import type { Database } from '../../lib/database.types'
+
+type AssetRow = Database['public']['Tables']['assets']['Row']
+type AssetInsert = Database['public']['Tables']['assets']['Insert']
+type AssetUpdate = Database['public']['Tables']['assets']['Update']
+
+interface PhysicalAssetData {
+  user_id: string
+  name: string
+  type: string
+  description?: string | null
+  value?: number | null
+  location?: string | null
+  ownership_type: string
+  vault_id?: string | null
+  heir_ids?: string[]
+  documents?: string[]
+  notes?: string | null
+}
+
+interface AssetUpdateData {
+  name?: string
+  type?: string
+  description?: string | null
+  value?: number | null
+  location?: string | null
+  ownership_type?: string
+  vault_id?: string | null
+  heir_ids?: string[]
+  documents?: string[]
+  notes?: string | null
+}
 
 // Physical Assets Management Actions (Real Estate, Vehicles, etc.)
 export const physicalAssetActions = {
   // Create Asset
-  createAsset: async (assetData: any) => {
+  createAsset: async (assetData: PhysicalAssetData) => {
     const { data, error } = await supabase
       .from('assets')
       .insert({
@@ -27,16 +59,16 @@ export const physicalAssetActions = {
   },
 
   // Update Asset
-  updateAsset: async (assetId: string, updateData: any) => {
+  updateAsset: async (assetId: string, updateData: AssetUpdateData) => {
     const { data, error } = await supabase
       .from('assets')
       .update({
         name: updateData.name,
-        type: updateData.type,
+        type: updateData.type as any, // Cast type as it might be 'other' or specific
         description: updateData.description || null,
         value: updateData.value || null,
         location: updateData.location || null,
-        ownership_type: updateData.ownership_type,
+        ownership_type: updateData.ownership_type as any,
         vault_id: updateData.vault_id || null,
         heir_ids: updateData.heir_ids || [],
         documents: updateData.documents || [],
@@ -74,7 +106,7 @@ export const physicalAssetActions = {
   },
 
   // Get All Assets for User
-  getAllAssets: async (userId: string) => {
+  getAllAssets: async (userId: string): Promise<AssetRow[]> => {
     const { data, error } = await supabase
       .from('assets')
       .select('*')
@@ -129,20 +161,20 @@ export const physicalAssetActions = {
     
     const stats = {
       totalAssets: assets.length,
-      totalValue: assets.reduce((sum, asset) => sum + (asset.value || 0), 0),
-      realEstateCount: assets.filter(a => a.type === 'real_estate').length,
-      vehicleCount: assets.filter(a => a.type === 'vehicle').length,
-      bankAccountCount: assets.filter(a => a.type === 'bank_account').length,
-      investmentCount: assets.filter(a => a.type === 'investment').length,
-      insuranceCount: assets.filter(a => a.type === 'insurance').length,
-      personalPropertyCount: assets.filter(a => a.type === 'personal_property').length,
-      businessCount: assets.filter(a => a.type === 'business').length,
-      otherCount: assets.filter(a => a.type === 'other').length,
-      withVault: assets.filter(a => a.vault_id).length,
-      withHeirs: assets.filter(a => a.heir_ids && a.heir_ids.length > 0).length,
-      withDocuments: assets.filter(a => a.documents && a.documents.length > 0).length,
-      soleOwnership: assets.filter(a => a.ownership_type === 'sole').length,
-      jointOwnership: assets.filter(a => a.ownership_type === 'joint').length
+      totalValue: assets.reduce((sum: number, asset: AssetRow) => sum + (asset.value || 0), 0),
+      realEstateCount: assets.filter((a: AssetRow) => a.type === 'real_estate').length,
+      vehicleCount: assets.filter((a: AssetRow) => a.type === 'vehicle').length,
+      bankAccountCount: assets.filter((a: AssetRow) => a.type === 'bank_account').length,
+      investmentCount: assets.filter((a: AssetRow) => a.type === 'investment').length,
+      insuranceCount: assets.filter((a: AssetRow) => a.type === 'insurance').length,
+      personalPropertyCount: assets.filter((a: AssetRow) => a.type === 'personal_property').length,
+      businessCount: assets.filter((a: AssetRow) => a.type === 'business').length,
+      otherCount: assets.filter((a: AssetRow) => a.type === 'other').length,
+      withVault: assets.filter((a: AssetRow) => a.vault_id).length,
+      withHeirs: assets.filter((a: AssetRow) => a.heir_ids && a.heir_ids.length > 0).length,
+      withDocuments: assets.filter((a: AssetRow) => a.documents && a.documents.length > 0).length,
+      soleOwnership: assets.filter((a: AssetRow) => a.ownership_type === 'sole').length,
+      jointOwnership: assets.filter((a: AssetRow) => a.ownership_type === 'joint').length
     }
 
     return stats
@@ -183,7 +215,7 @@ export const physicalAssetActions = {
   // Add Document
   addDocument: async (assetId: string, documentName: string) => {
     const { data: asset } = await physicalAssetActions.getAssetById(assetId)
-    const documents = asset.documents || []
+    const documents = (asset as AssetRow).documents || []
     
     const { data, error } = await supabase
       .from('assets')
@@ -202,7 +234,7 @@ export const physicalAssetActions = {
   // Remove Document
   removeDocument: async (assetId: string, documentName: string) => {
     const { data: asset } = await physicalAssetActions.getAssetById(assetId)
-    const documents = (asset.documents || []).filter((doc: string) => doc !== documentName)
+    const documents = ((asset as AssetRow).documents || []).filter((doc: string) => doc !== documentName)
     
     const { data, error } = await supabase
       .from('assets')

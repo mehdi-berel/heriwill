@@ -12,24 +12,53 @@ import { FuneralDetails } from "@/components/module/wishes/funeral-details"
 import { ServiceProviders } from "@/components/module/wishes/service-providers"
 import { Card, CardContent } from "@/components/ui/card"
 import { FileText, AlertCircle, CheckCircle, Heart } from "lucide-react"
-import { supabase } from "@/lib/supabase"
+import { supabase } from '@/lib/supabase'
+import { User } from "@supabase/supabase-js"
+
+interface UserProfile {
+  user_id: string
+  full_name?: string
+  email?: string
+  avatar_url?: string
+  subscription_tier?: string
+}
+
+interface WillData {
+  user_id: string
+  testament_content?: string
+  primary_beneficiaries?: unknown
+  executor_details?: unknown
+  updated_at?: string
+}
+
+interface WishData {
+  user_id: string
+  burial_preferences?: unknown
+  funeral_details?: unknown
+  service_providers?: unknown
+  updated_at?: string
+}
+
+interface SaveData {
+  [key: string]: unknown
+}
 
 interface WillCategory {
   id: string
   title: string
   description: string
-  icon: any
+  icon: React.ComponentType<{ className?: string }>
   color: string
   completed: boolean
 }
 
 export default function WillPage() {
-  const [user, setUser] = useState<any>(null)
-  const [profile, setProfile] = useState<any>(null)
+  const [user, setUser] = useState<User | null>(null)
+  const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
-  const [willData, setWillData] = useState<any>(null)
-  const [wishData, setWishData] = useState<any>(null)
+  const [willData, setWillData] = useState<WillData | null>(null)
+  const [wishData, setWishData] = useState<WishData | null>(null)
   const router = useRouter()
 
   const categories: WillCategory[] = [
@@ -125,7 +154,7 @@ export default function WillPage() {
 
   const loadWillData = async (userId: string) => {
     try {
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('user_wills')
         .select('*')
         .eq('user_id', userId)
@@ -141,7 +170,7 @@ export default function WillPage() {
 
   const loadWishData = async (userId: string) => {
     try {
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('user_wishes')
         .select('*')
         .eq('user_id', userId)
@@ -160,7 +189,7 @@ export default function WillPage() {
     router.push("/login")
   }
 
-  const handleSave = async (category: string, data: any) => {
+  const handleSave = async (category: string, data: SaveData) => {
     try {
       const updateData = {
         user_id: user.id,
@@ -268,43 +297,43 @@ export default function WillPage() {
           <div>
             {selectedCategory === 'testament' && (
               <TestamentDetails
-                initialData={willData}
-                onSave={(data) => handleSave('testament', data)}
+                initialData={willData as any} // Cast to any to match expected component props if needed or fix interface
+                onSave={(data) => handleSave('testament', data as any)}
                 onCancel={() => setSelectedCategory(null)}
               />
             )}
             {selectedCategory === 'beneficiaries' && (
               <BeneficiariesSection
-                initialData={willData}
-                onSave={(data) => handleSave('beneficiaries', data)}
+                initialData={willData as any}
+                onSave={(data) => handleSave('beneficiaries', data as any)}
                 onCancel={() => setSelectedCategory(null)}
               />
             )}
             {selectedCategory === 'executor' && (
               <ExecutorDetails
-                initialData={willData}
-                onSave={(data) => handleSave('executor', data)}
+                initialData={willData as any}
+                onSave={(data) => handleSave('executor', data as any)}
                 onCancel={() => setSelectedCategory(null)}
               />
             )}
             {selectedCategory === 'burial' && (
               <BurialPreferences
-                initialData={wishData}
-                onSave={(data) => handleSave('burial', data)}
+                initialData={wishData as any}
+                onSave={(data) => handleSave('burial', data as any)}
                 onCancel={() => setSelectedCategory(null)}
               />
             )}
             {selectedCategory === 'funeral' && (
               <FuneralDetails
-                initialData={wishData}
-                onSave={(data) => handleSave('funeral', data)}
+                initialData={wishData as any}
+                onSave={(data) => handleSave('funeral', data as any)}
                 onCancel={() => setSelectedCategory(null)}
               />
             )}
             {selectedCategory === 'providers' && (
               <ServiceProviders
-                initialData={wishData}
-                onSave={(data) => handleSave('providers', data)}
+                initialData={wishData as any}
+                onSave={(data) => handleSave('providers', data as any)}
                 onCancel={() => setSelectedCategory(null)}
               />
             )}

@@ -1,6 +1,5 @@
 "use client"
 
-import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -9,13 +8,10 @@ import {
   FileText, 
   Download, 
   Eye, 
-  Edit, 
   Trash2, 
   CheckCircle, 
-  AlertCircle, 
   Clock, 
   Shield, 
-  Star, 
   MoreVertical,
   Gavel,
   User,
@@ -71,7 +67,6 @@ export function LegalDocumentCard({
   onDownload, 
   onNotarize 
 }: LegalDocumentCardProps) {
-  const [showActions, setShowActions] = useState(false)
 
   const getDocumentIcon = (type: string) => {
     switch (type) {
@@ -155,8 +150,6 @@ export function LegalDocumentCard({
   return (
     <Card 
       className="hover:shadow-lg transition-shadow cursor-pointer group"
-      onMouseEnter={() => setShowActions(true)}
-      onMouseLeave={() => setShowActions(false)}
     >
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">

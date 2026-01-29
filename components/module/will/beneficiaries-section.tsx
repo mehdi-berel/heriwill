@@ -3,14 +3,21 @@
 import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Save, X } from "lucide-react"
 
+interface BeneficiaryData {
+  primary_beneficiaries: string
+  contingent_beneficiaries: string
+  specific_bequests: string
+  residuary_clause: string
+  distribution_instructions: string
+}
+
 interface BeneficiariesSectionProps {
-  initialData?: any
-  onSave: (data: any) => void
+  initialData?: Partial<BeneficiaryData>
+  onSave: (data: BeneficiaryData) => void
   onCancel: () => void
 }
 
@@ -53,7 +60,7 @@ export function BeneficiariesSection({ initialData, onSave, onCancel }: Benefici
               rows={4}
             />
             <p className="text-xs text-muted-foreground">
-              Example: "My spouse [Name] - 50%, My children equally - 50%"
+              Example: &quot;My spouse [Name] - 50%, My children equally - 50%&quot;
             </p>
           </div>
 
@@ -81,7 +88,7 @@ export function BeneficiariesSection({ initialData, onSave, onCancel }: Benefici
               rows={5}
             />
             <p className="text-xs text-muted-foreground">
-              Example: "My wedding ring to my daughter Sarah, My car to my son John"
+              Example: &quot;My wedding ring to my daughter Sarah, My car to my son John&quot;
             </p>
           </div>
 

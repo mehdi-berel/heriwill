@@ -5,20 +5,28 @@ import { useRouter } from "next/navigation"
 import { DashboardLayout } from "@/components/module/dashboard/dashboard-layout"
 import { SignOffMethodSelector } from "@/components/module/sign-off/sign-off-method-selector"
 import { SignOffSettingsModal } from "@/components/module/sign-off/sign-off-settings-modal"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Clock, Users, Bell, Calendar, Hand, Shield, AlertCircle, CheckCircle, Power } from "lucide-react"
+import { Card, CardContent } from "@/components/ui/card"
+import { Clock, Users, Bell, Calendar, Hand, Shield, AlertCircle, Power } from "lucide-react"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { supabase } from "@/lib/supabase"
 import { getGlobalTrigger, deleteGlobalTrigger } from "@/lib/services/globalTriggerService"
+import { User } from "@supabase/supabase-js"
+import { LucideIcon } from "lucide-react"
+
+interface UserProfile {
+  id: string
+  full_name?: string
+  email?: string
+  subscription_tier?: string
+  global_trigger_method?: string
+}
 
 interface SignOffMethod {
   id: string
   title: string
   description: string
-  icon: any
+  icon: LucideIcon
   color: string
 }
 
@@ -61,12 +69,11 @@ const DETECTION_METHODS: SignOffMethod[] = [
 ]
 
 export default function SignOffPage() {
-  const [user, setUser] = useState<any>(null)
-  const [profile, setProfile] = useState<any>(null)
+  const [user, setUser] = useState<User | null>(null)
+  const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [selectedMethod, setSelectedMethod] = useState<string | null>(null)
   const [activeMethod, setActiveMethod] = useState<string | null>(null)
-  const [hasTriggeredPlans, setHasTriggeredPlans] = useState(false)
   const [isActivated, setIsActivated] = useState(false)
   const [saving, setSaving] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)

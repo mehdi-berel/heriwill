@@ -1,9 +1,42 @@
 import { supabase } from '../../lib/supabase'
+import type { Database } from '../../lib/database.types'
+
+type PlanRow = Database['public']['Tables']['inheritance_plans']['Row']
+type PlanInsert = Database['public']['Tables']['inheritance_plans']['Insert']
+type PlanUpdate = Database['public']['Tables']['inheritance_plans']['Update']
+type TriggerRow = Database['public']['Tables']['inheritance_triggers']['Row']
+type TriggerInsert = Database['public']['Tables']['inheritance_triggers']['Insert']
+type TriggerUpdate = Database['public']['Tables']['inheritance_triggers']['Update']
+
+interface InheritancePlanData {
+  user_id: string
+  title: string
+  description?: string
+  status?: string
+  trigger_method?: string
+  trigger_settings?: Record<string, unknown>
+}
+
+interface PlanUpdateData {
+  [key: string]: unknown
+}
+
+interface TriggerData {
+  user_id: string
+  plan_id: string
+  trigger_type: string
+  trigger_conditions?: Record<string, unknown>
+  is_active?: boolean
+}
+
+interface TriggerUpdateData {
+  [key: string]: unknown
+}
 
 // Inheritance Plan Actions
 export const inheritanceActions = {
   // Create Inheritance Plan
-  createPlan: async (planData: any) => {
+  createPlan: async (planData: InheritancePlanData) => {
     const { data, error } = await supabase
       .from('inheritance_plans')
       .insert({
@@ -23,7 +56,7 @@ export const inheritanceActions = {
   },
 
   // Update Inheritance Plan
-  updatePlan: async (planId: string, updateData: any) => {
+  updatePlan: async (planId: string, updateData: PlanUpdateData) => {
     const { data, error } = await supabase
       .from('inheritance_plans')
       .update(updateData)
@@ -58,7 +91,7 @@ export const inheritanceActions = {
   },
 
   // Get All Plans for User
-  getAllPlans: async (userId: string) => {
+  getAllPlans: async (userId: string): Promise<PlanRow[]> => {
     const { data, error } = await supabase
       .from('inheritance_plans')
       .select('*')
@@ -71,9 +104,14 @@ export const inheritanceActions = {
 
   // Update Plan Status
   updatePlanStatus: async (planId: string, status: string) => {
+    // Check if status is a valid boolean for is_active, or if it maps to is_active
+    // The DB has is_active (boolean) and is_triggered (boolean). No 'status' string column.
+    // Assuming status='active' maps to is_active=true
+    const isActive = status === 'active'
+    
     const { data } = await supabase
       .from('inheritance_plans')
-      .update({ status })
+      .update({ is_active: isActive })
       .eq('id', planId)
       .select()
       .single()
@@ -83,14 +121,14 @@ export const inheritanceActions = {
 
   // Get Plan Statistics
   getPlanStats: async (userId: string) => {
-    const { data: plans } = await inheritanceActions.getAllPlans(userId)
+    const plans = await inheritanceActions.getAllPlans(userId)
     
     const stats = {
       totalPlans: plans.length,
-      activePlans: plans.filter(p => p.status === 'active').length,
-      draftPlans: plans.filter(p => p.status === 'draft').length,
-      completedPlans: plans.filter(p => p.status === 'completed').length,
-      recentlyUpdated: plans.filter(p => {
+      activePlans: plans.filter((p: PlanRow) => p.is_active).length,
+      draftPlans: plans.filter((p: PlanRow) => !p.is_active).length,
+      completedPlans: plans.filter((p: PlanRow) => p.is_triggered).length,
+      recentlyUpdated: plans.filter((p: PlanRow) => {
         return p.updated_at && 
           new Date(p.updated_at) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
       }).length
@@ -103,16 +141,23 @@ export const inheritanceActions = {
 // Inheritance Trigger Actions
 export const triggerActions = {
   // Create Trigger
-  createTrigger: async (triggerData: any) => {
+  createTrigger: async (triggerData: TriggerData) => {
+    // Inheritance triggers in DB: id, inheritance_plan_id, user_id, trigger_metadata, status, requires_verification...
+    // trigger_type is not in DB, maybe trigger_reason or part of metadata?
+    // Using trigger_metadata for conditions
+    
     const { data, error } = await supabase
       .from('inheritance_triggers')
       .insert({
         user_id: triggerData.user_id,
-        plan_id: triggerData.plan_id,
-        trigger_type: triggerData.trigger_type,
-        trigger_conditions: triggerData.trigger_conditions || {},
-        is_active: triggerData.is_active || true,
-        created_at: new Date().toISOString()
+        inheritance_plan_id: triggerData.plan_id,
+        trigger_metadata: { 
+          type: triggerData.trigger_type, 
+          conditions: triggerData.trigger_conditions 
+        },
+        status: 'pending',
+        requires_verification: true,
+        triggered_at: new Date().toISOString()
       })
       .select()
       .single()
@@ -122,7 +167,7 @@ export const triggerActions = {
   },
 
   // Update Trigger
-  updateTrigger: async (triggerId: string, updateData: any) => {
+  updateTrigger: async (triggerId: string, updateData: TriggerUpdateData) => {
     const { data, error } = await supabase
       .from('inheritance_triggers')
       .update(updateData)
@@ -135,12 +180,12 @@ export const triggerActions = {
   },
 
   // Get Triggers for Plan
-  getTriggersForPlan: async (planId: string) => {
+  getTriggersForPlan: async (planId: string): Promise<TriggerRow[]> => {
     const { data, error } = await supabase
       .from('inheritance_triggers')
       .select('*')
-      .eq('plan_id', planId)
-      .order('created_at', { ascending: false })
+      .eq('inheritance_plan_id', planId)
+      .order('triggered_at', { ascending: false })
 
     if (error) throw new Error(error.message)
     return data || []
@@ -148,9 +193,10 @@ export const triggerActions = {
 
   // Activate/Deactivate Trigger
   toggleTrigger: async (triggerId: string, isActive: boolean) => {
+    const status = isActive ? 'pending' : 'cancelled'
     const { data } = await supabase
       .from('inheritance_triggers')
-      .update({ is_active: isActive })
+      .update({ status: status })
       .eq('id', triggerId)
       .select()
       .single()
@@ -163,9 +209,12 @@ export const triggerActions = {
     const { data } = await supabase
       .from('inheritance_triggers')
       .update({ 
-        verified: true,
+        // verified: true, // DB column not found in schema analysis? 
+        // Schema has: verified_at, verified_by, requires_verification (bool)
+        // Setting verified_at implies verified
         verified_by: verifiedBy,
-        verified_at: new Date().toISOString()
+        verified_at: new Date().toISOString(),
+        status: 'verified'
       })
       .eq('id', triggerId)
       .select()

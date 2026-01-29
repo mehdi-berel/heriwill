@@ -15,14 +15,7 @@ import {
   Lock,
   Gift,
   Power,
-  Package,
-  Settings,
-  HelpCircle,
-  UserCheck,
-  ChevronLeft,
-  ChevronRight,
-  Heart,
-  ScrollText
+  Package
 } from "lucide-react"
 
 const navigation = [
@@ -80,10 +73,11 @@ const navigation = [
 ]
 
 interface SidebarProps {
+  userName?: string
   onSignOut?: () => void
 }
 
-export function Sidebar({ onSignOut }: SidebarProps) {
+export function Sidebar({ userName, onSignOut }: SidebarProps) {
   const pathname = usePathname()
   const [isHovered, setIsHovered] = useState(false)
   const [isProUser, setIsProUser] = useState(false)
@@ -100,7 +94,10 @@ export function Sidebar({ onSignOut }: SidebarProps) {
           .eq('id', user.id)
           .single()
 
-        setIsProUser((profile as any)?.subscription_tier === 'pro')
+        interface ProfileData {
+          subscription_tier?: string
+        }
+        setIsProUser((profile as ProfileData | null)?.subscription_tier === 'pro')
       } catch (error) {
         console.error('Error checking pro status:', error)
       }
@@ -109,9 +106,17 @@ export function Sidebar({ onSignOut }: SidebarProps) {
     checkProStatus()
   }, [])
 
+  interface NavigationItem {
+    name: string
+    href: string
+    icon: React.ComponentType<{ className?: string }>
+    description: string
+    isPro?: boolean
+  }
+
   // Filter navigation items based on pro status
   const filteredNavigation = navigation.filter(item => {
-    if ((item as any).isPro && !isProUser) {
+    if ((item as NavigationItem).isPro && !isProUser) {
       return false
     }
     return true
@@ -185,7 +190,7 @@ export function Sidebar({ onSignOut }: SidebarProps) {
                   <>
                     <span className="flex-1">
                       {item.name}
-                      {(item as any).isPro && (
+                      {(item as NavigationItem).isPro && (
                         <span className="ml-1.5 text-[10px] text-primary-400 font-semibold">(pro)</span>
                       )}
                     </span>

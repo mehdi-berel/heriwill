@@ -1,31 +1,20 @@
 "use client"
 
 import { useState } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { 
   FolderOpen, 
   Lock, 
-  Share2, 
-  Eye, 
-  Edit,
   Download,
   FileText,
   Image,
   Video,
-  Music,
   Archive,
   Key,
   Shield,
-  Calendar,
-  User,
   Search,
-  MoreVertical,
-  Grid,
-  List,
   Plus
 } from "lucide-react"
 import { ItemForm } from "./item-form"
@@ -71,8 +60,6 @@ interface Vault {
 interface VaultDetailProps {
   vault: Vault
   items: VaultItem[]
-  onBack: () => void
-  onEdit: () => void
   onUpload: (files: File[]) => void
   onDownloadItem: (itemId: string) => void
   onDeleteItem: (itemId: string) => void
@@ -81,14 +68,11 @@ interface VaultDetailProps {
 export function VaultDetail({ 
   vault, 
   items, 
-  onBack, 
-  onEdit, 
   onUpload, 
   onDownloadItem, 
   onDeleteItem 
 }: VaultDetailProps) {
   const [searchTerm, setSearchTerm] = useState('')
-  const [selectedItems, setSelectedItems] = useState<string[]>([])
   const [isItemFormOpen, setIsItemFormOpen] = useState(false)
   const [selectedItemForEdit, setSelectedItemForEdit] = useState<VaultItem | null>(null)
   const [viewingItem, setViewingItem] = useState<VaultItem | null>(null)
@@ -103,7 +87,7 @@ export function VaultDetail({
       case 'password': return <Key className="h-4 w-4" />
       case 'document': return <FileText className="h-4 w-4" />
       case 'video': return <Video className="h-4 w-4" />
-      case 'image': return <Image className="h-4 w-4" />
+      case 'image': return <Image className="h-4 w-4" aria-label="Image" />
       case 'note': return <FileText className="h-4 w-4" />
       case 'crypto': return <Shield className="h-4 w-4" />
       case 'bank': return <FileText className="h-4 w-4" />
@@ -132,12 +116,6 @@ export function VaultDetail({
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
   }
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || [])
-    if (files.length > 0) {
-      onUpload(files)
-    }
-  }
 
   const handleAddItem = () => {
     setSelectedItemForEdit(null)
@@ -152,7 +130,9 @@ export function VaultDetail({
 
   const handleSaveItem = async (itemData: any) => {
     try {
-      await onUpload(itemData as any)
+      // Convert VaultItem to the format expected by onUpload
+      // This is a placeholder - adjust based on actual onUpload requirements
+      await onUpload(itemData)
       setIsItemFormOpen(false)
       setSelectedItemForEdit(null)
     } catch (error) {
@@ -170,22 +150,7 @@ export function VaultDetail({
     setViewingItem(null)
   }
 
-  const toggleItemSelection = (itemId: string) => {
-    setSelectedItems(prev => 
-      prev.includes(itemId) 
-        ? prev.filter(id => id !== itemId)
-        : [...prev, itemId]
-    )
-  }
 
-  const getCategoryIcon = (category: string) => {
-    switch (category) {
-      case 'share_after_death': return <Share2 className="h-4 w-4" />
-      case 'delete_after_death': return <Archive className="h-4 w-4" />
-      case 'sign_off_after_death': return <Lock className="h-4 w-4" />
-      default: return <FolderOpen className="h-4 w-4" />
-    }
-  }
 
   return (
     <div className="space-y-6">

@@ -1,12 +1,12 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Select, SelectItem } from "@/components/ui/select"
 import { Save, X } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 
@@ -19,7 +19,13 @@ interface SignOffSettingsProps {
 
 export function SignOffSettings({ method, userId, onSave, onCancel }: SignOffSettingsProps) {
   const [loading, setLoading] = useState(false)
-  const [heirs, setHeirs] = useState<any[]>([])
+  interface Heir {
+    id: string
+    full_name_encrypted?: string
+    email_encrypted?: string
+  }
+  
+  const [heirs, setHeirs] = useState<Heir[]>([])
   
   // Inactivity settings
   const [inactivityDays, setInactivityDays] = useState('90')
@@ -36,50 +42,45 @@ export function SignOffSettings({ method, userId, onSave, onCancel }: SignOffSet
   const [heirNotificationFrequency, setHeirNotificationFrequency] = useState('30')
   const [heirVerificationThreshold, setHeirVerificationThreshold] = useState('75')
 
-  useEffect(() => {
-    loadSettings()
-    if (method === 'trusted_contact') {
-      loadHeirs()
-    }
-  }, [method, userId])
-
-  const loadSettings = async () => {
+  const loadSettings = useCallback(async () => {
     try {
       const { data } = await supabase
-        .from('global_triggers')
-        .select('*')
-        .eq('user_id', userId)
+        .from('users')
+        .select('global_trigger_method, global_trigger_settings, global_scheduled_date, trusted_contact_heir_id')
+        .eq('id', userId)
         .single()
 
       if (data) {
-        if (data.global_trigger_settings?.inactivity_days) {
-          setInactivityDays(data.global_trigger_settings.inactivity_days.toString())
+        const userData = data as any
+        const settings = userData.global_trigger_settings as Record<string, any> | null
+        if (settings?.inactivity_days) {
+          setInactivityDays(settings.inactivity_days.toString())
         }
-        if (data.global_trigger_settings?.reminder_enabled) {
-          setReminderEnabled(data.global_trigger_settings.reminder_enabled)
+        if (settings?.reminder_enabled) {
+          setReminderEnabled(settings.reminder_enabled)
         }
-        if (data.global_trigger_settings?.reminder_days_before) {
-          setReminderDays(data.global_trigger_settings.reminder_days_before.toString())
+        if (settings?.reminder_days_before) {
+          setReminderDays(settings.reminder_days_before.toString())
         }
-        if (data.trusted_contact_heir_id) {
-          setTrustedContactHeirId(data.trusted_contact_heir_id)
+        if (userData.trusted_contact_heir_id) {
+          setTrustedContactHeirId(userData.trusted_contact_heir_id)
         }
-        if (data.global_scheduled_date) {
-          setScheduledDate(new Date(data.global_scheduled_date))
+        if (userData.global_scheduled_date) {
+          setScheduledDate(new Date(userData.global_scheduled_date))
         }
-        if (data.global_trigger_settings?.heir_notification_frequency) {
-          setHeirNotificationFrequency(data.global_trigger_settings.heir_notification_frequency.toString())
+        if (settings?.heir_notification_frequency) {
+          setHeirNotificationFrequency(settings.heir_notification_frequency.toString())
         }
-        if (data.global_trigger_settings?.heir_verification_threshold) {
-          setHeirVerificationThreshold(data.global_trigger_settings.heir_verification_threshold.toString())
+        if (settings?.heir_verification_threshold) {
+          setHeirVerificationThreshold(settings.heir_verification_threshold.toString())
         }
       }
     } catch (error) {
       console.error('Error loading settings:', error)
     }
-  }
+  }, [userId])
 
-  const loadHeirs = async () => {
+  const loadHeirs = useCallback(async () => {
     try {
       const { data } = await supabase
         .from('heirs')
@@ -91,7 +92,14 @@ export function SignOffSettings({ method, userId, onSave, onCancel }: SignOffSet
     } catch (error) {
       console.error('Error loading heirs:', error)
     }
-  }
+  }, [userId])
+
+  useEffect(() => {
+    loadSettings()
+    if (method === 'trusted_contact') {
+      loadHeirs()
+    }
+  }, [method, loadSettings, loadHeirs])
 
   const handleSave = async () => {
     try {
@@ -102,7 +110,13 @@ export function SignOffSettings({ method, userId, onSave, onCancel }: SignOffSet
         methodToSave = 'scheduled'
       }
 
-      const settingsToSave: any = {
+      const settingsToSave: {
+        user_id: string
+        global_trigger_method: string
+        global_trigger_settings?: Record<string, unknown>
+        trusted_contact_heir_id?: string
+        global_scheduled_date?: string
+      } = {
         user_id: userId,
         global_trigger_method: methodToSave,
       }
@@ -128,10 +142,11 @@ export function SignOffSettings({ method, userId, onSave, onCancel }: SignOffSet
         settingsToSave.global_trigger_settings = {}
       }
 
-      // Upsert the settings
+      // Update the settings in users table
       const { error } = await supabase
-        .from('global_triggers')
-        .upsert(settingsToSave, { onConflict: 'user_id' })
+        .from('users')
+        .update(settingsToSave as any)
+        .eq('id', userId)
 
       if (error) throw error
 
@@ -271,7 +286,7 @@ export function SignOffSettings({ method, userId, onSave, onCancel }: SignOffSet
         {method === 'manual_trigger' && (
           <div className="space-y-4">
             <p className="text-sm text-text-secondary">
-              With manual trigger, you will need to explicitly activate your inheritance plan when you're ready. 
+              With manual trigger, you will need to explicitly activate your inheritance plan when you&apos;re ready. 
               This gives you complete control over when the process begins.
             </p>
             <div className="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">

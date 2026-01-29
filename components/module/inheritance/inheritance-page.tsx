@@ -81,8 +81,25 @@ export function InheritancePage({ userId }: InheritancePageProps) {
       }
 
       // Get owner names and item counts
+      interface VaultAccess {
+        vaults: {
+          id: string
+          user_id: string
+          name: string
+          description: string | null
+          category: string
+          is_encrypted: boolean
+          icon?: string
+          color?: string
+          created_at: string
+        }
+        can_view: boolean
+        can_export: boolean
+        can_edit: boolean
+      }
+
       const vaultsWithDetails = await Promise.all(
-        accessData.map(async (access: any) => {
+        accessData.map(async (access: VaultAccess) => {
           const vault = access.vaults
           
           // Get owner name
@@ -104,8 +121,8 @@ export function InheritancePage({ userId }: InheritancePageProps) {
             id: vault.id,
             name: vault.name,
             description: vault.description,
-            icon: vault.icon,
-            color: vault.color,
+            icon: vault.icon || null,
+            color: vault.color || null,
             category: vault.category,
             shared_from_user_id: vault.user_id,
             shared_from_user_name: owner?.full_name || owner?.email || 'Unknown',
@@ -161,10 +178,6 @@ export function InheritancePage({ userId }: InheritancePageProps) {
     loadVaultItems(vault)
   }
 
-  const handleHeirEdit = (heir: { id: string; name: string; email: string }) => {
-    setSelectedVault(null)
-    setVaultItems([])
-  }
 
   const handleBackToVaults = () => {
     setSelectedVault(null)
@@ -308,7 +321,7 @@ export function InheritancePage({ userId }: InheritancePageProps) {
             </div>
             <h3 className="text-lg font-semibold mb-2 text-text-primary">No Inherited Vaults</h3>
             <p className="text-text-muted mb-4">
-              You don't have access to any inherited vaults yet. When someone shares a vault with you as an heir, it will appear here.
+              You don&apos;t have access to any inherited vaults yet. When someone shares a vault with you as an heir, it will appear here.
             </p>
           </CardContent>
         </Card>

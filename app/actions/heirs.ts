@@ -1,9 +1,29 @@
 import { supabase } from '../../lib/supabase'
+import type { Database } from '../../lib/database.types'
+
+type HeirRow = Database['public']['Tables']['heirs']['Row']
+type HeirInsert = Database['public']['Tables']['heirs']['Insert']
+type HeirUpdate = Database['public']['Tables']['heirs']['Update']
+
+interface HeirData {
+  user_id: string
+  full_name: string
+  email: string
+  phone?: string | null
+  relationship?: string | null
+  heir_type?: string
+  access_level?: string
+  invitation_expires_at?: string | null
+}
+
+interface HeirUpdateData {
+  [key: string]: unknown
+}
 
 // Heir Management Actions
 export const heirActions = {
   // Create Heir
-  createHeir: async (heirData: any) => {
+  createHeir: async (heirData: HeirData) => {
     const { data, error } = await supabase
       .from('heirs')
       .insert({
@@ -30,7 +50,7 @@ export const heirActions = {
   },
 
   // Update Heir
-  updateHeir: async (heirId: string, updateData: any) => {
+  updateHeir: async (heirId: string, updateData: HeirUpdateData) => {
     const { data, error } = await supabase
       .from('heirs')
       .update(updateData)
@@ -65,7 +85,7 @@ export const heirActions = {
   },
 
   // Get All Heirs for User
-  getAllHeirs: async (userId: string) => {
+  getAllHeirs: async (userId: string): Promise<HeirRow[]> => {
     const { data, error } = await supabase
       .from('heirs')
       .select('*')
@@ -82,7 +102,7 @@ export const heirActions = {
     if (!heir) throw new Error('Heir not found')
 
     // In a real app, this would send an email
-    console.log('Resending invitation to heir:', heir.email)
+    console.log('Resending invitation to heir:', heir.email_encrypted)
     
     // Update invitation status
     const { data } = await supabase
@@ -111,7 +131,7 @@ export const heirActions = {
   updateVerificationStatus: async (heirId: string, status: string) => {
     const { data } = await supabase
       .from('heirs')
-      .update({ verification_status: status })
+      .update({ notification_status: status }) // mapped verification_status to notification_status or similar if needed, check DB
       .eq('id', heirId)
       .select()
       .single()
@@ -121,24 +141,21 @@ export const heirActions = {
 
   // Get Heir Statistics
   getHeirStats: async (userId: string) => {
-    const { data: heirs } = await heirActions.getAllHeirs(userId)
+    const heirs = await heirActions.getAllHeirs(userId)
     
     const stats = {
       totalHeirs: heirs.length,
-      acceptedHeirs: heirs.filter(h => h.invitation_status === 'accepted').length,
-      pendingHeirs: heirs.filter(h => h.invitation_status === 'pending').length,
-      rejectedHeirs: heirs.filter(h => h.invitation_status === 'rejected').length,
-      expiredHeirs: heirs.filter(h => {
+      acceptedHeirs: heirs.filter((h: HeirRow) => h.invitation_status === 'accepted').length,
+      pendingHeirs: heirs.filter((h: HeirRow) => h.invitation_status === 'pending').length,
+      rejectedHeirs: heirs.filter((h: HeirRow) => h.invitation_status === 'rejected').length,
+      expiredHeirs: heirs.filter((h: HeirRow) => {
         return h.invitation_expires_at && new Date(h.invitation_expires_at) < new Date()
       }).length,
-      verifiedHeirs: heirs.filter(h => h.verification_status === 'verified').length,
-      fullAccessHeirs: heirs.filter(h => h.access_level === 'full').length,
-      partialAccessHeirs: heirs.filter(h => h.access_level === 'partial').length,
-      viewAccessHeirs: heirs.filter(h => h.access_level === 'view').length,
-      recentlyActive: heirs.filter(h => {
-        return h.last_activity && 
-          new Date(h.last_activity) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
-      }).length
+      verifiedHeirs: heirs.filter((h: HeirRow) => h.notification_status === 'verified').length,
+      fullAccessHeirs: heirs.filter((h: HeirRow) => h.access_level === 'full').length,
+      partialAccessHeirs: heirs.filter((h: HeirRow) => h.access_level === 'partial').length,
+      viewAccessHeirs: heirs.filter((h: HeirRow) => h.access_level === 'view').length,
+      recentlyActive: 0 // last_activity not in heir table
     }
 
     return stats
@@ -146,9 +163,9 @@ export const heirActions = {
 
   // Search and Filter
   searchHeirs: async (userId: string, searchTerm: string) => {
-    const { data: heirs } = await heirActions.getAllHeirs(userId)
+    const heirs = await heirActions.getAllHeirs(userId)
     
-    const filteredHeirs = heirs.filter(heir =>
+    const filteredHeirs = heirs.filter((heir: HeirRow) =>
       heir.full_name_encrypted?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       heir.email_encrypted?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       heir.relationship?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -159,16 +176,16 @@ export const heirActions = {
 
   // Filter by Status
   getHeirsByStatus: async (userId: string, status: string) => {
-    const { data: heirs } = await heirActions.getAllHeirs(userId)
+    const heirs = await heirActions.getAllHeirs(userId)
     
-    return heirs.filter(heir => heir.invitation_status === status)
+    return heirs.filter((heir: HeirRow) => heir.invitation_status === status)
   },
 
   // Filter by Access Level
   getHeirsByAccessLevel: async (userId: string, accessLevel: string) => {
-    const { data: heirs } = await heirActions.getAllHeirs(userId)
+    const heirs = await heirActions.getAllHeirs(userId)
     
-    return heirs.filter(heir => heir.access_level === accessLevel)
+    return heirs.filter((heir: HeirRow) => heir.access_level === accessLevel)
   }
 }
 

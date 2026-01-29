@@ -6,9 +6,7 @@ import {
   Mail, 
   Edit, 
   Trash2, 
-  CheckCircle, 
-  Clock, 
-  AlertCircle
+  CheckCircle 
 } from "lucide-react"
 
 interface Heir {
@@ -44,7 +42,6 @@ export function HeirList({
   onEdit, 
   onDelete, 
   searchTerm = '',
-  onSearchChange,
   selectedStatus = null
 }: HeirListProps) {
 
@@ -68,31 +65,6 @@ export function HeirList({
   })
 
   const sortedHeirs = [...filteredHeirs].sort((a, b) => (a.full_name_encrypted || '').localeCompare(b.full_name_encrypted || ''))
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'accepted': return 'bg-green-100 text-green-800'
-      case 'pending': return 'bg-yellow-100 text-yellow-800'
-      case 'rejected': return 'bg-red-100 text-red-800'
-      case 'expired': return 'bg-gray-100 text-gray-800'
-      default: return 'bg-gray-100 text-gray-800'
-    }
-  }
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'accepted': return <CheckCircle className="h-4 w-4" />
-      case 'pending': return <Clock className="h-4 w-4" />
-      case 'rejected': return <AlertCircle className="h-4 w-4" />
-      case 'expired': return <AlertCircle className="h-4 w-4" />
-      default: return <Clock className="h-4 w-4" />
-    }
-  }
-
-  const isInvitationExpired = (heir: Heir) => {
-    if (!heir.invitation_expires_at) return false
-    return new Date(heir.invitation_expires_at) < new Date()
-  }
 
   return (
     <div className="space-y-6">

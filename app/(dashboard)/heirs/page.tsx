@@ -1,17 +1,23 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { DashboardLayout } from "@/components/module/dashboard/dashboard-layout"
 import { HeirForm } from "@/components/module/heirs/heir-form"
 import { HeirList } from "@/components/module/heirs/heir-list"
-import { HeirStats } from "@/components/module/heirs/heir-stats"
-import { HeirDetail } from "@/components/module/heirs/heir-detail"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { Search } from "lucide-react"
 import { supabase } from "@/lib/supabase"
+import { User } from "@supabase/supabase-js"
+
+interface UserProfile {
+  id: string
+  full_name?: string
+  email?: string
+  subscription_tier?: string
+}
 
 interface Heir {
   id: string
@@ -38,18 +44,21 @@ interface Heir {
   updated_at: string
 }
 
-interface HeirActivity {
-  id: string
-  type: 'login' | 'vault_access' | 'settings_change' | 'verification_completed'
-  description: string
-  timestamp: string
-  metadata?: Record<string, any>
+interface HeirFormData {
+  full_name: string
+  email: string
+  phone?: string
+  relationship?: string
+  heir_type?: 'family' | 'friend' | 'professional' | 'organization'
+  access_level: 'full' | 'partial' | 'view'
+  notification_delay_days?: number
+  is_active?: boolean
+  notify_on_activation?: boolean
 }
 
-
 export default function HeirsPage() {
-  const [user, setUser] = useState<any>(null)
-  const [profile, setProfile] = useState<any>(null)
+  const [user, setUser] = useState<User | null>(null)
+  const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [heirs, setHeirs] = useState<Heir[]>([])
   const [searchTerm, setSearchTerm] = useState('')
@@ -59,6 +68,25 @@ export default function HeirsPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [heirToDelete, setHeirToDelete] = useState<string | null>(null)
   const router = useRouter()
+
+  const loadHeirs = useCallback(async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('heirs')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+
+      if (error) {
+        console.error('Error loading heirs:', error)
+        return
+      }
+
+      setHeirs(data || [])
+    } catch (error) {
+      console.error('Error loading heirs:', error)
+    }
+  }, [])
 
   useEffect(() => {
     const getUser = async () => {
@@ -100,37 +128,9 @@ export default function HeirsPage() {
     })
 
     return () => subscription.unsubscribe()
-  }, [router])
+  }, [router, loadHeirs])
 
-  const loadHeirs = async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('heirs')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-
-      if (error) {
-        console.error('Error loading heirs:', error)
-        return
-      }
-
-      setHeirs(data || [])
-    } catch (error) {
-      console.error('Error loading heirs:', error)
-    }
-  }
-
-  const loadHeirActivities = async (heirId: string) => {
-    try {
-      // In a real app, this would fetch from an activities table
-      // Mock activities removed since we're not using detail view in this page
-    } catch (error) {
-      console.error('Error loading heir activities:', error)
-    }
-  }
-
-  const handleAddHeir = async (formData: any) => {
+  const handleAddHeir = async (formData: HeirFormData) => {
     try {
       const { data, error } = await supabase
         .from('heirs')
@@ -167,7 +167,7 @@ export default function HeirsPage() {
     }
   }
 
-  const handleUpdateHeir = async (formData: any) => {
+  const handleUpdateHeir = async (formData: HeirFormData) => {
     if (!editingHeir) return
 
     try {
@@ -277,20 +277,6 @@ export default function HeirsPage() {
     router.push("/login")
   }
 
-  const getHeirStats = () => {
-    const totalHeirs = heirs.length
-    const activeHeirs = heirs.filter(h => h.is_active === true).length
-    const pendingHeirs = heirs.filter(h => h.invitation_status === 'pending').length
-    const acceptedHeirs = heirs.filter(h => h.has_accepted === true).length
-
-    return {
-      totalHeirs,
-      activeHeirs,
-      pendingHeirs,
-      acceptedHeirs
-    }
-  }
-
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -380,7 +366,7 @@ export default function HeirsPage() {
         }}>
           <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
             <DialogTitle className="sr-only">
-              {editingHeir ? 'Edit Heir' : 'Add New Heir'}
+              {editingHeir ? "Edit Heir" : "Add New Heir"}
             </DialogTitle>
             <HeirForm
               initialData={editingHeir ? {
