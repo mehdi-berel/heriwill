@@ -1,10 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import { logger } from '@/lib/utils/logger'
+import { rateLimit, RateLimitPresets } from '@/lib/middleware/rateLimit'
 
 // RevenueCat webhook handler
 // Handles subscription events from RevenueCat
 export async function POST(request: NextRequest) {
   try {
+    // Apply rate limiting for webhooks
+    const rateLimitResult = rateLimit(RateLimitPresets.webhook)(request)
+    
+    if (rateLimitResult) {
+      return rateLimitResult
+    }
+
     // Verify webhook signature (recommended for production)
     const signature = request.headers.get('x-revenuecat-signature')
     const webhookSecret = process.env.REVENUECAT_WEBHOOK_SECRET
@@ -20,7 +29,7 @@ export async function POST(request: NextRequest) {
 
     const event = await request.json()
     
-    console.log('RevenueCat webhook received:', event.type)
+    logger.info('RevenueCat webhook received', { eventType: event.type })
 
     // Extract event data
     const eventType = event.type
@@ -90,12 +99,12 @@ export async function POST(request: NextRequest) {
         break
 
       default:
-        console.log('Unhandled event type:', eventType)
+        logger.warn('Unhandled RevenueCat event type', { eventType })
     }
 
     return NextResponse.json({ received: true })
   } catch (error) {
-    console.error('Error processing webhook:', error)
+    logger.error('Error processing RevenueCat webhook', error)
     return NextResponse.json(
       { error: 'Webhook processing failed' },
       { status: 500 }
@@ -122,13 +131,13 @@ async function updateUserSubscription(
       .eq('id', userId)
 
     if (error) {
-      console.error('Error updating user subscription:', error)
+      logger.error('Error updating user subscription', error, { userId })
       throw error
     }
 
-    console.log('Updated subscription for user:', userId, updates)
+    logger.info('Updated subscription for user', { userId, updates })
   } catch (error) {
-    console.error('Failed to update user subscription:', error)
+    logger.error('Failed to update user subscription', error)
     throw error
   }
 }

@@ -341,8 +341,9 @@ export default function AssetsPage() {
               className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
                 selectedType === type.value
                   ? 'bg-primary-600/10 text-primary-400 border border-primary-600/20'
-                  : 'text-text-muted hover:bg-background-hover hover:text-text-secondary'
+                  : 'text-text-muted hover:bg-background-hover hover:text-text-secondary border'
               }`}
+              style={{ borderColor: selectedType === type.value ? undefined : '#232629' }}
             >
               {type.label}
             </button>

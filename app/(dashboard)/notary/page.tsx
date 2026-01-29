@@ -5,9 +5,8 @@ import { useRouter } from "next/navigation"
 import { ProTierGuard } from "@/components/module/auth/pro-tier-guard"
 import { DashboardLayout } from "@/components/module/dashboard/dashboard-layout"
 import { NotarySelector } from "@/components/module/notary/notary-selector"
-import { Search } from "lucide-react"
+import { NotaryDetail } from "@/components/module/notary/notary-detail"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { supabase } from "@/lib/supabase"
 import { User } from "@supabase/supabase-js"
 
@@ -56,8 +55,8 @@ export default function NotaryPage() {
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [notaries, setNotaries] = useState<Notary[]>([])
-  const [searchTerm, setSearchTerm] = useState('')
   const [selectedFilter, setSelectedFilter] = useState<'all' | 'primary' | 'secondary' | null>(null)
+  const [selectedNotary, setSelectedNotary] = useState<Notary | null>(null)
   const router = useRouter()
 
   useEffect(() => {
@@ -233,56 +232,41 @@ export default function NotaryPage() {
             </Button>
           </div>
           
-          {/* Category Tabs - Centered */}
-          <div className="flex justify-center gap-2 mb-4">
-            <Button
-              variant={selectedFilter === 'all' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setSelectedFilter(selectedFilter === 'all' ? null : 'all')}
-              className="rounded-lg"
-            >
-              All ({notaries.length})
-            </Button>
-            <Button
-              variant={selectedFilter === 'primary' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setSelectedFilter(selectedFilter === 'primary' ? null : 'primary')}
-              className="rounded-lg"
-            >
-              Primary ({notaries.filter(n => n.is_primary).length})
-            </Button>
-            <Button
-              variant={selectedFilter === 'secondary' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setSelectedFilter(selectedFilter === 'secondary' ? null : 'secondary')}
-              className="rounded-lg"
-            >
-              Secondary ({notaries.filter(n => !n.is_primary).length})
-            </Button>
-          </div>
-          
-          {/* Search Bar */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-            <Input
-              placeholder="Search notaries..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 h-11 bg-background-secondary border-border rounded-xl"
-            />
-          </div>
         </div>
 
-        {/* Notary Selector */}
-        <NotarySelector
-          notaries={notaries}
-          onAddNotary={handleAddNotary}
-          onUpdateNotary={handleUpdateNotary}
-          onDeleteNotary={handleDeleteNotary}
-          onSetPrimary={handleSetPrimary}
-          searchTerm={searchTerm}
-          selectedFilter={selectedFilter}
-        />
+        {/* Notary Selector or Detail View */}
+        {selectedNotary ? (
+          <NotaryDetail
+            notary={selectedNotary}
+            onEdit={() => {
+              // TODO: Implement edit functionality
+              setSelectedNotary(null)
+            }}
+            onDelete={() => {
+              if (selectedNotary.id) {
+                handleDeleteNotary(selectedNotary.id)
+              }
+              setSelectedNotary(null)
+            }}
+            onSetPrimary={() => {
+              if (selectedNotary.id) {
+                handleSetPrimary(selectedNotary.id)
+              }
+              setSelectedNotary(null)
+            }}
+            onClose={() => setSelectedNotary(null)}
+          />
+        ) : (
+          <NotarySelector
+            notaries={notaries}
+            onAddNotary={handleAddNotary}
+            onUpdateNotary={handleUpdateNotary}
+            onDeleteNotary={handleDeleteNotary}
+            onSetPrimary={handleSetPrimary}
+            onViewDetails={(notary) => setSelectedNotary(notary)}
+            selectedFilter={selectedFilter}
+          />
+        )}
       </div>
     </DashboardLayout>
     </ProTierGuard>

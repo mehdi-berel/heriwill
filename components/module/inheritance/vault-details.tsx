@@ -286,7 +286,8 @@ export function VaultDetails({
               <select
                 value={selectedType}
                 onChange={(e) => setSelectedType(e.target.value)}
-                className="px-3 py-2 border border-input rounded-md text-sm"
+                className="px-3 py-2 border rounded-md text-sm"
+                style={{ borderColor: '#232629' }}
               >
                 {itemTypes.map(type => (
                   <option key={type.value} value={type.value}>
@@ -298,7 +299,8 @@ export function VaultDetails({
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as 'name' | 'date' | 'size' | 'type')}
-                className="px-3 py-2 border border-input rounded-md text-sm"
+                className="px-3 py-2 border rounded-md text-sm"
+                style={{ borderColor: '#232629' }}
               >
                 <option value="name">Sort by Name</option>
                 <option value="date">Sort by Date</option>
@@ -314,7 +316,7 @@ export function VaultDetails({
                 {sortOrder === 'asc' ? <SortAsc className="h-4 w-4" /> : <SortDesc className="h-4 w-4" />}
               </Button>
               
-              <div className="flex border border-input rounded-md">
+              <div className="flex border rounded-md" style={{ borderColor: '#232629' }}>
                 <Button
                   variant={viewMode === 'grid' ? 'default' : 'ghost'}
                   size="sm"
@@ -623,7 +625,7 @@ export function VaultDetails({
                   <div className="space-y-2">
                     <p className="font-medium">Shared With:</p>
                     {vault.sharedWith.map((person, index) => (
-                      <div key={index} className="flex items-center justify-between p-2 border rounded">
+                      <div key={index} className="flex items-center justify-between p-2 border rounded" style={{ borderColor: '#232629' }}>
                         <div className="flex items-center space-x-2">
                           <Users className="h-4 w-4" />
                           <span className="text-sm">{person}</span>
@@ -648,7 +650,7 @@ export function VaultDetails({
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <div className="flex items-center space-x-3 p-3 border rounded-lg">
+                <div className="flex items-center space-x-3 p-3 border rounded-lg" style={{ borderColor: '#232629' }}>
                   <Upload className="h-4 w-4 text-green-600" />
                   <div className="flex-1">
                     <p className="text-sm font-medium">Files uploaded</p>
@@ -657,7 +659,7 @@ export function VaultDetails({
                   <Badge variant="secondary">Upload</Badge>
                 </div>
                 
-                <div className="flex items-center space-x-3 p-3 border rounded-lg">
+                <div className="flex items-center space-x-3 p-3 border rounded-lg" style={{ borderColor: '#232629' }}>
                   <Eye className="h-4 w-4 text-blue-600" />
                   <div className="flex-1">
                     <p className="text-sm font-medium">Vault accessed</p>
@@ -666,7 +668,7 @@ export function VaultDetails({
                   <Badge variant="secondary">Access</Badge>
                 </div>
                 
-                <div className="flex items-center space-x-3 p-3 border rounded-lg">
+                <div className="flex items-center space-x-3 p-3 border rounded-lg" style={{ borderColor: '#232629' }}>
                   <Share2 className="h-4 w-4 text-purple-600" />
                   <div className="flex-1">
                     <p className="text-sm font-medium">Vault shared with John Doe</p>

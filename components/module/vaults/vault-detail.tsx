@@ -216,7 +216,8 @@ export function VaultDetail({
             <div
               key={item.id}
               onClick={() => handleViewItem(item)}
-              className="flex items-center p-4 bg-background-card border border-border rounded-xl hover:border-primary/50 transition-all group cursor-pointer"
+              className="flex items-center p-4 bg-background-card border rounded-xl hover:border-primary/50 transition-all group cursor-pointer"
+              style={{ borderColor: '#232629' }}
             >
               {/* Icon Container */}
               <div className={`w-10 h-10 rounded-lg flex items-center justify-center mr-3 flex-shrink-0 ${getItemColor(item.type)}`}>

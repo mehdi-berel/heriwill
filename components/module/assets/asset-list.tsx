@@ -91,7 +91,8 @@ export function AssetList({
           {sortedAssets.map(asset => (
             <div
               key={asset.id}
-              className="flex items-center p-4 bg-background-card border border-border rounded-xl cursor-pointer hover:border-primary/50 transition-all group"
+              className="flex items-center p-4 bg-background-card border rounded-xl cursor-pointer hover:border-primary/50 transition-all group"
+              style={{ borderColor: '#232629' }}
               onClick={() => router.push(`/assets/${asset.id}`)}
             >
               {/* Icon Container */}

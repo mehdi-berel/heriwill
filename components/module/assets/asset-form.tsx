@@ -116,9 +116,10 @@ export function AssetForm({ initialData, onSubmit, onCancel, isEditing = false }
                       ${
                         isSelected 
                           ? 'border-primary bg-primary/10' 
-                          : 'border-border hover:border-primary/50 hover:bg-accent'
+                          : 'hover:border-primary/50 hover:bg-accent'
                       }
                     `}
+                    style={{ borderColor: isSelected ? undefined : '#232629' }}
                   >
                     <Icon className={`h-5 w-5 ${isSelected ? 'text-primary' : 'text-muted-foreground'}`} />
                     <span className={`text-xs font-medium text-center ${isSelected ? 'text-primary' : 'text-muted-foreground'}`}>

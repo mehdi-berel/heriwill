@@ -43,11 +43,12 @@ export default {
           tertiary: '#71717A',
         },
         border: {
-          DEFAULT: '#27272A',
+          DEFAULT: '#232629',
           light: '#3F3F46',
           accent: '#7E22CE',
           muted: '#18181B',
-          separator: '#27272A',
+          separator: '#232629',
+          default: '#232629',
         },
         status: {
           success: '#10B981',

@@ -39,6 +39,7 @@ interface NotarySelectorProps {
   onUpdateNotary: (id: string, notary: Notary) => void
   onDeleteNotary: (id: string) => void
   onSetPrimary: (id: string) => void
+  onViewDetails?: (notary: Notary) => void
   searchTerm?: string
   selectedFilter?: 'all' | 'primary' | 'secondary' | null
 }
@@ -48,7 +49,8 @@ export function NotarySelector({
   onAddNotary, 
   onUpdateNotary, 
   onDeleteNotary,
-  onSetPrimary 
+  onSetPrimary,
+  onViewDetails
 }: NotarySelectorProps) {
   const [showForm, setShowForm] = useState(false)
   const [editingNotary, setEditingNotary] = useState<Notary | null>(null)
@@ -118,8 +120,9 @@ export function NotarySelector({
           {notaries.map((notary) => (
             <div
               key={notary.id}
-              className="flex items-center p-4 bg-background-card border border-border rounded-xl cursor-pointer hover:border-primary/50 transition-all group"
-              onClick={() => handleEdit(notary)}
+              className="flex items-center p-4 bg-background-card border rounded-xl cursor-pointer hover:border-primary/50 transition-all group"
+              style={{ borderColor: '#232629' }}
+              onClick={() => onViewDetails?.(notary)}
             >
               {/* Icon Container */}
               <div 

@@ -362,7 +362,6 @@ export default function VaultsPage() {
             </Button>
           </div>
           
-          {/* Category Tabs - Centered */}
           <div className="flex justify-center gap-2 mb-4">
             <Button
               variant={selectedCategory === 'share_after_death' ? 'default' : 'outline'}
@@ -397,7 +396,8 @@ export default function VaultsPage() {
               placeholder="Search vaults..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 h-11 bg-background-secondary border-border rounded-xl"
+              className="pl-10 h-11 bg-background-secondary rounded-xl"
+              style={{ borderColor: '#232629' }}
             />
           </div>
         </div>

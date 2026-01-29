@@ -206,7 +206,8 @@ export function VaultAssign({
               {filteredNotaries.map((notary) => (
                 <div
                   key={notary.id}
-                  className="flex items-center p-4 bg-background-card border border-border rounded-xl hover:border-primary/50 transition-all cursor-pointer"
+                  className="flex items-center p-4 bg-background-card border rounded-xl hover:border-primary/50 transition-all cursor-pointer"
+                  style={{ borderColor: '#232629' }}
                   onClick={() => toggleHeirSelection(notary.id)}
                 >
                   <Checkbox
@@ -249,7 +250,8 @@ export function VaultAssign({
               {filteredHeirs.map((heir) => (
                 <div
                   key={heir.id}
-                  className="flex items-center p-4 bg-background-card border border-border rounded-xl hover:border-primary/50 transition-all cursor-pointer"
+                  className="flex items-center p-4 bg-background-card border rounded-xl hover:border-primary/50 transition-all cursor-pointer"
+                  style={{ borderColor: '#232629' }}
                   onClick={() => toggleHeirSelection(heir.id)}
                 >
                   {/* Checkbox */}

@@ -435,7 +435,8 @@ export function SettingsOverview({ profile }: SettingsOverviewProps) {
                   <select
                     value={formData.privacy.sessionTimeout}
                     onChange={(e) => handleNestedChange('privacy', 'sessionTimeout', parseInt(e.target.value))}
-                    className="px-3 py-2 border border-input rounded-md text-sm"
+                    className="px-3 py-2 border rounded-md text-sm"
+                    style={{ borderColor: '#232629' }}
                   >
                     <option value={1}>1 hour</option>
                     <option value={6}>6 hours</option>
@@ -471,7 +472,8 @@ export function SettingsOverview({ profile }: SettingsOverviewProps) {
                   <select
                     value={formData.timezone}
                     onChange={(e) => handleInputChange('timezone', e.target.value)}
-                    className="w-full px-3 py-2 border border-input rounded-md text-sm"
+                    className="w-full px-3 py-2 border rounded-md text-sm"
+                    style={{ borderColor: '#232629' }}
                   >
                     <option value="UTC">UTC</option>
                     <option value="EST">EST</option>
@@ -485,7 +487,8 @@ export function SettingsOverview({ profile }: SettingsOverviewProps) {
                   <select
                     value={formData.language}
                     onChange={(e) => handleInputChange('language', e.target.value)}
-                    className="w-full px-3 py-2 border border-input rounded-md text-sm"
+                    className="w-full px-3 py-2 border rounded-md text-sm"
+                    style={{ borderColor: '#232629' }}
                   >
                     <option value="en">English</option>
                     <option value="es">Spanish</option>
@@ -499,7 +502,8 @@ export function SettingsOverview({ profile }: SettingsOverviewProps) {
                   <select
                     value={formData.currency}
                     onChange={(e) => handleInputChange('currency', e.target.value)}
-                    className="w-full px-3 py-2 border border-input rounded-md text-sm"
+                    className="w-full px-3 py-2 border rounded-md text-sm"
+                    style={{ borderColor: '#232629' }}
                   >
                     <option value="USD">USD</option>
                     <option value="EUR">EUR</option>
@@ -513,7 +517,8 @@ export function SettingsOverview({ profile }: SettingsOverviewProps) {
                   <select
                     value={formData.dateFormat}
                     onChange={(e) => handleInputChange('dateFormat', e.target.value)}
-                    className="w-full px-3 py-2 border border-input rounded-md text-sm"
+                    className="w-full px-3 py-2 border rounded-md text-sm"
+                    style={{ borderColor: '#232629' }}
                   >
                     <option value="MM/DD/YYYY">MM/DD/YYYY</option>
                     <option value="DD/MM/YYYY">DD/MM/YYYY</option>
@@ -525,7 +530,8 @@ export function SettingsOverview({ profile }: SettingsOverviewProps) {
                   <select
                     value={formData.timeFormat}
                     onChange={(e) => handleInputChange('timeFormat', e.target.value)}
-                    className="w-full px-3 py-2 border border-input rounded-md text-sm"
+                    className="w-full px-3 py-2 border rounded-md text-sm"
+                    style={{ borderColor: '#232629' }}
                   >
                     <option value="12h">12-hour</option>
                     <option value="24h">24-hour</option>
@@ -542,7 +548,7 @@ export function SettingsOverview({ profile }: SettingsOverviewProps) {
         </TabsContent>
 
         <TabsContent value="danger" className="space-y-6">
-          <Card className="border-red-200">
+          <Card className="border" style={{ borderColor: '#232629' }}>
             <CardHeader>
               <CardTitle className="flex items-center space-x-2 text-red-600">
                 <AlertTriangle className="h-5 w-5" />
@@ -554,7 +560,7 @@ export function SettingsOverview({ profile }: SettingsOverviewProps) {
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 border rounded-lg">
+                <div className="flex items-center justify-between p-4 border rounded-lg" style={{ borderColor: '#232629' }}>
                   <div>
                     <p className="font-medium">Export Your Data</p>
                     <p className="text-sm text-muted-foreground">Download a copy of all your data</p>
@@ -564,7 +570,7 @@ export function SettingsOverview({ profile }: SettingsOverviewProps) {
                     Export Data
                   </Button>
                 </div>
-                <div className="flex items-center justify-between p-4 border rounded-lg border-red-200">
+                <div className="flex items-center justify-between p-4 border rounded-lg" style={{ borderColor: '#232629' }}>
                   <div>
                     <p className="font-medium text-red-600">Delete Account</p>
                     <p className="text-sm text-muted-foreground">Permanently delete your account and all data</p>

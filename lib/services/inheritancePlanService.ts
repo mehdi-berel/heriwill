@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase'
+import { logger } from '@/lib/utils/logger'
 
 /**
  * Inheritance Plan Execution Service
@@ -24,7 +25,7 @@ interface VaultAction {
  */
 export async function executeInheritancePlan(userId: string): Promise<void> {
   try {
-    console.log(`[INHERITANCE] Starting execution for user ${userId}`)
+    logger.info('Starting inheritance plan execution', { userId })
 
     // 1. Mark user as deceased
     await markUserAsDeceased(userId)
@@ -50,9 +51,9 @@ export async function executeInheritancePlan(userId: string): Promise<void> {
       timestamp: new Date().toISOString()
     })
 
-    console.log(`[INHERITANCE] Execution complete for user ${userId}`)
+    logger.info('Inheritance plan execution complete', { userId })
   } catch (error) {
-    console.error(`[INHERITANCE] Error executing plan for user ${userId}:`, error)
+    logger.error('Error executing inheritance plan', error, { userId })
     
     // Log the failure
     await createAuditLog(userId, 'inheritance_plan_failed', {
@@ -78,11 +79,11 @@ async function markUserAsDeceased(userId: string): Promise<void> {
     .eq('id', userId)
 
   if (error) {
-    console.error('[INHERITANCE] Error marking user as deceased:', error)
+    logger.error('Error marking user as deceased', error, { userId })
     throw error
   }
 
-  console.log(`[INHERITANCE] User ${userId} marked as deceased`)
+  logger.info('User marked as deceased', { userId })
 }
 
 /**
@@ -96,7 +97,7 @@ async function getVaultActions(userId: string): Promise<VaultAction[]> {
     .eq('user_id', userId)
 
   if (vaultsError) {
-    console.error('[INHERITANCE] Error fetching vaults:', vaultsError)
+    logger.error('Error fetching vaults for inheritance', vaultsError)
     throw vaultsError
   }
 
@@ -111,7 +112,7 @@ async function getVaultActions(userId: string): Promise<VaultAction[]> {
       .eq('vault_id', vault.id)
 
     if (accessError) {
-      console.error(`[INHERITANCE] Error fetching heir access for vault ${vault.id}:`, accessError)
+      logger.error('Error fetching heir access for vault', accessError, { vaultId: vault.id })
       continue
     }
 
@@ -138,7 +139,7 @@ async function getHeirs(userId: string): Promise<Array<{ id: string; email: stri
     .eq('is_active', true)
 
   if (error) {
-    console.error('[INHERITANCE] Error fetching heirs:', error)
+    logger.error('Error fetching heirs for inheritance', error)
     throw error
   }
 
@@ -154,7 +155,7 @@ async function getHeirs(userId: string): Promise<Array<{ id: string; email: stri
  * Execute action for a specific vault based on its category
  */
 async function executeVaultAction(userId: string, action: VaultAction): Promise<void> {
-  console.log(`[INHERITANCE] Executing action for vault ${action.vault_name} (${action.category})`)
+  logger.info('Executing vault action', { vaultName: action.vault_name, category: action.category, userId })
 
   switch (action.category) {
     case 'share_after_death':
@@ -170,7 +171,7 @@ async function executeVaultAction(userId: string, action: VaultAction): Promise<
       break
 
     default:
-      console.warn(`[INHERITANCE] Unknown vault category: ${action.category}`)
+      logger.warn('Unknown vault category', { category: action.category })
   }
 }
 
@@ -179,7 +180,7 @@ async function executeVaultAction(userId: string, action: VaultAction): Promise<
  */
 async function shareVaultWithHeirs(vaultId: string, heirIds: string[]): Promise<void> {
   if (heirIds.length === 0) {
-    console.log(`[INHERITANCE] No heirs assigned to vault ${vaultId}`)
+    logger.info('No heirs assigned to vault', { vaultId })
     return
   }
 
@@ -195,11 +196,11 @@ async function shareVaultWithHeirs(vaultId: string, heirIds: string[]): Promise<
       .eq('heir_id', heirId)
 
     if (error) {
-      console.error(`[INHERITANCE] Error granting access to heir ${heirId}:`, error)
+      logger.error('Error granting vault access to heir', error, { heirId, vaultId })
     }
   }
 
-  console.log(`[INHERITANCE] Granted access to ${heirIds.length} heirs for vault ${vaultId}`)
+  logger.info('Granted vault access to heirs', { vaultId, heirCount: heirIds.length })
 }
 
 /**
@@ -213,7 +214,7 @@ async function deleteVault(vaultId: string): Promise<void> {
     .eq('vault_id', vaultId)
 
   if (itemsError) {
-    console.error(`[INHERITANCE] Error deleting vault items:`, itemsError)
+    logger.error('Error deleting vault items', itemsError, { vaultId })
   }
 
   // Delete vault
@@ -223,11 +224,11 @@ async function deleteVault(vaultId: string): Promise<void> {
     .eq('id', vaultId)
 
   if (vaultError) {
-    console.error(`[INHERITANCE] Error deleting vault:`, vaultError)
+    logger.error('Error deleting vault', vaultError, { vaultId })
     throw vaultError
   }
 
-  console.log(`[INHERITANCE] Deleted vault ${vaultId}`)
+  logger.info('Deleted vault', { vaultId })
 }
 
 /**
@@ -243,7 +244,7 @@ async function notifyNotaryForSignOff(userId: string, vaultId: string): Promise<
     .single()
 
   if (error || !notary) {
-    console.warn(`[INHERITANCE] No primary notary found for user ${userId}`)
+    logger.warn('No primary notary found for user', { userId })
     return
   }
 
@@ -251,8 +252,12 @@ async function notifyNotaryForSignOff(userId: string, vaultId: string): Promise<
   const notaryData = notary as any
 
   // TODO: Send email notification to notary
-  // For now, just log
-  console.log(`[INHERITANCE] Would notify notary ${notaryData.name} (${notaryData.email}) about vault ${vaultId}`)
+  logger.info('Notary notification pending', { 
+    notaryName: notaryData.name, 
+    notaryEmail: notaryData.email, 
+    vaultId,
+    userId 
+  })
 
   // Create audit log
   await createAuditLog(userId, 'notary_notified', {
@@ -270,14 +275,17 @@ async function notifyHeirs(
   heirs: Array<{ id: string; email: string; full_name: string }>
 ): Promise<void> {
   if (heirs.length === 0) {
-    console.log(`[INHERITANCE] No heirs to notify for user ${userId}`)
+    logger.info('No heirs to notify', { userId })
     return
   }
 
   // TODO: Send email notifications to heirs
-  // For now, just log
   for (const heir of heirs) {
-    console.log(`[INHERITANCE] Would notify heir ${heir.full_name} (${heir.email})`)
+    logger.info('Heir notification pending', { 
+      heirName: heir.full_name, 
+      heirEmail: heir.email,
+      userId 
+    })
     
     // Create audit log for each notification
     await createAuditLog(userId, 'heir_notified', {
@@ -286,7 +294,7 @@ async function notifyHeirs(
     })
   }
 
-  console.log(`[INHERITANCE] Notified ${heirs.length} heirs`)
+  logger.info('Heir notifications completed', { heirCount: heirs.length, userId })
 }
 
 /**
@@ -309,6 +317,6 @@ async function createAuditLog(
     })
 
   if (error) {
-    console.error('[INHERITANCE] Error creating audit log:', error)
+    logger.error('Error creating audit log', error, { userId, action })
   }
 }

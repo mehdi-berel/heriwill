@@ -280,7 +280,6 @@ export default function HeirsPage() {
             </Button>
           </div>
           
-          {/* Category Tabs - Centered */}
           <div className="flex justify-center gap-2 mb-4">
             <Button
               variant={selectedStatus === 'accepted' ? 'default' : 'outline'}
@@ -315,7 +314,8 @@ export default function HeirsPage() {
               placeholder="Search heirs..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 h-11 bg-background-secondary border-border rounded-xl"
+              className="pl-10 h-11 bg-background-secondary rounded-xl"
+              style={{ borderColor: '#232629' }}
             />
           </div>
         </div>

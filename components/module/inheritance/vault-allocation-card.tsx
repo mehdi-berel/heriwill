@@ -69,12 +69,12 @@ export function VaultAllocationCard({
       case 'sign_off_after_death':
         return 'bg-status-warning/10 text-status-warning border-status-warning/30'
       default:
-        return 'bg-background-elevated text-text-muted border-border-default'
+        return 'bg-background-elevated text-text-muted'
     }
   }
 
   return (
-    <Card className="border-border-default">
+    <Card className="border" style={{ borderColor: '#232629' }}>
       <CardHeader>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -100,7 +100,7 @@ export function VaultAllocationCard({
       </CardHeader>
       <CardContent className="space-y-3">
         {allocatedHeirs.length === 0 ? (
-          <div className="text-center py-8 border-2 border-dashed border-border-default rounded-lg">
+          <div className="text-center py-8 border-2 border-dashed rounded-lg" style={{ borderColor: '#232629' }}>
             <Shield className="h-8 w-8 mx-auto mb-2 text-text-muted" />
             <p className="text-sm text-text-muted mb-3">No heirs assigned to this vault</p>
             <Button 
@@ -142,12 +142,13 @@ export function VaultAllocationCard({
         )}
 
         {expanded && unallocatedHeirs.length > 0 && (
-          <div className="mt-4 pt-4 border-t border-border-default space-y-2">
+          <div className="mt-4 pt-4 border-t space-y-2" style={{ borderColor: '#232629' }}>
             <p className="text-sm font-medium text-text-secondary mb-2">Available Heirs:</p>
             {unallocatedHeirs.map(heir => (
               <div 
                 key={heir.id}
-                className="flex items-center justify-between p-3 border border-border-default rounded-lg bg-background-elevated hover:bg-background-hover transition-colors cursor-pointer"
+                className="flex items-center justify-between p-3 border rounded-lg bg-background-elevated hover:bg-background-hover transition-colors cursor-pointer"
+                style={{ borderColor: '#232629' }}
                 onClick={() => {
                   onUpdateAllocation(vault.id, heir.id, {
                     heir_id: heir.id,

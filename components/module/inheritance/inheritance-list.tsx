@@ -174,7 +174,8 @@ export function InheritanceList({
           <select
             value={selectedStatus}
             onChange={(e) => setSelectedStatus(e.target.value)}
-            className="px-3 py-2 border border-input rounded-md text-sm"
+            className="px-3 py-2 border rounded-md text-sm"
+            style={{ borderColor: '#232629' }}
           >
             {statusOptions.map(option => (
               <option key={option.value} value={option.value}>
@@ -186,7 +187,8 @@ export function InheritanceList({
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as 'name' | 'percentage' | 'value' | 'status')}
-            className="px-3 py-2 border border-input rounded-md text-sm"
+            className="px-3 py-2 border rounded-md text-sm"
+            style={{ borderColor: '#232629' }}
           >
             <option value="name">Sort by Name</option>
             <option value="percentage">Sort by Percentage</option>

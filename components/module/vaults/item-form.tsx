@@ -419,7 +419,7 @@ export function ItemForm({ isOpen, onClose, onSave, initialData, vaultCategory }
                   )}
                 </div>
               ) : (
-                <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                <div className="p-4 bg-green-50 rounded-lg" style={{ borderColor: '#232629' }}>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <CheckCircle2 className="h-5 w-5 text-green-600" />
@@ -578,8 +578,9 @@ export function ItemForm({ isOpen, onClose, onSave, initialData, vaultCategory }
                     className={`p-3 rounded-lg border-2 transition-all ${
                       isSelected
                         ? 'border-primary-500 bg-primary-50 dark:bg-primary-950/30'
-                        : 'border-gray-200 hover:border-gray-300 dark:border-gray-700'
+                        : 'hover:border-gray-300'
                     } ${initialData ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                    style={{ borderColor: isSelected ? undefined : '#232629' }}
                   >
                     <div className="flex flex-col items-center gap-2">
                       <Icon className={`h-5 w-5 ${isSelected ? 'text-primary-600' : 'text-gray-600'}`} />
@@ -602,8 +603,9 @@ export function ItemForm({ isOpen, onClose, onSave, initialData, vaultCategory }
                     className={`p-3 rounded-lg border-2 transition-all ${
                       isSelected
                         ? 'border-primary-500 bg-primary-50 dark:bg-primary-950/30'
-                        : 'border-gray-200 hover:border-gray-300 dark:border-gray-700'
+                        : 'hover:border-gray-300'
                     } ${initialData ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                    style={{ borderColor: isSelected ? undefined : '#232629' }}
                   >
                     <div className="flex flex-col items-center gap-2">
                       <Icon className={`h-5 w-5 ${isSelected ? 'text-primary-600' : 'text-gray-600'}`} />

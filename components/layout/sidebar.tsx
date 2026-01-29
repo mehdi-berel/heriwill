@@ -20,7 +20,8 @@ import {
   Package,
   Sparkles,
   ArrowRight,
-  LockKeyhole
+  LockKeyhole,
+  Settings
 } from "lucide-react"
 
 const navigation = [
@@ -41,12 +42,6 @@ const navigation = [
     href: "/heirs",
     icon: Users,
     description: "Beneficiaries",
-  },
-  {
-    name: "Inheritance",
-    href: "/inheritance",
-    icon: Gift,
-    description: "Legacy plan",
   },
   {
     name: "Sign-Off",
@@ -128,15 +123,18 @@ export function Sidebar({ onSignOut }: SidebarProps) {
   return (
     <div 
       className={cn(
-        "flex h-full flex-col bg-black/30 backdrop-blur-xl border-r border-border-default/50 transition-all duration-200 relative",
+        "flex h-full flex-col bg-black/30 backdrop-blur-xl border-r transition-all duration-200 relative",
         isHovered ? "w-64" : "w-20"
       )}
-      style={{ transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)' }}
+      style={{ 
+        transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)',
+        borderColor: '#232629'
+      }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
       {/* Logo */}
-      <div className="flex h-14 items-center px-4 border-b border-border-separator justify-between">
+      <div className="flex h-14 items-center px-4 border-b justify-between" style={{ borderColor: '#232629' }}>
         <div className={cn(
           "flex items-center gap-2.5 transition-all duration-300",
           !isHovered && "justify-center w-full"
@@ -270,8 +268,26 @@ export function Sidebar({ onSignOut }: SidebarProps) {
         </div>
       )}
 
-      {/* Divider before sign out */}
+      {/* Divider before settings */}
       <div className="mx-2 mb-2 h-px bg-gradient-to-r from-transparent via-border-default to-transparent opacity-50"></div>
+
+      {/* Settings */}
+      <div className="px-2 pb-2">
+        <Link
+          href="/settings"
+          className={cn(
+            "group w-full flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm font-medium text-text-muted hover:bg-background-hover hover:text-text-primary transition-all duration-200",
+            pathname === "/settings" && "bg-primary-600/10 text-primary-400",
+            !isHovered && "justify-center"
+          )}
+          title={!isHovered ? "Settings" : undefined}
+        >
+          <div className="group-hover:scale-105 transition-all duration-200">
+            <Settings className="h-4 w-4" />
+          </div>
+          {isHovered && <span className="flex-1 text-left whitespace-nowrap">Settings</span>}
+        </Link>
+      </div>
 
       {/* Sign Out */}
       <div className="px-2 pb-2">

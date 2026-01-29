@@ -73,8 +73,10 @@ export function UpgradeModal({ isOpen, onClose, reason = 'pro_feature', currentP
           <div className={`relative border-2 rounded-xl p-6 transition-all ${
             currentPlan === 'premium' 
               ? 'border-primary-500 bg-primary-50 dark:bg-primary-950/30' 
-              : 'border-border hover:border-primary-300'
-          }`}>
+              : 'hover:border-primary-300'
+          }`}
+            style={{ borderColor: currentPlan === 'premium' ? undefined : '#232629' }}
+          >
             {currentPlan === 'premium' && (
               <Badge className="absolute top-4 right-4 bg-primary-500">Current Plan</Badge>
             )}

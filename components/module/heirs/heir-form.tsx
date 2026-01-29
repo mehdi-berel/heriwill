@@ -162,8 +162,9 @@ export function HeirForm({ onSubmit, onCancel, initialData, isEditing = false }:
                   className={`p-4 border rounded-lg cursor-pointer transition-colors ${
                     formData.access_level === level.value
                       ? 'border-primary bg-primary/5'
-                      : 'border-gray-200 hover:border-gray-300'
+                      : 'hover:border-gray-300'
                   }`}
+                  style={{ borderColor: formData.access_level === level.value ? undefined : '#232629' }}
                   onClick={() => setFormData({ ...formData, access_level: level.value as 'full' | 'partial' | 'view' })}
                 >
                   <div className="flex items-center justify-between">

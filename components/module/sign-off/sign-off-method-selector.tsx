@@ -38,8 +38,9 @@ export function SignOffMethodSelector({
               "group relative cursor-pointer transition-all duration-200 rounded-lg border p-3 hover:shadow-md",
               isSelected 
                 ? "border-primary-500 bg-primary-50/50 dark:bg-primary-950/30 shadow-sm" 
-                : "border-gray-200 dark:border-gray-700 hover:border-primary-300 dark:hover:border-primary-700 hover:bg-gray-50/50 dark:hover:bg-gray-900/30"
+                : "hover:border-primary-300 dark:hover:border-primary-700 hover:bg-gray-50/50 dark:hover:bg-gray-900/30"
             )}
+            style={{ borderColor: isSelected ? undefined : '#232629' }}
             onClick={() => onMethodSelect(method.id)}
           >
             <div className="flex items-center gap-3">
@@ -65,7 +66,7 @@ export function SignOffMethodSelector({
                     <CheckCircle2 className="h-3.5 w-3.5 text-primary-500 flex-shrink-0" />
                   )}
                   {method.recommended && !isSelected && (
-                    <Badge className="bg-amber-500 text-white border-0 text-xs py-0 px-1.5 h-4">
+                    <Badge className="bg-amber-500 text-white border-transparent text-xs py-0 px-1.5 h-4">
                       Recommended
                     </Badge>
                   )}

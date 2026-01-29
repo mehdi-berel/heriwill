@@ -264,7 +264,8 @@ export function InheritancePage({ userId }: InheritancePageProps) {
                 {vaultItems.map((item) => (
                   <div
                     key={item.id}
-                    className="flex items-center justify-between p-4 rounded-lg border border-border-default hover:bg-background-hover transition-colors"
+                    className="flex items-center justify-between p-4 rounded-lg border hover:bg-background-hover transition-colors"
+                    style={{ borderColor: '#232629' }}
                   >
                     <div className="flex items-center gap-3">
                       <Lock className="h-5 w-5 text-text-tertiary" />
@@ -303,7 +304,7 @@ export function InheritancePage({ userId }: InheritancePageProps) {
       </div>
 
       {/* Info Banner */}
-      <Card className="bg-primary-600/5 border-primary-600/20">
+      <Card className="bg-primary-600/5 border" style={{ borderColor: '#232629' }}>
         <CardContent className="flex items-start gap-3 p-4">
           <Info className="h-5 w-5 text-primary-400 flex-shrink-0 mt-0.5" />
           <p className="text-sm text-text-secondary">
@@ -314,7 +315,7 @@ export function InheritancePage({ userId }: InheritancePageProps) {
 
       {/* Vaults List */}
       {sharedVaults.length === 0 ? (
-        <Card>
+        <Card className="border" style={{ borderColor: '#232629' }}>
           <CardContent className="p-12 text-center">
             <div className="h-20 w-20 rounded-full bg-primary-600/10 flex items-center justify-center mx-auto mb-4">
               <FolderOpen className="h-10 w-10 text-primary-400" />

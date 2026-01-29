@@ -5,8 +5,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { User, CheckCircle } from "lucide-react"
+import { User, CheckCircle, AlertCircle } from "lucide-react"
 import { supabase } from "@/lib/supabase"
+import { logger } from "@/lib/utils/logger"
+import { validateEmail, validatePhone, validateFullName, validateTextField, sanitizeText } from "@/lib/utils/validation"
 
 export function ProfileSettings() {
   const [formData, setFormData] = useState({
@@ -22,65 +24,130 @@ export function ProfileSettings() {
   })
   const [isSaving, setIsSaving] = useState(false)
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle')
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
 
   useEffect(() => {
     const loadProfile = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
+      try {
+        const { data: { user }, error: authError } = await supabase.auth.getUser()
+        if (authError) throw authError
+        if (!user) return
 
-      const { data: profile } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', user.id)
-        .single()
+        const { data: profile, error: profileError } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', user.id)
+          .single()
 
-      if (profile) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const p = profile as any
-        setFormData({
-          fullName: p.full_name || '',
-          email: p.email || '',
-          phone: p.phone || '',
-          address: p.address || '',
-          timezone: p.timezone || 'UTC',
-          language: p.language || 'en',
-          currency: p.currency || 'USD',
-          dateFormat: p.date_format || 'MM/DD/YYYY',
-          timeFormat: p.time_format || '12h'
-        })
+        if (profileError) throw profileError
+
+        if (profile) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const p = profile as any
+          setFormData({
+            fullName: p.full_name || '',
+            email: p.email || '',
+            phone: p.phone || '',
+            address: p.address || '',
+            timezone: p.timezone || 'UTC',
+            language: p.language || 'en',
+            currency: p.currency || 'USD',
+            dateFormat: p.date_format || 'MM/DD/YYYY',
+            timeFormat: p.time_format || '12h'
+          })
+        }
+      } catch (error) {
+        logger.error('Failed to load profile', error)
       }
     }
     loadProfile()
   }, [])
 
   const onInputChange = (field: string, value: string) => {
+    // Clear validation error for this field when user starts typing
+    if (validationErrors[field]) {
+      setValidationErrors(prev => {
+        const newErrors = { ...prev }
+        delete newErrors[field]
+        return newErrors
+      })
+    }
     setFormData(prev => ({ ...prev, [field]: value }))
   }
 
+  const validateForm = (): boolean => {
+    const errors: Record<string, string> = {}
+
+    // Validate full name
+    const nameValidation = validateFullName(formData.fullName)
+    if (!nameValidation.isValid) {
+      errors.fullName = nameValidation.error!
+    }
+
+    // Validate email
+    const emailValidation = validateEmail(formData.email)
+    if (!emailValidation.isValid) {
+      errors.email = emailValidation.error!
+    }
+
+    // Validate phone (optional)
+    if (formData.phone) {
+      const phoneValidation = validatePhone(formData.phone)
+      if (!phoneValidation.isValid) {
+        errors.phone = phoneValidation.error!
+      }
+    }
+
+    // Validate address (optional but with length limit)
+    const addressValidation = validateTextField(formData.address, 'Address', { maxLength: 500 })
+    if (!addressValidation.isValid) {
+      errors.address = addressValidation.error!
+    }
+
+    setValidationErrors(errors)
+    return Object.keys(errors).length === 0
+  }
+
   const onSave = async () => {
+    // Validate form before saving
+    if (!validateForm()) {
+      setSaveStatus('error')
+      setTimeout(() => setSaveStatus('idle'), 3000)
+      return
+    }
+
     setIsSaving(true)
     setSaveStatus('saving')
     try {
-      const { data: { user } } = await supabase.auth.getUser()
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+      if (authError) throw authError
       if (!user) throw new Error('Not authenticated')
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error } = await (supabase.from('users') as any).update({
-        full_name: formData.fullName,
-        phone: formData.phone,
-        address: formData.address,
+      // Sanitize text inputs
+      const sanitizedData = {
+        full_name: sanitizeText(formData.fullName.trim()),
+        phone: formData.phone ? sanitizeText(formData.phone.trim()) : null,
+        address: formData.address ? sanitizeText(formData.address.trim()) : null,
         timezone: formData.timezone,
         language: formData.language,
         currency: formData.currency,
         date_format: formData.dateFormat,
-        time_format: formData.timeFormat
-      }).eq('id', user.id)
+        time_format: formData.timeFormat,
+        updated_at: new Date().toISOString()
+      }
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase.from('users') as any)
+        .update(sanitizedData)
+        .eq('id', user.id)
 
       if (error) throw error
+      
+      logger.info('Profile updated successfully', { userId: user.id })
       setSaveStatus('success')
       setTimeout(() => setSaveStatus('idle'), 3000)
     } catch (error) {
-      console.error('Save error:', error)
+      logger.error('Failed to save profile', error)
       setSaveStatus('error')
       setTimeout(() => setSaveStatus('idle'), 3000)
     } finally {
@@ -109,7 +176,14 @@ export function ProfileSettings() {
                 value={formData.fullName}
                 onChange={(e) => onInputChange('fullName', e.target.value)}
                 placeholder="John Doe"
+                className={validationErrors.fullName ? 'border-status-error' : ''}
               />
+              {validationErrors.fullName && (
+                <div className="flex items-center gap-1 text-xs text-status-error">
+                  <AlertCircle className="h-3 w-3" />
+                  <span>{validationErrors.fullName}</span>
+                </div>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="email">Email Address</Label>
@@ -119,7 +193,14 @@ export function ProfileSettings() {
                 value={formData.email}
                 onChange={(e) => onInputChange('email', e.target.value)}
                 placeholder="john@example.com"
+                className={validationErrors.email ? 'border-status-error' : ''}
               />
+              {validationErrors.email && (
+                <div className="flex items-center gap-1 text-xs text-status-error">
+                  <AlertCircle className="h-3 w-3" />
+                  <span>{validationErrors.email}</span>
+                </div>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="phone">Phone Number</Label>
@@ -129,7 +210,14 @@ export function ProfileSettings() {
                 value={formData.phone}
                 onChange={(e) => onInputChange('phone', e.target.value)}
                 placeholder="+1 (555) 123-4567"
+                className={validationErrors.phone ? 'border-status-error' : ''}
               />
+              {validationErrors.phone && (
+                <div className="flex items-center gap-1 text-xs text-status-error">
+                  <AlertCircle className="h-3 w-3" />
+                  <span>{validationErrors.phone}</span>
+                </div>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="address">Address</Label>
@@ -138,7 +226,14 @@ export function ProfileSettings() {
                 value={formData.address}
                 onChange={(e) => onInputChange('address', e.target.value)}
                 placeholder="123 Main St, City, State"
+                className={validationErrors.address ? 'border-status-error' : ''}
               />
+              {validationErrors.address && (
+                <div className="flex items-center gap-1 text-xs text-status-error">
+                  <AlertCircle className="h-3 w-3" />
+                  <span>{validationErrors.address}</span>
+                </div>
+              )}
             </div>
           </div>
         </CardContent>
@@ -160,7 +255,8 @@ export function ProfileSettings() {
                 id="timezone"
                 value={formData.timezone}
                 onChange={(e) => onInputChange('timezone', e.target.value)}
-                className="w-full px-3 py-2 bg-background-secondary border border-border-default rounded-md"
+                className="w-full px-3 py-2 bg-background-secondary border rounded-md"
+                style={{ borderColor: '#232629' }}
               >
                 <option value="UTC">UTC</option>
                 <option value="America/New_York">Eastern Time</option>
@@ -178,7 +274,8 @@ export function ProfileSettings() {
                 id="language"
                 value={formData.language}
                 onChange={(e) => onInputChange('language', e.target.value)}
-                className="w-full px-3 py-2 bg-background-secondary border border-border-default rounded-md"
+                className="w-full px-3 py-2 bg-background-secondary border rounded-md"
+                style={{ borderColor: '#232629' }}
               >
                 <option value="en">English</option>
                 <option value="es">Spanish</option>
@@ -193,7 +290,8 @@ export function ProfileSettings() {
                 id="currency"
                 value={formData.currency}
                 onChange={(e) => onInputChange('currency', e.target.value)}
-                className="w-full px-3 py-2 bg-background-secondary border border-border-default rounded-md"
+                className="w-full px-3 py-2 bg-background-secondary border rounded-md"
+                style={{ borderColor: '#232629' }}
               >
                 <option value="USD">USD ($)</option>
                 <option value="EUR">EUR (€)</option>
@@ -207,7 +305,8 @@ export function ProfileSettings() {
                 id="dateFormat"
                 value={formData.dateFormat}
                 onChange={(e) => onInputChange('dateFormat', e.target.value)}
-                className="w-full px-3 py-2 bg-background-secondary border border-border-default rounded-md"
+                className="w-full px-3 py-2 bg-background-secondary border rounded-md"
+                style={{ borderColor: '#232629' }}
               >
                 <option value="MM/DD/YYYY">MM/DD/YYYY</option>
                 <option value="DD/MM/YYYY">DD/MM/YYYY</option>

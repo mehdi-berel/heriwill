@@ -80,6 +80,106 @@ export function BillingSettings({
 
   return (
     <div className="space-y-6">
+      {/* Payment Method */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Payment Method</CardTitle>
+          <CardDescription>
+            Manage your payment methods and billing details
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {subscriptionTier !== 'free' ? (
+            <div className="p-4 border rounded-lg" style={{ borderColor: '#232629' }}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-gray-800 rounded">
+                    <CreditCard className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="font-medium">•••• •••• •••• 4242</p>
+                    <p className="text-sm text-text-tertiary">Expires 12/2025</p>
+                  </div>
+                </div>
+                <Button variant="outline" size="sm">
+                  Update
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="p-4 bg-gray-800/50 border rounded-lg text-center" style={{ borderColor: '#232629' }}>
+              <p className="text-text-tertiary">No payment method on file</p>
+              <p className="text-sm text-text-tertiary mt-1">Upgrade to add a payment method</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Billing History */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Billing History</CardTitle>
+          <CardDescription>
+            View and download your past invoices
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {subscriptionTier !== 'free' ? (
+            <div className="space-y-2">
+              {[
+                { date: '2026-01-01', amount: subscriptionTier === 'pro' ? '€20.00' : '€10.00', status: 'Paid' },
+                { date: '2025-12-01', amount: subscriptionTier === 'pro' ? '€20.00' : '€10.00', status: 'Paid' },
+                { date: '2025-11-01', amount: subscriptionTier === 'pro' ? '€20.00' : '€10.00', status: 'Paid' }
+              ].map((invoice, index) => (
+                <div key={index} className="flex items-center justify-between p-4 border rounded-lg" style={{ borderColor: '#232629' }}>
+                  <div>
+                    <p className="font-medium">{formatDate(invoice.date)}</p>
+                    <p className="text-sm text-text-tertiary">{invoice.amount}</p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Badge className="bg-status-success">{invoice.status}</Badge>
+                    <Button variant="ghost" size="sm">
+                      <Download className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="p-4 bg-gray-800/50 border rounded-lg text-center" style={{ borderColor: '#232629' }}>
+              <p className="text-text-tertiary">No billing history</p>
+              <p className="text-sm text-text-tertiary mt-1">You're on the free plan</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Danger Zone */}
+      {subscriptionTier !== 'free' && (
+        <Card className="border-red-500/50">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-red-500" />
+              <CardTitle className="text-red-500">Danger Zone</CardTitle>
+            </div>
+            <CardDescription>
+              Irreversible actions that affect your subscription
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
+              <p className="font-medium mb-2">Cancel Subscription</p>
+              <p className="text-sm text-text-tertiary mb-4">
+                Once you cancel, you'll lose access to all premium features at the end of your billing period.
+              </p>
+              <Button variant="outline" className="border-red-500 text-red-500 hover:bg-red-500/10">
+                Cancel Subscription
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Current Plan */}
       <Card>
         <CardHeader>
@@ -92,7 +192,7 @@ export function BillingSettings({
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className={`p-6 ${planDetails.bgColor} border border-border-default rounded-lg`}>
+          <div className={`p-6 ${planDetails.bgColor} border rounded-lg`} style={{ borderColor: '#232629' }}>
             <div className="flex items-start justify-between mb-4">
               <div className="flex items-center gap-3">
                 <div className={`p-3 ${planDetails.bgColor} rounded-lg`}>
@@ -118,7 +218,7 @@ export function BillingSettings({
             </div>
 
             {subscriptionExpiresAt && (
-              <div className="pt-4 border-t border-border-default">
+              <div className="pt-4 border-t" style={{ borderColor: '#232629' }}>
                 <p className="text-sm text-text-tertiary">
                   {subscriptionStatus === 'active' ? 'Renews on' : 'Expires on'}: {formatDate(subscriptionExpiresAt)}
                 </p>
@@ -155,106 +255,6 @@ export function BillingSettings({
           )}
         </CardContent>
       </Card>
-
-      {/* Payment Method */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Payment Method</CardTitle>
-          <CardDescription>
-            Manage your payment methods and billing details
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {subscriptionTier !== 'free' ? (
-            <div className="p-4 border border-border-default rounded-lg">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-gray-800 rounded">
-                    <CreditCard className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <p className="font-medium">•••• •••• •••• 4242</p>
-                    <p className="text-sm text-text-tertiary">Expires 12/2025</p>
-                  </div>
-                </div>
-                <Button variant="outline" size="sm">
-                  Update
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <div className="p-4 bg-gray-800/50 border border-border-default rounded-lg text-center">
-              <p className="text-text-tertiary">No payment method on file</p>
-              <p className="text-sm text-text-tertiary mt-1">Upgrade to add a payment method</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Billing History */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Billing History</CardTitle>
-          <CardDescription>
-            View and download your past invoices
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {subscriptionTier !== 'free' ? (
-            <div className="space-y-2">
-              {[
-                { date: '2026-01-01', amount: subscriptionTier === 'pro' ? '€20.00' : '€10.00', status: 'Paid' },
-                { date: '2025-12-01', amount: subscriptionTier === 'pro' ? '€20.00' : '€10.00', status: 'Paid' },
-                { date: '2025-11-01', amount: subscriptionTier === 'pro' ? '€20.00' : '€10.00', status: 'Paid' }
-              ].map((invoice, index) => (
-                <div key={index} className="flex items-center justify-between p-4 border border-border-default rounded-lg">
-                  <div>
-                    <p className="font-medium">{formatDate(invoice.date)}</p>
-                    <p className="text-sm text-text-tertiary">{invoice.amount}</p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Badge className="bg-status-success">{invoice.status}</Badge>
-                    <Button variant="ghost" size="sm">
-                      <Download className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="p-4 bg-gray-800/50 border border-border-default rounded-lg text-center">
-              <p className="text-text-tertiary">No billing history</p>
-              <p className="text-sm text-text-tertiary mt-1">You're on the free plan</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Danger Zone */}
-      {subscriptionTier !== 'free' && (
-        <Card className="border-red-500/50">
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-red-500" />
-              <CardTitle className="text-red-500">Danger Zone</CardTitle>
-            </div>
-            <CardDescription>
-              Irreversible actions that affect your subscription
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
-              <p className="font-medium mb-2">Cancel Subscription</p>
-              <p className="text-sm text-text-tertiary mb-4">
-                Once you cancel, you'll lose access to all premium features at the end of your billing period.
-              </p>
-              <Button variant="outline" className="border-red-500 text-red-500 hover:bg-red-500/10">
-                Cancel Subscription
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
     </div>
   )
 }

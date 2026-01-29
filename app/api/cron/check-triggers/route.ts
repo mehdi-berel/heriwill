@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { checkGlobalTriggerConditions } from '@/lib/services/globalTriggerService'
+import { logger } from '@/lib/utils/logger'
+import { rateLimit, RateLimitPresets } from '@/lib/middleware/rateLimit'
 
 /**
  * Vercel Cron Job - Check Sign-Off Trigger Conditions
@@ -18,18 +20,41 @@ import { checkGlobalTriggerConditions } from '@/lib/services/globalTriggerServic
  */
 export async function GET(request: NextRequest) {
   try {
+    // Apply rate limiting (strict for cron jobs)
+    const rateLimitResult = rateLimit({
+      windowMs: 1 * 60 * 1000, // 1 minute
+      maxRequests: 2, // Max 2 requests per minute
+      message: 'Cron endpoint rate limit exceeded'
+    })(request)
+    
+    if (rateLimitResult) {
+      return rateLimitResult
+    }
+
     // Verify cron secret for security
     const authHeader = request.headers.get('authorization')
     const cronSecret = process.env.CRON_SECRET
     
-    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+    // IMPORTANT: Require cron secret in production
+    if (!cronSecret) {
+      logger.error('CRON_SECRET not configured')
+      return NextResponse.json(
+        { error: 'Server configuration error' },
+        { status: 500 }
+      )
+    }
+    
+    if (authHeader !== `Bearer ${cronSecret}`) {
+      logger.warn('Unauthorized cron access attempt', { 
+        ip: request.headers.get('x-forwarded-for') || 'unknown' 
+      })
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
       )
     }
 
-    console.log('[CRON] Starting trigger check at', new Date().toISOString())
+    logger.info('Starting trigger check', { timestamp: new Date().toISOString() })
 
     // Get all users with active global triggers
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -40,7 +65,7 @@ export async function GET(request: NextRequest) {
       .eq('is_active', true)
 
     if (usersError) {
-      console.error('[CRON] Error fetching users:', usersError)
+      logger.error('Error fetching users for trigger check', usersError)
       return NextResponse.json(
         { error: 'Failed to fetch users', details: usersError.message },
         { status: 500 }
@@ -62,7 +87,7 @@ export async function GET(request: NextRequest) {
         const shouldTrigger = await checkGlobalTriggerConditions(user.id)
         
         if (shouldTrigger) {
-          console.log(`[CRON] Trigger condition met for user ${user.id} (${user.email})`)
+          logger.info('Trigger condition met for user', { userId: user.id, email: user.email })
           
           // Execute inheritance plan
           const { executeInheritancePlan } = await import('@/lib/services/inheritancePlanService')
@@ -82,12 +107,12 @@ export async function GET(request: NextRequest) {
           })
         }
       } catch (error) {
-        console.error(`[CRON] Error checking user ${user.id}:`, error)
+        logger.error('Error checking user trigger', error, { userId: user.id })
         results.failed++
       }
     }
 
-    console.log('[CRON] Check complete:', results)
+    logger.info('Trigger check complete', results)
 
     return NextResponse.json({
       success: true,
@@ -95,7 +120,7 @@ export async function GET(request: NextRequest) {
       results
     })
   } catch (error) {
-    console.error('[CRON] Fatal error:', error)
+    logger.error('Fatal error in cron job', error)
     return NextResponse.json(
       { 
         error: 'Cron job failed', 

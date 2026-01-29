@@ -25,12 +25,21 @@ export default function LoginPage() {
     setError("")
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
 
       if (error) throw error
+
+      // Update last_activity and last_login timestamps
+      if (data.user) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (supabase.from('users') as any).update({
+          last_activity: new Date().toISOString(),
+          last_login: new Date().toISOString()
+        }).eq('id', data.user.id)
+      }
 
       router.push("/")
     } catch (error: unknown) {

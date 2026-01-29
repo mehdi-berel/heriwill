@@ -98,7 +98,8 @@ export function HeirList({
           {sortedHeirs.map((heir) => (
             <div
               key={heir.id}
-              className="flex items-center p-4 bg-background-card border border-border rounded-xl cursor-pointer hover:border-primary/50 transition-all group"
+              className="flex items-center p-4 bg-background-card border rounded-xl cursor-pointer hover:border-primary/50 transition-all group"
+              style={{ borderColor: '#232629' }}
               onClick={() => onView(heir)}
             >
               {/* Icon Container */}

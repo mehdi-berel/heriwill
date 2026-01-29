@@ -2,6 +2,7 @@
 
 import { ReactNode } from "react"
 import { Sidebar } from "../../layout/sidebar"
+import { Header } from "../../layout/header"
 
 interface DashboardLayoutProps {
   children: ReactNode
@@ -13,8 +14,9 @@ export function DashboardLayout({ children, userName, onSignOut }: DashboardLayo
   return (
     <div className="flex h-screen">
       <Sidebar userName={userName} onSignOut={onSignOut} />
-      <main className="flex-1 overflow-auto">
-        <div className="h-full">
+      <main className="flex-1 flex flex-col overflow-hidden">
+        <Header />
+        <div className="flex-1 overflow-auto">
           {children}
         </div>
       </main>

@@ -9,11 +9,13 @@ import { supabase } from "@/lib/supabase"
 import { User } from "@supabase/supabase-js"
 
 interface UserProfile {
-  user_id: string
+  id: string
   full_name?: string
   email?: string
   avatar_url?: string
   subscription_tier?: string
+  subscription_status?: string
+  is_active?: boolean
 }
 
 interface DashboardStats {
@@ -40,12 +42,24 @@ export default function HomePage() {
   const router = useRouter()
 
   const loadProfile = useCallback(async (userId: string) => {
-    const { data } = await supabase
-      .from('user_profiles')
-      .select('*')
-      .eq('user_id', userId)
-      .single()
-    setProfile(data)
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('id, full_name, email, avatar_url, subscription_tier, subscription_status, is_active')
+        .eq('id', userId)
+        .single()
+      
+      if (error) {
+        throw error
+      }
+      
+      if (data) {
+        setProfile(data as UserProfile)
+      }
+    } catch (error) {
+      // Silent error - user can still use dashboard with limited profile data
+      setProfile(null)
+    }
   }, [])
 
   const calculateSecurityScore = useCallback((
@@ -75,24 +89,15 @@ export default function HomePage() {
 
   const loadStats = useCallback(async (userId: string) => {
     try {
-      const { data: vaults } = await supabase
-        .from('vaults')
-        .select('*')
-        .eq('user_id', userId)
+      const [vaultsResult, heirsResult, assetsResult] = await Promise.all([
+        supabase.from('vaults').select('id', { count: 'exact' }).eq('user_id', userId),
+        supabase.from('heirs').select('id', { count: 'exact' }).eq('user_id', userId),
+        supabase.from('assets').select('id', { count: 'exact' }).eq('user_id', userId)
+      ])
 
-      const { data: heirs } = await supabase
-        .from('heirs')
-        .select('*')
-        .eq('user_id', userId)
-
-      const { data: assets } = await supabase
-        .from('assets')
-        .select('*')
-        .eq('user_id', userId)
-
-      const vaultsCount = vaults?.length || 0
-      const heirsCount = heirs?.length || 0
-      const assetsCount = assets?.length || 0
+      const vaultsCount = vaultsResult.count || 0
+      const heirsCount = heirsResult.count || 0
+      const assetsCount = assetsResult.count || 0
 
       const completedSections = [
         vaultsCount > 0,
@@ -115,7 +120,15 @@ export default function HomePage() {
         pendingTasks: 6 - completedSections
       })
     } catch (error) {
-      console.error('Error loading stats:', error)
+      // Set default stats on error
+      setStats({
+        totalAssets: 0,
+        totalBeneficiaries: 0,
+        completedSections: 0,
+        totalSections: 6,
+        securityScore: 0,
+        pendingTasks: 6
+      })
     }
   }, [calculateSecurityScore])
 
@@ -167,12 +180,12 @@ export default function HomePage() {
 
   return (
     <DashboardLayout 
-      userName={profile?.full_name || user?.email} 
+      userName={profile?.full_name || user?.email || 'User'}
       onSignOut={handleSignOut}
     >
       <DashboardOverview 
-        stats={stats} 
-        userName={profile?.full_name || user?.email}
+        userName={profile?.full_name || 'User'}
+        stats={stats}
       />
     </DashboardLayout>
   )

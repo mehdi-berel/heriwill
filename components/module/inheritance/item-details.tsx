@@ -404,7 +404,7 @@ export function ItemDetails({
                   <div className="space-y-2">
                     <p className="font-medium">Shared With:</p>
                     {item.sharedWith.map((person, index) => (
-                      <div key={index} className="flex items-center justify-between p-2 border rounded">
+                      <div key={index} className="flex items-center justify-between p-2 border rounded" style={{ borderColor: '#232629' }}>
                         <div className="flex items-center space-x-2">
                           <Users className="h-4 w-4" />
                           <span className="text-sm">{person}</span>

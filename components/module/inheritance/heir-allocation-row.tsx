@@ -54,7 +54,7 @@ export function HeirAllocationRow({
   }
 
   return (
-    <div className="border border-border-default rounded-lg bg-background-card">
+    <div className="border rounded-lg bg-background-card" style={{ borderColor: '#232629' }}>
       <div className="flex items-center justify-between p-3">
         <div className="flex items-center gap-3 flex-1">
           <div className="p-2 bg-primary-600/10 rounded-full">
@@ -71,12 +71,12 @@ export function HeirAllocationRow({
                 </Badge>
               )}
               {heir.invitation_status === 'pending' && (
-                <Badge variant="secondary" className="text-xs bg-status-warning/10 text-status-warning border-status-warning/30">
+                <Badge variant="secondary" className="text-xs bg-status-warning/10 text-status-warning">
                   Pending
                 </Badge>
               )}
               {heir.invitation_status === 'rejected' && (
-                <Badge variant="secondary" className="text-xs bg-status-error/10 text-status-error border-status-error/30">
+                <Badge variant="secondary" className="text-xs bg-status-error/10 text-status-error">
                   Rejected
                 </Badge>
               )}
@@ -143,7 +143,7 @@ export function HeirAllocationRow({
       </div>
 
       {expanded && (
-        <div className="border-t border-border-default p-4 space-y-4 bg-background-elevated">
+        <div className="border-t p-4 space-y-4 bg-background-elevated" style={{ borderColor: '#232629' }}>
           <div className="grid gap-4">
             <div>
               <Label htmlFor={`percentage-${heir.id}`} className="text-sm font-medium">

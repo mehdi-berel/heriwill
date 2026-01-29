@@ -70,14 +70,6 @@ const QUICK_ACTIONS: QuickAction[] = [
     color: '#EF4444',
     badge: 'Important',
   },
-  {
-    id: 'legal',
-    title: 'Legal Documents',
-    description: 'Store important papers',
-    icon: FileText,
-    href: '/Legal',
-    color: '#F59E0B',
-  },
 ]
 
 interface ChecklistItem {
@@ -114,7 +106,7 @@ export function DashboardOverview({ stats, userName }: DashboardOverviewProps) {
 
       {/* Setup Progress Banner */}
       {!isSetupComplete && (
-        <Card className="bg-gradient-to-r from-primary-600/10 to-primary-400/10 border-primary-500/20">
+        <Card className="bg-gradient-to-r from-primary-600/10 to-primary-400/10" style={{ borderColor: '#232629' }}>
           <CardContent className="flex items-start gap-4 p-5">
             <div className="w-12 h-12 rounded-full bg-primary-500/20 flex items-center justify-center flex-shrink-0">
               <TrendingUp className="h-6 w-6 text-primary-400" />
@@ -137,86 +129,54 @@ export function DashboardOverview({ stats, userName }: DashboardOverviewProps) {
       )}
 
       {/* Stats Grid */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-3 md:grid-cols-3">
         {/* Vaults */}
-        <Link href="/vaults">
-          <Card className="border border-border hover:border-primary-500/50 transition-all hover:shadow-card-hover cursor-pointer group">
-            <CardContent className="p-5">
-              <div className="flex items-center justify-between mb-3">
-                <div className="w-12 h-12 rounded-xl bg-purple-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <Lock className="h-6 w-6 text-purple-500" />
-                </div>
-                <ArrowRight className="h-4 w-4 text-text-tertiary group-hover:text-primary-400 group-hover:translate-x-1 transition-all" />
+        <Card className="border" style={{ borderColor: '#232629' }}>
+          <CardContent className="p-3">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-9 h-9 rounded-lg bg-purple-500/10 flex items-center justify-center flex-shrink-0">
+                <Lock className="h-4 w-4 text-purple-500" />
               </div>
-              <div className="text-3xl font-bold text-text-primary mb-1">
+              <div className="text-xl font-bold text-text-primary">
                 {stats.totalAssets}
               </div>
-              <div className="text-sm text-text-secondary font-medium">
-                Active Vaults
-              </div>
-            </CardContent>
-          </Card>
-        </Link>
+            </div>
+            <div className="text-xs text-text-tertiary">
+              Active Vaults
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Items */}
-        <Link href="/vaults">
-          <Card className="border border-border hover:border-primary-500/50 transition-all hover:shadow-card-hover cursor-pointer group">
-            <CardContent className="p-5">
-              <div className="flex items-center justify-between mb-3">
-                <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <FolderOpen className="h-6 w-6 text-blue-500" />
-                </div>
-                <ArrowRight className="h-4 w-4 text-text-tertiary group-hover:text-primary-400 group-hover:translate-x-1 transition-all" />
+        <Card className="border" style={{ borderColor: '#232629' }}>
+          <CardContent className="p-3">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-9 h-9 rounded-lg bg-blue-500/10 flex items-center justify-center flex-shrink-0">
+                <FolderOpen className="h-4 w-4 text-blue-500" />
               </div>
-              <div className="text-3xl font-bold text-text-primary mb-1">
+              <div className="text-xl font-bold text-text-primary">
                 {stats.totalAssets * 3}
               </div>
-              <div className="text-sm text-text-secondary font-medium">
-                Stored Items
-              </div>
-            </CardContent>
-          </Card>
-        </Link>
+            </div>
+            <div className="text-xs text-text-tertiary">
+              Stored Items
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Heirs */}
-        <Link href="/heirs">
-          <Card className="border border-border hover:border-primary-500/50 transition-all hover:shadow-card-hover cursor-pointer group">
-            <CardContent className="p-5">
-              <div className="flex items-center justify-between mb-3">
-                <div className="w-12 h-12 rounded-xl bg-green-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <Users className="h-6 w-6 text-green-500" />
-                </div>
-                <ArrowRight className="h-4 w-4 text-text-tertiary group-hover:text-primary-400 group-hover:translate-x-1 transition-all" />
+        <Card className="border" style={{ borderColor: '#232629' }}>
+          <CardContent className="p-3">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-9 h-9 rounded-lg bg-green-500/10 flex items-center justify-center flex-shrink-0">
+                <Users className="h-4 w-4 text-green-500" />
               </div>
-              <div className="text-3xl font-bold text-text-primary mb-1">
+              <div className="text-xl font-bold text-text-primary">
                 {stats.totalBeneficiaries}
               </div>
-              <div className="text-sm text-text-secondary font-medium">
-                Designated Heirs
-              </div>
-            </CardContent>
-          </Card>
-        </Link>
-
-        {/* Security Score */}
-        <Card className="border border-border hover:border-primary-500/50 transition-all hover:shadow-card-hover cursor-pointer group">
-          <CardContent className="p-5">
-            <div className="flex items-center justify-between mb-3">
-              <div className="w-12 h-12 rounded-xl bg-amber-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                <Shield className="h-6 w-6 text-amber-500" />
-              </div>
-              <Badge 
-                variant={stats.securityScore >= 80 ? "default" : "secondary"}
-                className="text-xs"
-              >
-                {stats.securityScore >= 80 ? 'Good' : 'Fair'}
-              </Badge>
             </div>
-            <div className="text-3xl font-bold text-text-primary mb-1">
-              {stats.securityScore}%
-            </div>
-            <div className="text-sm text-text-secondary font-medium">
-              Security Score
+            <div className="text-xs text-text-tertiary">
+              Designated Heirs
             </div>
           </CardContent>
         </Card>
@@ -225,12 +185,12 @@ export function DashboardOverview({ stats, userName }: DashboardOverviewProps) {
       {/* Quick Actions */}
       <div>
         <h2 className="text-xl font-semibold text-text-primary mb-4">Quick Actions</h2>
-        <div className="grid gap-3 md:grid-cols-2">
+        <div className="grid gap-3 md:grid-cols-3">
           {QUICK_ACTIONS.map((action) => {
             const Icon = action.icon
             return (
               <Link key={action.id} href={action.href}>
-                <Card className="border border-border hover:border-primary-500/50 transition-all hover:shadow-card-hover cursor-pointer group">
+                <Card className="border hover:border-primary-500/50 transition-all hover:shadow-card-hover cursor-pointer group" style={{ borderColor: '#232629' }}>
                   <CardContent className="p-4">
                     <div className="flex items-center gap-3">
                       <div 
@@ -270,7 +230,7 @@ export function DashboardOverview({ stats, userName }: DashboardOverviewProps) {
       </div>
 
       {/* Important Reminders */}
-      <Card className="bg-blue-600/5 border-blue-600/20">
+      <Card className="bg-blue-600/5" style={{ borderColor: '#232629' }}>
         <CardContent className="flex items-start gap-3 p-5">
           <AlertCircle className="h-5 w-5 text-blue-400 flex-shrink-0 mt-0.5" />
           <div className="flex-1">

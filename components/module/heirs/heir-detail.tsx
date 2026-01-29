@@ -63,7 +63,7 @@ export function HeirDetail({
     <div className="space-y-6">
       {/* Info Cards */}
       <div className="grid gap-4 md:grid-cols-3 mb-6">
-        <Card className="border">
+        <Card className="border" style={{ borderColor: '#232629' }}>
           <CardContent className="flex flex-col items-center p-4">
             <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center mb-3">
               <div className="text-primary">{getStatusIcon(heir.invitation_status)}</div>
@@ -73,7 +73,7 @@ export function HeirDetail({
           </CardContent>
         </Card>
 
-        <Card className="border">
+        <Card className="border" style={{ borderColor: '#232629' }}>
           <CardContent className="flex flex-col items-center p-4">
             <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center mb-3">
               <Users className="h-5 w-5 text-primary" />
@@ -83,7 +83,7 @@ export function HeirDetail({
           </CardContent>
         </Card>
 
-        <Card className="border">
+        <Card className="border" style={{ borderColor: '#232629' }}>
           <CardContent className="flex flex-col items-center p-4">
             <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center mb-3">
               <Calendar className="h-5 w-5 text-primary" />

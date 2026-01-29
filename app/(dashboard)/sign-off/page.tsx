@@ -156,19 +156,6 @@ export default function SignOffPage() {
       onSignOut={handleSignOut}
     >
       <div className="p-6 space-y-6">
-        {/* Header */}
-        <div className="flex items-start justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-text-primary">Sign-Off Detection</h1>
-            <p className="text-text-secondary mt-1">
-              Configure how your inheritance plan is triggered
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Shield className="h-8 w-8 text-primary-400" />
-          </div>
-        </div>
-
         {/* Activation Toggle Card */}
         <Card className={isActivated ? "bg-green-50 dark:bg-green-950/20 border-green-500/50" : "bg-gray-50 dark:bg-gray-900/30 border-gray-300 dark:border-gray-700"}>
           <CardContent className="p-5">

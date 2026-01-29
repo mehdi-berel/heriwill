@@ -152,7 +152,7 @@ export function NotificationSettings() {
         </CardHeader>
         <CardContent className="space-y-4">
           {notificationCategories.map((category) => (
-            <div key={category.id} className="flex items-center justify-between p-4 border border-border-default rounded-lg">
+            <div key={category.id} className="flex items-center justify-between p-4 border rounded-lg" style={{ borderColor: '#232629' }}>
               <div>
                 <p className="font-medium">{category.title}</p>
                 <p className="text-sm text-text-tertiary">{category.description}</p>
