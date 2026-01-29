@@ -24,7 +24,7 @@ interface Vault {
   id: string
   name: string
   icon?: string
-  category: string
+  category?: string
 }
 
 interface Heir {
@@ -35,21 +35,23 @@ interface Heir {
 
 interface AssetFormData {
   name: string
-  type: string
+  type: 'real_estate' | 'vehicle' | 'bank_account' | 'investment' | 'insurance' | 'personal_property' | 'business' | 'other'
   description?: string
-  value?: string | number
+  value?: number
   location?: string
-  ownership_type: string
+  ownership_type: 'sole' | 'joint' | 'tenants_in_common' | 'community_property'
   beneficiaries?: string[]
   documents?: string[]
   notes?: string
+  vault_id?: string
+  heir_ids?: string[]
 }
 
 interface AssetFormProps {
   initialData?: Partial<AssetFormData>
   vaults: Vault[]
   heirs: Heir[]
-  onSubmit: (data: AssetFormData) => void
+  onSubmit: (data: AssetFormData) => void | Promise<void>
   onCancel: () => void
   isEditing?: boolean
 }
@@ -108,7 +110,7 @@ export function AssetForm({ initialData, onSubmit, onCancel, isEditing = false }
                   <button
                     key={assetType.value}
                     type="button"
-                    onClick={() => setFormData({ ...formData, type: assetType.value })}
+                    onClick={() => setFormData({ ...formData, type: assetType.value as AssetFormData['type'] })}
                     className={`
                       flex flex-col items-center gap-2 p-3 rounded-lg border-2 transition-all
                       ${
@@ -178,7 +180,7 @@ export function AssetForm({ initialData, onSubmit, onCancel, isEditing = false }
               <Label htmlFor="ownership_type">Ownership Type</Label>
               <Select
                 value={formData.ownership_type}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, ownership_type: value }))}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, ownership_type: value as AssetFormData['ownership_type'] }))}
               >
                 <SelectTrigger>
                   <SelectValue />

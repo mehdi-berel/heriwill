@@ -71,6 +71,8 @@ export default function InheritanceRoute() {
     )
   }
 
+  if (!user) return null
+
   return (
     <DashboardLayout 
       userName={profile?.full_name || user?.email} 

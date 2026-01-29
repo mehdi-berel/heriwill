@@ -51,22 +51,22 @@ export function SignOffSettings({ method, userId, onSave, onCancel }: SignOffSet
         .single()
 
       if (data) {
-        const userData = data as any
-        const settings = userData.global_trigger_settings as Record<string, any> | null
+        const userData = data as Record<string, unknown>
+        const settings = userData.global_trigger_settings as Record<string, unknown> | null
         if (settings?.inactivity_days) {
           setInactivityDays(settings.inactivity_days.toString())
         }
-        if (settings?.reminder_enabled) {
-          setReminderEnabled(settings.reminder_enabled)
+        if (settings?.reminder_enabled !== undefined) {
+          setReminderEnabled(settings.reminder_enabled as boolean)
         }
         if (settings?.reminder_days_before) {
           setReminderDays(settings.reminder_days_before.toString())
         }
         if (userData.trusted_contact_heir_id) {
-          setTrustedContactHeirId(userData.trusted_contact_heir_id)
+          setTrustedContactHeirId(userData.trusted_contact_heir_id as string)
         }
         if (userData.global_scheduled_date) {
-          setScheduledDate(new Date(userData.global_scheduled_date))
+          setScheduledDate(new Date(userData.global_scheduled_date as string))
         }
         if (settings?.heir_notification_frequency) {
           setHeirNotificationFrequency(settings.heir_notification_frequency.toString())
@@ -111,13 +111,11 @@ export function SignOffSettings({ method, userId, onSave, onCancel }: SignOffSet
       }
 
       const settingsToSave: {
-        user_id: string
         global_trigger_method: string
         global_trigger_settings?: Record<string, unknown>
-        trusted_contact_heir_id?: string
-        global_scheduled_date?: string
+        trusted_contact_heir_id?: string | null
+        global_scheduled_date?: string | null
       } = {
-        user_id: userId,
         global_trigger_method: methodToSave,
       }
 
@@ -143,9 +141,9 @@ export function SignOffSettings({ method, userId, onSave, onCancel }: SignOffSet
       }
 
       // Update the settings in users table
-      const { error } = await supabase
-        .from('users')
-        .update(settingsToSave as any)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase.from('users') as any)
+        .update(settingsToSave)
         .eq('id', userId)
 
       if (error) throw error

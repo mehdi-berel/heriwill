@@ -24,7 +24,7 @@ interface AssetFormData {
   name: string
   type: string
   description?: string
-  value?: number
+  value?: number | string
   location?: string
   ownership_type: string
   vault_id?: string | null
@@ -174,15 +174,19 @@ export default function AssetsPage() {
   }, [router, loadAssets, loadVaults, loadHeirs])
 
   const handleAddAsset = async (assetData: AssetFormData) => {
+    if (!user) return
+
+    const value = typeof assetData.value === 'string' ? parseFloat(assetData.value) : assetData.value
+
     try {
-      const { data, error } = await supabase
-        .from('assets')
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase.from('assets') as any)
         .insert({
           user_id: user.id,
           name: assetData.name,
           type: assetData.type,
           description: assetData.description || null,
-          value: assetData.value || null,
+          value: value || null,
           location: assetData.location || null,
           ownership_type: assetData.ownership_type,
           vault_id: assetData.vault_id || null,
@@ -209,14 +213,16 @@ export default function AssetsPage() {
   const handleUpdateAsset = async (assetData: AssetFormData) => {
     if (!editingAsset) return
 
+    const value = typeof assetData.value === 'string' ? parseFloat(assetData.value) : assetData.value
+
     try {
-      const { data, error } = await supabase
-        .from('assets')
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase.from('assets') as any)
         .update({
           name: assetData.name,
           type: assetData.type,
           description: assetData.description || null,
-          value: assetData.value || null,
+          value: value || null,
           location: assetData.location || null,
           ownership_type: assetData.ownership_type,
           vault_id: assetData.vault_id || null,
@@ -371,7 +377,12 @@ export default function AssetsPage() {
                 setShowForm(false)
                 setEditingAsset(null)
               }}
-              initialData={editingAsset || undefined}
+              initialData={editingAsset ? {
+                ...editingAsset,
+                value: editingAsset.value || undefined,
+                vault_id: editingAsset.vault_id || undefined,
+                heir_ids: editingAsset.heir_ids || undefined
+              } : undefined}
               vaults={vaults}
               heirs={heirs}
               isEditing={!!editingAsset}

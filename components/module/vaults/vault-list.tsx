@@ -12,19 +12,25 @@ import {
 
 interface Vault {
   id: string
+  user_id: string
   name: string
-  description: string
+  description: string | null
   category: 'share_after_death' | 'delete_after_death' | 'sign_off_after_death'
-  is_encrypted: boolean
-  is_locked: boolean
-  is_favorite: boolean
-  is_shared: boolean
-  tags: string[]
+  is_encrypted: boolean | null
+  is_locked: boolean | null
+  is_favorite: boolean | null
+  is_shared: boolean | null
+  tags: string[] | null
   item_count: number
   created_at: string
-  last_accessed?: string
-  icon?: string
-  color?: string
+  updated_at: string
+  last_accessed: string | null
+  icon: string | null
+  color: string | null
+  settings: Record<string, unknown> | null
+  access_control: Record<string, unknown> | null
+  death_settings: Record<string, unknown> | null
+  sort_order: number | null
 }
 
 interface VaultListProps {
@@ -33,6 +39,7 @@ interface VaultListProps {
   onVaultEdit: (vault: Vault) => void
   onVaultDelete: (vaultId: string) => void
   searchTerm?: string
+  onSearchChange?: (term: string) => void
   selectedCategory?: 'share_after_death' | 'delete_after_death' | 'sign_off_after_death' | null
 }
 

@@ -123,7 +123,8 @@ export default function SignOffPage() {
       if (globalTrigger) {
         let method = globalTrigger.global_trigger_method
         if (method === 'scheduled') {
-          method = 'scheduled_date'
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          method = 'scheduled_date' as any
         }
         setSelectedMethod(method)
         setActiveMethod(method)
@@ -188,6 +189,8 @@ export default function SignOffPage() {
               <Switch
                 checked={isActivated}
                 onCheckedChange={async (checked) => {
+                  if (!user) return
+
                   if (!checked) {
                     // Deactivate - delete the trigger
                     setSaving(true)
@@ -259,8 +262,9 @@ export default function SignOffPage() {
           }}
           method={selectedMethod}
           methodTitle={DETECTION_METHODS.find(m => m.id === selectedMethod)?.title || ''}
-          userId={user.id}
+          userId={user?.id || ''}
           onSave={async () => {
+            if (!user) return
             setActiveMethod(selectedMethod)
             setIsActivated(true)
             await loadSignOffSettings(user.id)

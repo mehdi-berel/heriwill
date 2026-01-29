@@ -54,6 +54,7 @@ interface HeirFormData {
   notification_delay_days?: number
   is_active?: boolean
   notify_on_activation?: boolean
+  invitation_expires_at?: string
 }
 
 export default function HeirsPage() {
@@ -131,9 +132,11 @@ export default function HeirsPage() {
   }, [router, loadHeirs])
 
   const handleAddHeir = async (formData: HeirFormData) => {
+    if (!user) return
+
     try {
-      const { data, error } = await supabase
-        .from('heirs')
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase.from('heirs') as any)
         .insert({
           user_id: user.id,
           full_name_encrypted: formData.full_name,
@@ -171,8 +174,8 @@ export default function HeirsPage() {
     if (!editingHeir) return
 
     try {
-      const { data, error } = await supabase
-        .from('heirs')
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase.from('heirs') as any)
         .update({
           full_name_encrypted: formData.full_name,
           email_encrypted: formData.email,
@@ -227,35 +230,6 @@ export default function HeirsPage() {
       setHeirToDelete(null)
     } catch (error) {
       console.error('Error deleting heir:', error)
-    }
-  }
-
-  const handleResendInvitation = async (heirId: string) => {
-    // In a real app, this would send an email
-    console.log('Resending invitation to heir:', heirId)
-  }
-
-  const handleRevokeAccess = async (heirId: string) => {
-    try {
-      const { error } = await supabase
-        .from('heirs')
-        .update({ 
-          invitation_status: 'rejected',
-          is_active: false,
-          rejected_at: new Date().toISOString()
-        })
-        .eq('id', heirId)
-      
-      if (error) {
-        console.error('Error revoking access:', error)
-        return
-      }
-      
-      setHeirs(heirs.map(h => 
-        h.id === heirId ? { ...h, invitation_status: 'rejected' as const, is_active: false } : h
-      ))
-    } catch (error) {
-      console.error('Error revoking access:', error)
     }
   }
 
@@ -349,11 +323,9 @@ export default function HeirsPage() {
         {/* Heirs List */}
         <HeirList
           heirs={heirs}
-          onHeirSelect={handleHeirSelect}
-          onHeirEdit={handleHeirEdit}
-          onHeirDelete={handleDeleteHeir}
-          onResendInvitation={handleResendInvitation}
-          onRevokeAccess={handleRevokeAccess}
+          onView={handleHeirSelect}
+          onEdit={handleHeirEdit}
+          onDelete={handleDeleteHeir}
           searchTerm={searchTerm}
           onSearchChange={setSearchTerm}
           selectedStatus={selectedStatus}

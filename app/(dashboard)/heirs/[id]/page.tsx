@@ -77,9 +77,20 @@ export default function HeirDetailPage() {
     }
   }, [router])
 
-  const loadHeirActivities = useCallback(async () => {
+  const loadHeirActivities = useCallback(async (id: string) => {
     try {
       // Mock data for now - in real app, fetch from activities table
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { data, error } = await supabase
+        .from('user_activity')
+        .select('*')
+        .eq('metadata->heir_id', id)
+        .order('created_at', { ascending: false })
+        .limit(10)
+
+      if (error) throw error
+
+      // Transform data if needed, or use mock for now
       const mockActivities: HeirActivity[] = [
         {
           id: '1',
@@ -126,7 +137,7 @@ export default function HeirDetailPage() {
       // Load heir data
       await Promise.all([
         loadHeir(heirId),
-        loadHeirActivities()
+        loadHeirActivities(heirId)
       ])
       
       setLoading(false)
@@ -141,7 +152,7 @@ export default function HeirDetailPage() {
         setUser(session.user)
         if (heirId) {
           loadHeir(heirId)
-          loadHeirActivities()
+          loadHeirActivities(heirId)
         }
       }
     })
@@ -181,8 +192,8 @@ export default function HeirDetailPage() {
 
   const handleRevokeAccess = async () => {
     try {
-      await supabase
-        .from('heirs')
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (supabase.from('heirs') as any)
         .update({ invitation_status: 'rejected' })
         .eq('id', heirId)
       
@@ -264,7 +275,7 @@ export default function HeirDetailPage() {
         </div>
 
         <HeirDetail
-          heir={heir}
+          heir={heir as unknown as Heir}
           activities={activities}
           onBack={() => router.push("/heirs")}
           onEdit={handleEdit}

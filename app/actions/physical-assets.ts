@@ -2,42 +2,28 @@ import { supabase } from '../../lib/supabase'
 import type { Database } from '../../lib/database.types'
 
 type AssetRow = Database['public']['Tables']['assets']['Row']
-type AssetInsert = Database['public']['Tables']['assets']['Insert']
 type AssetUpdate = Database['public']['Tables']['assets']['Update']
 
 interface PhysicalAssetData {
   user_id: string
   name: string
-  type: string
+  type: 'real_estate' | 'vehicle' | 'bank_account' | 'investment' | 'insurance' | 'personal_property' | 'business' | 'other'
   description?: string | null
   value?: number | null
   location?: string | null
-  ownership_type: string
-  vault_id?: string | null
-  heir_ids?: string[]
-  documents?: string[]
+  ownership_type?: 'sole' | 'joint' | 'tenants_in_common' | 'community_property'
+  documents?: string[] | null
   notes?: string | null
+  vault_id?: string | null
+  heir_ids?: string[] | null
 }
 
-interface AssetUpdateData {
-  name?: string
-  type?: string
-  description?: string | null
-  value?: number | null
-  location?: string | null
-  ownership_type?: string
-  vault_id?: string | null
-  heir_ids?: string[]
-  documents?: string[]
-  notes?: string | null
-}
-
-// Physical Assets Management Actions (Real Estate, Vehicles, etc.)
+// Physical Assets Management Actions
 export const physicalAssetActions = {
-  // Create Asset
-  createAsset: async (assetData: PhysicalAssetData) => {
-    const { data, error } = await supabase
-      .from('assets')
+  // Create Physical Asset
+  createPhysicalAsset: async (assetData: PhysicalAssetData) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabase.from('assets') as any)
       .insert({
         user_id: assetData.user_id,
         name: assetData.name,
@@ -45,11 +31,11 @@ export const physicalAssetActions = {
         description: assetData.description || null,
         value: assetData.value || null,
         location: assetData.location || null,
-        ownership_type: assetData.ownership_type,
+        ownership_type: assetData.ownership_type || 'sole',
+        documents: assetData.documents || null,
+        notes: assetData.notes || null,
         vault_id: assetData.vault_id || null,
-        heir_ids: assetData.heir_ids || [],
-        documents: assetData.documents || [],
-        notes: assetData.notes || null
+        heir_ids: assetData.heir_ids || null
       })
       .select()
       .single()
@@ -58,23 +44,11 @@ export const physicalAssetActions = {
     return data
   },
 
-  // Update Asset
-  updateAsset: async (assetId: string, updateData: AssetUpdateData) => {
-    const { data, error } = await supabase
-      .from('assets')
-      .update({
-        name: updateData.name,
-        type: updateData.type as any, // Cast type as it might be 'other' or specific
-        description: updateData.description || null,
-        value: updateData.value || null,
-        location: updateData.location || null,
-        ownership_type: updateData.ownership_type as any,
-        vault_id: updateData.vault_id || null,
-        heir_ids: updateData.heir_ids || [],
-        documents: updateData.documents || [],
-        notes: updateData.notes || null,
-        updated_at: new Date().toISOString()
-      })
+  // Update Physical Asset
+  updatePhysicalAsset: async (assetId: string, updateData: AssetUpdate) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabase.from('assets') as any)
+      .update(updateData)
       .eq('id', assetId)
       .select()
       .single()
@@ -83,8 +57,8 @@ export const physicalAssetActions = {
     return data
   },
 
-  // Delete Asset
-  deleteAsset: async (assetId: string) => {
+  // Delete Physical Asset
+  deletePhysicalAsset: async (assetId: string) => {
     const { error } = await supabase
       .from('assets')
       .delete()
@@ -93,8 +67,8 @@ export const physicalAssetActions = {
     if (error) throw new Error(error.message)
   },
 
-  // Get Asset by ID
-  getAssetById: async (assetId: string) => {
+  // Get Physical Asset by ID
+  getPhysicalAssetById: async (assetId: string) => {
     const { data, error } = await supabase
       .from('assets')
       .select('*')
@@ -105,8 +79,61 @@ export const physicalAssetActions = {
     return data
   },
 
-  // Get All Assets for User
-  getAllAssets: async (userId: string): Promise<AssetRow[]> => {
+  // Alias for getPhysicalAssetById
+  getAssetById: async (assetId: string) => {
+    return physicalAssetActions.getPhysicalAssetById(assetId)
+  },
+
+  // Alias for updatePhysicalAsset
+  updateAsset: async (assetId: string, updateData: AssetUpdate) => {
+    return physicalAssetActions.updatePhysicalAsset(assetId, updateData)
+  },
+
+  // Alias for deletePhysicalAsset
+  deleteAsset: async (assetId: string) => {
+    return physicalAssetActions.deletePhysicalAsset(assetId)
+  },
+
+  // Add document to asset
+  addDocument: async (assetId: string, documentPath: string) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const asset = await physicalAssetActions.getPhysicalAssetById(assetId) as any
+    const currentDocuments = asset.documents || []
+    
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabase.from('assets') as any)
+      .update({
+        documents: [...currentDocuments, documentPath]
+      })
+      .eq('id', assetId)
+      .select()
+      .single()
+
+    if (error) throw new Error(error.message)
+    return data
+  },
+
+  // Remove document from asset
+  removeDocument: async (assetId: string, documentPath: string) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const asset = await physicalAssetActions.getPhysicalAssetById(assetId) as any
+    const currentDocuments = asset.documents || []
+    
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabase.from('assets') as any)
+      .update({
+        documents: currentDocuments.filter((doc: string) => doc !== documentPath)
+      })
+      .eq('id', assetId)
+      .select()
+      .single()
+
+    if (error) throw new Error(error.message)
+    return data
+  },
+
+  // Get All Physical Assets for User
+  getAllPhysicalAssets: async (userId: string): Promise<AssetRow[]> => {
     const { data, error } = await supabase
       .from('assets')
       .select('*')
@@ -117,136 +144,31 @@ export const physicalAssetActions = {
     return data || []
   },
 
-  // Get Assets by Type
-  getAssetsByType: async (userId: string, type: string) => {
-    const { data, error } = await supabase
-      .from('assets')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('type', type)
-      .order('created_at', { ascending: false })
-
-    if (error) throw new Error(error.message)
-    return data || []
+  // Get Physical Assets by Type
+  getPhysicalAssetsByType: async (userId: string, type: string) => {
+    const assets = await physicalAssetActions.getAllPhysicalAssets(userId)
+    return assets.filter((asset: AssetRow) => asset.type === type)
   },
 
-  // Get Assets by Vault
-  getAssetsByVault: async (vaultId: string) => {
-    const { data, error } = await supabase
-      .from('assets')
-      .select('*')
-      .eq('vault_id', vaultId)
-      .order('created_at', { ascending: false })
-
-    if (error) throw new Error(error.message)
-    return data || []
-  },
-
-  // Search Assets
-  searchAssets: async (userId: string, searchTerm: string) => {
-    const { data, error } = await supabase
-      .from('assets')
-      .select('*')
-      .eq('user_id', userId)
-      .or(`name.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%,location.ilike.%${searchTerm}%`)
-      .order('created_at', { ascending: false })
-
-    if (error) throw new Error(error.message)
-    return data || []
-  },
-
-  // Get Asset Statistics
-  getAssetStats: async (userId: string) => {
-    const assets = await physicalAssetActions.getAllAssets(userId)
+  // Get Physical Asset Statistics
+  getPhysicalAssetStats: async (userId: string) => {
+    const assets = await physicalAssetActions.getAllPhysicalAssets(userId)
     
     const stats = {
       totalAssets: assets.length,
-      totalValue: assets.reduce((sum: number, asset: AssetRow) => sum + (asset.value || 0), 0),
-      realEstateCount: assets.filter((a: AssetRow) => a.type === 'real_estate').length,
-      vehicleCount: assets.filter((a: AssetRow) => a.type === 'vehicle').length,
-      bankAccountCount: assets.filter((a: AssetRow) => a.type === 'bank_account').length,
-      investmentCount: assets.filter((a: AssetRow) => a.type === 'investment').length,
-      insuranceCount: assets.filter((a: AssetRow) => a.type === 'insurance').length,
-      personalPropertyCount: assets.filter((a: AssetRow) => a.type === 'personal_property').length,
-      businessCount: assets.filter((a: AssetRow) => a.type === 'business').length,
-      otherCount: assets.filter((a: AssetRow) => a.type === 'other').length,
-      withVault: assets.filter((a: AssetRow) => a.vault_id).length,
-      withHeirs: assets.filter((a: AssetRow) => a.heir_ids && a.heir_ids.length > 0).length,
+      realEstateAssets: assets.filter((a: AssetRow) => a.type === 'real_estate').length,
+      vehicleAssets: assets.filter((a: AssetRow) => a.type === 'vehicle').length,
+      bankAccountAssets: assets.filter((a: AssetRow) => a.type === 'bank_account').length,
+      investmentAssets: assets.filter((a: AssetRow) => a.type === 'investment').length,
+      insuranceAssets: assets.filter((a: AssetRow) => a.type === 'insurance').length,
+      personalPropertyAssets: assets.filter((a: AssetRow) => a.type === 'personal_property').length,
+      businessAssets: assets.filter((a: AssetRow) => a.type === 'business').length,
+      otherAssets: assets.filter((a: AssetRow) => a.type === 'other').length,
+      totalValue: assets.reduce((sum: number, a: AssetRow) => sum + (a.value || 0), 0),
       withDocuments: assets.filter((a: AssetRow) => a.documents && a.documents.length > 0).length,
-      soleOwnership: assets.filter((a: AssetRow) => a.ownership_type === 'sole').length,
-      jointOwnership: assets.filter((a: AssetRow) => a.ownership_type === 'joint').length
+      withHeirs: assets.filter((a: AssetRow) => a.heir_ids && a.heir_ids.length > 0).length
     }
 
     return stats
-  },
-
-  // Assign to Vault
-  assignToVault: async (assetId: string, vaultId: string | null) => {
-    const { data, error } = await supabase
-      .from('assets')
-      .update({ 
-        vault_id: vaultId,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', assetId)
-      .select()
-      .single()
-
-    if (error) throw new Error(error.message)
-    return data
-  },
-
-  // Assign Heirs
-  assignHeirs: async (assetId: string, heirIds: string[]) => {
-    const { data, error } = await supabase
-      .from('assets')
-      .update({ 
-        heir_ids: heirIds,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', assetId)
-      .select()
-      .single()
-
-    if (error) throw new Error(error.message)
-    return data
-  },
-
-  // Add Document
-  addDocument: async (assetId: string, documentName: string) => {
-    const { data: asset } = await physicalAssetActions.getAssetById(assetId)
-    const documents = (asset as AssetRow).documents || []
-    
-    const { data, error } = await supabase
-      .from('assets')
-      .update({ 
-        documents: [...documents, documentName],
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', assetId)
-      .select()
-      .single()
-
-    if (error) throw new Error(error.message)
-    return data
-  },
-
-  // Remove Document
-  removeDocument: async (assetId: string, documentName: string) => {
-    const { data: asset } = await physicalAssetActions.getAssetById(assetId)
-    const documents = ((asset as AssetRow).documents || []).filter((doc: string) => doc !== documentName)
-    
-    const { data, error } = await supabase
-      .from('assets')
-      .update({ 
-        documents,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', assetId)
-      .select()
-      .single()
-
-    if (error) throw new Error(error.message)
-    return data
   }
 }

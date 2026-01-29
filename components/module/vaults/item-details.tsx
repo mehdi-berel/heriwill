@@ -24,7 +24,7 @@ import {
   Tag
 } from "lucide-react"
 
-export type VaultItemType = 'password' | 'document' | 'video' | 'image' | 'note' | 'crypto' | 'bank' | 'other'
+export type VaultItemType = 'password' | 'document' | 'video' | 'image' | 'note' | 'crypto' | 'bank' | 'other' | 'legal' | 'assets'
 
 interface VaultItemMetadata {
   username?: string
@@ -37,18 +37,22 @@ interface VaultItemMetadata {
   fileName?: string
   fileUrl?: string
   fileSize?: string
+  fileSizeBytes?: number
   description?: string
+  linkedDocumentId?: string
+  linkedAssetId?: string
+  linkedItemType?: 'legal' | 'asset'
 }
 
 interface VaultItem {
-  id: string
+  id?: string
   title: string
   type: VaultItemType
   metadata: VaultItemMetadata
   isEncrypted: boolean
   tags: string[]
-  createdAt: string
-  updatedAt: string
+  createdAt?: string
+  updatedAt?: string
 }
 
 interface ItemDetailsProps {
@@ -57,6 +61,7 @@ interface ItemDetailsProps {
   onClose: () => void
   onEdit: () => void
   onDelete: () => void
+  onDownload?: () => void
 }
 
 const ITEM_TYPE_CONFIG = {
@@ -67,10 +72,13 @@ const ITEM_TYPE_CONFIG = {
   image: { label: 'Image', icon: ImageIcon, color: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' },
   video: { label: 'Video', icon: Video, color: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400' },
   bank: { label: 'Bank', icon: FileText, color: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' },
+  legal: { label: 'Legal', icon: FileText, color: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400' },
+  assets: { label: 'Assets', icon: FileText, color: 'bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-400' },
   other: { label: 'Other', icon: FileText, color: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300' },
-}
+} as const
 
-const formatDate = (dateString: string) => {
+const formatDate = (dateString?: string) => {
+  if (!dateString) return 'N/A'
   return new Date(dateString).toLocaleDateString(undefined, {
     year: 'numeric',
     month: 'short',

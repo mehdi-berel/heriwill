@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { DashboardLayout } from "@/components/module/dashboard/dashboard-layout"
 import { Button } from "@/components/ui/button"
@@ -10,8 +10,6 @@ import { Check, Sparkles, Crown, ArrowLeft, Loader2 } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { getOfferings, purchasePackage } from "@/lib/revenuecat"
 import { User } from "@supabase/supabase-js"
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-import type { Package } from "@revenuecat/purchases-js"
 
 interface UserProfile {
   id: string
@@ -28,7 +26,7 @@ interface UserProfile {
 //   [key: string]: unknown
 // }
 
-export default function UpgradePage() {
+function UpgradePageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const selectedPlan = searchParams.get('plan') as 'premium' | 'pro' | null
@@ -55,8 +53,9 @@ export default function UpgradePage() {
         .eq('id', user.id)
         .single()
       
-      setProfile(profileData)
-      setCurrentPlan((profileData?.subscription_tier as 'free' | 'premium' | 'pro') || 'free')
+      setProfile(profileData as unknown as UserProfile)
+      const tier = (profileData as unknown as Record<string, unknown>)?.subscription_tier
+      setCurrentPlan((tier as 'free' | 'premium' | 'pro') || 'free')
       setLoading(false)
     }
 
@@ -78,8 +77,8 @@ export default function UpgradePage() {
 
       // Select the appropriate package
       const packageToPurchase = plan === 'premium' 
-        ? offerings.current.availablePackages.find((p: any) => p.identifier.includes('premium'))
-        : offerings.current.availablePackages.find((p: any) => p.identifier.includes('pro'))
+        ? offerings.current.availablePackages.find((p) => (p.identifier as string).includes('premium'))
+        : offerings.current.availablePackages.find((p) => (p.identifier as string).includes('pro'))
 
       if (!packageToPurchase) {
         alert(`${plan} plan not found. Please contact support.`)
@@ -92,13 +91,13 @@ export default function UpgradePage() {
       
       // Update Supabase with new subscription tier
       if (user) {
-        await supabase
-          .from('users')
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (supabase.from('users') as any)
           .update({ 
             subscription_tier: plan,
             subscription_status: 'active',
             subscription_expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
-          } as any)
+          })
           .eq('id', user.id)
       }
 
@@ -331,5 +330,17 @@ export default function UpgradePage() {
         </div>
       </div>
     </DashboardLayout>
+  )
+}
+
+export default function UpgradePage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-lg">Loading...</div>
+      </div>
+    }>
+      <UpgradePageContent />
+    </Suspense>
   )
 }

@@ -219,6 +219,8 @@ export default function LegalPage() {
   }
 
   const getDocumentColor = () => {
+    // Return different colors based on document type if needed
+    // For now returning the primary purple color
     return 'rgb(124, 58, 237)' // purple for all
   }
 
@@ -345,7 +347,7 @@ export default function LegalPage() {
                   {/* Icon Container */}
                   <div 
                     className="w-12 h-12 rounded-full flex items-center justify-center mr-3 flex-shrink-0"
-                    style={{ backgroundColor: getDocumentColor(document.document_type) }}
+                    style={{ backgroundColor: getDocumentColor() }}
                   >
                     {getDocumentIcon(document.document_type)}
                   </div>

@@ -63,15 +63,35 @@ interface Vault {
   }
 }
 
+type VaultItemType = 'password' | 'document' | 'video' | 'image' | 'note' | 'crypto' | 'bank' | 'other' | 'legal' | 'assets'
+
+interface VaultItemMetadata {
+  username?: string
+  password?: string
+  url?: string
+  walletAddress?: string
+  privateKey?: string
+  network?: string
+  content?: string
+  fileName?: string
+  fileUrl?: string
+  fileSize?: string
+  fileSizeBytes?: number
+  description?: string
+  linkedDocumentId?: string
+  linkedAssetId?: string
+  linkedItemType?: 'legal' | 'asset'
+}
+
 interface VaultItem {
-  id: string
-  name: string
-  type: 'password' | 'document' | 'video' | 'image' | 'note' | 'crypto' | 'bank' | 'other'
-  size: number
-  created_at: string
-  updated_at: string
-  is_encrypted: boolean
+  id?: string
+  title: string
+  type: VaultItemType
+  metadata: VaultItemMetadata
+  isEncrypted: boolean
   tags: string[]
+  createdAt?: string
+  updatedAt?: string
 }
 
 export default function VaultDetailPage() {
@@ -118,13 +138,15 @@ export default function VaultDetailPage() {
       
       const mappedItems: VaultItem[] = items.map((item: VaultItemRaw) => ({
         id: item.id,
-        name: item.title_encrypted || 'Untitled',
-        type: item.item_type as VaultItem['type'],
-        size: item.file_size || 0,
-        created_at: item.created_at,
-        updated_at: item.updated_at,
-        is_encrypted: true,
-        tags: item.tags || []
+        title: item.title_encrypted || 'Untitled',
+        type: item.item_type as VaultItemType,
+        metadata: {
+          fileSizeBytes: item.file_size || 0
+        },
+        isEncrypted: true,
+        tags: item.tags || [],
+        createdAt: item.created_at,
+        updatedAt: item.updated_at
       }))
       
       setVaultItems(mappedItems)
@@ -189,9 +211,9 @@ export default function VaultDetailPage() {
 
   const handleEditSubmit = async (formData: VaultFormData) => {
     try {
-      await supabase
-        .from('vaults')
-        .update(formData as any)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (supabase.from('vaults') as any)
+        .update(formData)
         .eq('id', vaultId)
       
       await loadVault(vaultId)
@@ -233,14 +255,14 @@ export default function VaultDetailPage() {
   const handleSaveHeirAssignment = async (heirIds: string[]) => {
     try {
       // Update vault with assigned heir IDs
-      await supabase
-        .from('vaults')
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (supabase.from('vaults') as any)
         .update({ 
           access_control: {
             ...vault?.access_control,
             allowedHeirs: heirIds
           }
-        } as any)
+        })
         .eq('id', vaultId)
       
       await loadVault(vaultId)
@@ -270,7 +292,7 @@ export default function VaultDetailPage() {
           title_encrypted: itemData.title,
           item_type: itemData.type,
           tags: itemData.tags || [],
-          metadata: itemData.metadata || {}
+          metadata: (itemData.metadata || {}) as Record<string, unknown>
         })
       }
       
@@ -375,7 +397,7 @@ export default function VaultDetailPage() {
           items={vaultItems}
           onBack={() => router.push("/vaults")}
           onEdit={() => setShowEditModal(true)}
-          onUpload={handleSaveItem as any} // Cast to any to bypass type mismatch if VaultDetail expects different signature
+          onUpload={handleSaveItem as unknown as (files: File[]) => Promise<void>}
           onDownloadItem={handleDownloadItem}
           onDeleteItem={handleDeleteItem}
         />

@@ -7,9 +7,9 @@ import { WillCategories } from "@/components/module/will/will-categories"
 import { TestamentDetails } from "@/components/module/will/testament-details"
 import { BeneficiariesSection } from "@/components/module/will/beneficiaries-section"
 import { ExecutorDetails } from "@/components/module/will/executor-details"
-import { BurialPreferences } from "@/components/module/wishes/burial-preferences"
-import { FuneralDetails } from "@/components/module/wishes/funeral-details"
-import { ServiceProviders } from "@/components/module/wishes/service-providers"
+import { BurialPreferences } from "@/components/module/will/burial-preferences"
+import { FuneralDetails } from "@/components/module/will/funeral-details"
+import { ServiceProviders } from "@/components/module/will/service-providers"
 import { Card, CardContent } from "@/components/ui/card"
 import { FileText, AlertCircle, CheckCircle, Heart } from "lucide-react"
 import { supabase } from '@/lib/supabase'
@@ -29,6 +29,7 @@ interface WillData {
   primary_beneficiaries?: unknown
   executor_details?: unknown
   updated_at?: string
+  executor_name?: string // Added missing property
 }
 
 interface WishData {
@@ -37,6 +38,9 @@ interface WishData {
   funeral_details?: unknown
   service_providers?: unknown
   updated_at?: string
+  burial_type?: string // Added missing property
+  funeral_type?: string // Added missing property
+  funeral_home?: string // Added missing property
 }
 
 interface SaveData {
@@ -161,7 +165,7 @@ export default function WillPage() {
         .single()
 
       if (data) {
-        setWillData(data)
+        setWillData(data as unknown as WillData)
       }
     } catch (error) {
       console.error('Error loading will data:', error)
@@ -177,7 +181,7 @@ export default function WillPage() {
         .single()
 
       if (data) {
-        setWishData(data)
+        setWishData(data as unknown as WishData)
       }
     } catch (error) {
       console.error('Error loading wish data:', error)
@@ -191,6 +195,8 @@ export default function WillPage() {
 
   const handleSave = async (category: string, data: SaveData) => {
     try {
+      if (!user) return
+
       const updateData = {
         user_id: user.id,
         ...data,
@@ -201,8 +207,8 @@ export default function WillPage() {
       const isWishCategory = ['burial', 'funeral', 'providers'].includes(category)
       const tableName = isWishCategory ? 'user_wishes' : 'user_wills'
 
-      const { error } = await supabase
-        .from(tableName)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase.from(tableName as any) as any)
         .upsert(updateData, { onConflict: 'user_id' })
 
       if (error) throw error
@@ -297,43 +303,43 @@ export default function WillPage() {
           <div>
             {selectedCategory === 'testament' && (
               <TestamentDetails
-                initialData={willData as any} // Cast to any to match expected component props if needed or fix interface
-                onSave={(data) => handleSave('testament', data as any)}
+                initialData={willData as unknown as Record<string, unknown>}
+                onSave={(data) => handleSave('testament', data as unknown as Record<string, unknown>)}
                 onCancel={() => setSelectedCategory(null)}
               />
             )}
             {selectedCategory === 'beneficiaries' && (
               <BeneficiariesSection
-                initialData={willData as any}
-                onSave={(data) => handleSave('beneficiaries', data as any)}
+                initialData={willData as unknown as Record<string, unknown>}
+                onSave={(data) => handleSave('beneficiaries', data as unknown as Record<string, unknown>)}
                 onCancel={() => setSelectedCategory(null)}
               />
             )}
             {selectedCategory === 'executor' && (
               <ExecutorDetails
-                initialData={willData as any}
-                onSave={(data) => handleSave('executor', data as any)}
+                initialData={willData as unknown as Record<string, unknown>}
+                onSave={(data) => handleSave('executor', data as unknown as Record<string, unknown>)}
                 onCancel={() => setSelectedCategory(null)}
               />
             )}
             {selectedCategory === 'burial' && (
               <BurialPreferences
-                initialData={wishData as any}
-                onSave={(data) => handleSave('burial', data as any)}
+                initialData={wishData as unknown as Record<string, unknown>}
+                onSave={(data) => handleSave('burial', data as unknown as Record<string, unknown>)}
                 onCancel={() => setSelectedCategory(null)}
               />
             )}
             {selectedCategory === 'funeral' && (
               <FuneralDetails
-                initialData={wishData as any}
-                onSave={(data) => handleSave('funeral', data as any)}
+                initialData={wishData as unknown as Record<string, unknown>}
+                onSave={(data) => handleSave('funeral', data as unknown as Record<string, unknown>)}
                 onCancel={() => setSelectedCategory(null)}
               />
             )}
             {selectedCategory === 'providers' && (
               <ServiceProviders
-                initialData={wishData as any}
-                onSave={(data) => handleSave('providers', data as any)}
+                initialData={wishData as unknown as Record<string, unknown>}
+                onSave={(data) => handleSave('providers', data as unknown as Record<string, unknown>)}
                 onCancel={() => setSelectedCategory(null)}
               />
             )}

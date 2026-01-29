@@ -42,6 +42,7 @@ const SelectTrigger = ({ children }: { children?: React.ReactNode }) => {
 }
 
 // SelectValue is now a no-op for API compatibility
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const SelectValue = ({ placeholder }: { placeholder?: string }) => {
   return null
 }

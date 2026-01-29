@@ -46,6 +46,7 @@ interface AssetDetailProps {
   onBack: () => void
   onEdit: () => void
   onDelete: () => void
+  onUploadDocument: (files: File[]) => Promise<void>
   onDownloadDocument: (docName: string) => void
   onDeleteDocument: (docName: string) => void
 }

@@ -123,9 +123,11 @@ export default function NotaryPage() {
   }
 
   const handleAddNotary = async (notaryData: NotaryData) => {
+    if (!user) return
+
     try {
-      const { data, error } = await supabase
-        .from('notaries')
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase.from('notaries') as any)
         .insert({
           user_id: user.id,
           ...notaryData
@@ -144,9 +146,11 @@ export default function NotaryPage() {
   }
 
   const handleUpdateNotary = async (notaryId: string, notaryData: Partial<NotaryData>) => {
+    if (!user) return
+
     try {
-      const { error } = await supabase
-        .from('notaries')
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase.from('notaries') as any)
         .update(notaryData)
         .eq('id', notaryId)
 
@@ -159,6 +163,8 @@ export default function NotaryPage() {
   }
 
   const handleDeleteNotary = async (notaryId: string) => {
+    if (!user) return
+
     try {
       const { error } = await supabase
         .from('notaries')
@@ -174,16 +180,18 @@ export default function NotaryPage() {
   }
 
   const handleSetPrimary = async (notaryId: string) => {
+    if (!user) return
+
     try {
       // First, set all notaries to non-primary
-      await supabase
-        .from('notaries')
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (supabase.from('notaries') as any)
         .update({ is_primary: false })
         .eq('user_id', user.id)
 
       // Then set the selected notary as primary
-      const { error } = await supabase
-        .from('notaries')
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase.from('notaries') as any)
         .update({ is_primary: true })
         .eq('id', notaryId)
 

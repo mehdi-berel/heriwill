@@ -26,8 +26,17 @@ interface Heir {
   invitation_expires_at?: string
 }
 
+interface HeirActivity {
+  id: string
+  type: 'login' | 'vault_access' | 'settings_change' | 'verification_completed'
+  description: string
+  timestamp: string
+  metadata?: Record<string, unknown>
+}
+
 interface HeirDetailProps {
   heir: Heir
+  activities: HeirActivity[]
   onBack: () => void
   onEdit: () => void
   onDelete: () => void

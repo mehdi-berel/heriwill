@@ -1,14 +1,15 @@
 "use client"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { CheckCircle, LucideIcon } from "lucide-react"
+import { CheckCircle } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { ComponentType } from "react"
 
 interface WillCategory {
   id: string
   title: string
   description: string
-  icon: LucideIcon
+  icon: ComponentType<{ className?: string; style?: React.CSSProperties }>
   color: string
   completed: boolean
 }

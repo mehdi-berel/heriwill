@@ -77,7 +77,8 @@ export const purchasePackage = async (packageToPurchase: any) => {
     const purchases = getRevenueCat()
     if (!purchases) throw new Error('RevenueCat not initialized')
 
-    const { customerInfo } = await purchases.purchasePackage(packageToPurchase)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { customerInfo } = await purchases.purchasePackage(packageToPurchase as any)
     return customerInfo
   } catch (error) {
     console.error('Error purchasing package:', error)

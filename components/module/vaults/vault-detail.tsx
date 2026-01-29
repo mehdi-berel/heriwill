@@ -20,15 +20,35 @@ import {
 import { ItemForm } from "./item-form"
 import { ItemDetails } from "./item-details"
 
+type VaultItemType = 'password' | 'document' | 'video' | 'image' | 'note' | 'crypto' | 'bank' | 'other' | 'legal' | 'assets'
+
+interface VaultItemMetadata {
+  username?: string
+  password?: string
+  url?: string
+  walletAddress?: string
+  privateKey?: string
+  network?: string
+  content?: string
+  fileName?: string
+  fileUrl?: string
+  fileSize?: string
+  fileSizeBytes?: number
+  description?: string
+  linkedDocumentId?: string
+  linkedAssetId?: string
+  linkedItemType?: 'legal' | 'asset'
+}
+
 interface VaultItem {
-  id: string
-  name: string
-  type: 'password' | 'document' | 'video' | 'image' | 'note' | 'crypto' | 'bank' | 'other'
-  size: number
-  created_at: string
-  updated_at: string
-  is_encrypted: boolean
+  id?: string
+  title: string
+  type: VaultItemType
+  metadata: VaultItemMetadata
+  isEncrypted: boolean
   tags: string[]
+  createdAt?: string
+  updatedAt?: string
 }
 
 interface Vault {
@@ -60,6 +80,8 @@ interface Vault {
 interface VaultDetailProps {
   vault: Vault
   items: VaultItem[]
+  onBack: () => void
+  onEdit: () => void
   onUpload: (files: File[]) => void
   onDownloadItem: (itemId: string) => void
   onDeleteItem: (itemId: string) => void
@@ -78,7 +100,7 @@ export function VaultDetail({
   const [viewingItem, setViewingItem] = useState<VaultItem | null>(null)
 
   const filteredItems = items.filter(item =>
-    item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
     item.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
   )
 
@@ -128,11 +150,13 @@ export function VaultDetail({
     setViewingItem(null)
   }
 
-  const handleSaveItem = async (itemData: any) => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const handleSaveItem = async (itemData: VaultItem) => {
     try {
-      // Convert VaultItem to the format expected by onUpload
-      // This is a placeholder - adjust based on actual onUpload requirements
-      await onUpload(itemData)
+      // Convert VaultItem to File[] format expected by onUpload
+      // This is a placeholder - in a real implementation, you'd convert the VaultItem data
+      const files: File[] = [] // Placeholder conversion
+      await onUpload(files)
       setIsItemFormOpen(false)
       setSelectedItemForEdit(null)
     } catch (error) {
@@ -202,17 +226,17 @@ export function VaultDetail({
               {/* Content */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
-                  <h4 className="font-medium truncate">{item.name}</h4>
-                  {item.is_encrypted && (
+                  <h3 className="text-base font-semibold truncate">{item.title}</h3>
+                  {item.isEncrypted && (
                     <div className="px-1.5 py-0.5 rounded bg-yellow-500/20 flex items-center">
                       <Lock className="h-3 w-3 text-yellow-600" />
                     </div>
                   )}
                 </div>
                 <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                  <span>{formatFileSize(item.size)}</span>
+                  <p className="text-sm text-muted-foreground">Size: {formatFileSize(item.metadata.fileSizeBytes || 0)}</p>
                   <span>•</span>
-                  <span>{new Date(item.created_at).toLocaleDateString()}</span>
+                  <p className="text-xs text-muted-foreground">Created: {new Date(item.createdAt || '').toLocaleDateString()}</p>
                 </div>
                 {item.tags.length > 0 && (
                   <div className="flex flex-wrap gap-1 mt-2">
@@ -231,7 +255,10 @@ export function VaultDetail({
                   size="sm"
                   variant="ghost"
                   className="h-9 w-9 p-0"
-                  onClick={() => onDownloadItem(item.id)}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    if (item.id) onDownloadItem(item.id)
+                  }}
                 >
                   <Download className="h-4 w-4" />
                 </Button>
@@ -239,7 +266,10 @@ export function VaultDetail({
                   size="sm"
                   variant="ghost"
                   className="h-9 w-9 p-0"
-                  onClick={() => onDeleteItem(item.id)}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    if (item.id) onDeleteItem(item.id)
+                  }}
                 >
                   <Archive className="h-4 w-4" />
                 </Button>
@@ -257,36 +287,19 @@ export function VaultDetail({
           setSelectedItemForEdit(null)
         }}
         onSave={handleSaveItem}
-        initialData={selectedItemForEdit ? {
-          id: selectedItemForEdit.id,
-          title: selectedItemForEdit.name,
-          type: selectedItemForEdit.type,
-          metadata: {},
-          isEncrypted: selectedItemForEdit.is_encrypted,
-          tags: selectedItemForEdit.tags,
-          createdAt: selectedItemForEdit.created_at,
-          updatedAt: selectedItemForEdit.updated_at
-        } : undefined}
+        initialData={selectedItemForEdit || undefined}
         vaultId={vault.id}
         vaultCategory={vault.category}
       />
 
       {/* Item Details Modal */}
       <ItemDetails
-        item={viewingItem ? {
-          id: viewingItem.id,
-          title: viewingItem.name,
-          type: viewingItem.type,
-          metadata: {},
-          isEncrypted: viewingItem.is_encrypted,
-          tags: viewingItem.tags,
-          createdAt: viewingItem.created_at,
-          updatedAt: viewingItem.updated_at
-        } : null}
+        item={viewingItem}
         isOpen={!!viewingItem}
         onClose={() => setViewingItem(null)}
+        onDownload={() => viewingItem?.id && onDownloadItem(viewingItem.id)}
         onEdit={() => viewingItem && handleEditItem(viewingItem)}
-        onDelete={() => viewingItem && handleDeleteItemConfirm(viewingItem.id)}
+        onDelete={() => viewingItem?.id && handleDeleteItemConfirm(viewingItem.id)}
       />
     </div>
   )

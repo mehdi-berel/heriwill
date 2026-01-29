@@ -2,7 +2,6 @@ import { supabase } from '../../lib/supabase'
 import type { Database } from '../../lib/database.types'
 
 type HeirRow = Database['public']['Tables']['heirs']['Row']
-type HeirInsert = Database['public']['Tables']['heirs']['Insert']
 type HeirUpdate = Database['public']['Tables']['heirs']['Update']
 
 interface HeirData {
@@ -16,16 +15,12 @@ interface HeirData {
   invitation_expires_at?: string | null
 }
 
-interface HeirUpdateData {
-  [key: string]: unknown
-}
-
 // Heir Management Actions
 export const heirActions = {
   // Create Heir
   createHeir: async (heirData: HeirData) => {
-    const { data, error } = await supabase
-      .from('heirs')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabase.from('heirs') as any)
       .insert({
         user_id: heirData.user_id,
         full_name_encrypted: heirData.full_name,
@@ -50,9 +45,9 @@ export const heirActions = {
   },
 
   // Update Heir
-  updateHeir: async (heirId: string, updateData: HeirUpdateData) => {
-    const { data, error } = await supabase
-      .from('heirs')
+  updateHeir: async (heirId: string, updateData: HeirUpdate) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabase.from('heirs') as any)
       .update(updateData)
       .eq('id', heirId)
       .select()
@@ -98,15 +93,16 @@ export const heirActions = {
 
   // Invitation Management
   resendInvitation: async (heirId: string) => {
-    const heir = await heirActions.getHeirById(heirId)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const heir = await heirActions.getHeirById(heirId) as any
     if (!heir) throw new Error('Heir not found')
 
     // In a real app, this would send an email
     console.log('Resending invitation to heir:', heir.email_encrypted)
     
     // Update invitation status
-    const { data } = await supabase
-      .from('heirs')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data } = await (supabase.from('heirs') as any)
       .update({ invitation_status: 'pending' })
       .eq('id', heirId)
       .select()
@@ -117,8 +113,8 @@ export const heirActions = {
 
   // Revoke Access
   revokeAccess: async (heirId: string) => {
-    const { data } = await supabase
-      .from('heirs')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data } = await (supabase.from('heirs') as any)
       .update({ invitation_status: 'rejected' })
       .eq('id', heirId)
       .select()
@@ -129,8 +125,8 @@ export const heirActions = {
 
   // Update Verification Status
   updateVerificationStatus: async (heirId: string, status: string) => {
-    const { data } = await supabase
-      .from('heirs')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data } = await (supabase.from('heirs') as any)
       .update({ notification_status: status }) // mapped verification_status to notification_status or similar if needed, check DB
       .eq('id', heirId)
       .select()

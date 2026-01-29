@@ -38,9 +38,11 @@ export async function saveGlobalTrigger(
     const updateData: UserUpdate = {};
     
     if (settings.global_trigger_method) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       updateData.global_trigger_method = settings.global_trigger_method as any;
     }
     if (settings.global_trigger_settings) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       updateData.global_trigger_settings = settings.global_trigger_settings as any;
     }
     if (settings.global_scheduled_date !== undefined) {
@@ -50,8 +52,8 @@ export async function saveGlobalTrigger(
       updateData.trusted_contact_heir_id = settings.trusted_contact_heir_id;
     }
 
-    const { error } = await supabase
-      .from('users')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase.from('users') as any)
       .update(updateData)
       .eq('id', userId);
 
@@ -115,8 +117,8 @@ export async function getGlobalTrigger(
  */
 export async function deleteGlobalTrigger(userId: string): Promise<void> {
   try {
-    const { error } = await supabase
-      .from('users')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase.from('users') as any)
       .update({
         global_trigger_method: null,
         global_trigger_settings: null,
@@ -188,8 +190,8 @@ export async function checkGlobalTriggerConditions(userId: string): Promise<bool
  */
 export async function updateLastActivity(userId: string): Promise<void> {
   try {
-    const { error } = await supabase
-      .from('users')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase.from('users') as any)
       .update({ last_activity: new Date().toISOString() })
       .eq('id', userId);
 

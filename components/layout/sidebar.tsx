@@ -77,7 +77,7 @@ interface SidebarProps {
   onSignOut?: () => void
 }
 
-export function Sidebar({ userName, onSignOut }: SidebarProps) {
+export function Sidebar({ onSignOut }: SidebarProps) {
   const pathname = usePathname()
   const [isHovered, setIsHovered] = useState(false)
   const [isProUser, setIsProUser] = useState(false)

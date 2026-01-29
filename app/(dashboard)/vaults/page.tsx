@@ -84,19 +84,19 @@ export default function VaultsPage() {
             const { count, error: countError } = await supabase
               .from('vault_items')
               .select('*', { count: 'exact', head: true })
-              .eq('vault_id', vault.id as any) // Cast vault.id if needed
+              .eq('vault_id', (vault as Record<string, unknown>).id as string)
             
             if (countError) {
               console.error('Error loading vault item count:', countError)
             }
             
             return {
-              ...(vault as any), // Cast vault to any to avoid spread error
+              ...(vault as Record<string, unknown>),
               item_count: count || 0
             }
           })
         )
-        setVaults(vaultsWithCounts)
+        setVaults(vaultsWithCounts as unknown as Vault[])
       } else {
         setVaults([])
       }
@@ -109,8 +109,8 @@ export default function VaultsPage() {
     if (!user) return
 
     try {
-      const { data, error } = await supabase
-        .from('vaults')
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase.from('vaults') as any)
         .insert({
           user_id: user.id,
           name: formData.name,
@@ -142,7 +142,7 @@ export default function VaultsPage() {
             notifyEmail: []
           },
           sort_order: 0
-        } as any)
+        })
         .select()
         .single()
 
@@ -153,8 +153,8 @@ export default function VaultsPage() {
 
       if (data) {
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { item_count, ...rest } = data as any // Handle extra props
-        setVaults([{ ...(data as any), item_count: 0 }, ...vaults])
+        const { item_count, ...rest } = data as Record<string, unknown>
+        setVaults([{ ...(data as Record<string, unknown>), item_count: 0 } as unknown as Vault, ...vaults])
         setShowForm(false)
         setEditingVault(null)
       }
@@ -167,8 +167,8 @@ export default function VaultsPage() {
     if (!editingVault) return
 
     try {
-      const { data, error } = await supabase
-        .from('vaults')
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase.from('vaults') as any)
         .update({
           name: formData.name,
           description: formData.description || null,
@@ -177,7 +177,7 @@ export default function VaultsPage() {
           // Only update fields present in form
           tags: formData.tags || [],
           last_accessed: new Date().toISOString()
-        } as any)
+        })
         .eq('id', editingVault.id)
         .select()
         .single()
@@ -188,8 +188,8 @@ export default function VaultsPage() {
       }
 
       if (data) {
-        const updatedVault = { ...(data as any), item_count: editingVault.item_count || 0 }
-        setVaults(vaults.map(v => v.id === editingVault.id ? updatedVault : v))
+        const updatedVault = { ...(data as Record<string, unknown>), item_count: editingVault.item_count || 0 }
+        setVaults(vaults.map(v => v.id === editingVault.id ? updatedVault as unknown as Vault : v))
         setShowForm(false)
         setEditingVault(null)
       }
@@ -347,7 +347,7 @@ export default function VaultsPage() {
               {editingVault ? 'Edit Vault' : 'Create New Vault'}
             </DialogTitle>
             <VaultForm
-              initialData={(editingVault as any) || undefined}
+              initialData={(editingVault as unknown as Record<string, unknown>) || undefined}
               onSubmit={editingVault ? handleUpdateVault : handleAddVault}
               onCancel={() => {
                 setShowForm(false)
@@ -388,9 +388,9 @@ export default function VaultsPage() {
 
         {/* Vault List */}
         <VaultList
-          vaults={vaults as any}
-          onVaultSelect={handleVaultSelect as any}
-          onVaultEdit={handleVaultEdit as any}
+          vaults={vaults}
+          onVaultSelect={handleVaultSelect}
+          onVaultEdit={handleVaultEdit}
           onVaultDelete={handleDeleteVault}
           searchTerm={searchTerm}
           onSearchChange={setSearchTerm}
