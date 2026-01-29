@@ -1,10 +1,11 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { DashboardLayout } from "@/components/module/dashboard/dashboard-layout"
 import { VaultForm } from "@/components/module/vaults/vault-form"
 import { VaultList } from "@/components/module/vaults/vault-list"
+import { VaultListSkeleton } from "@/components/ui/skeleton"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
@@ -52,9 +53,9 @@ interface Vault {
 }
 
 export default function VaultsPage() {
-  const [user] = useState<User | null>(null)
-  const [profile] = useState<UserProfile | null>(null)
-  const [loading] = useState(true)
+  const [user, setUser] = useState<User | null>(null)
+  const [profile, setProfile] = useState<UserProfile | null>(null)
+  const [loading, setLoading] = useState(true)
   const [vaults, setVaults] = useState<Vault[]>([])
   const [selectedVault, setSelectedVault] = useState<Vault | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
@@ -65,7 +66,7 @@ export default function VaultsPage() {
   const [vaultToDelete, setVaultToDelete] = useState<string | null>(null)
   const router = useRouter()
 
-  useCallback(async (userId: string) => {
+  const loadVaults = useCallback(async (userId: string) => {
     try {
       const { data, error } = await supabase
         .from('vaults')
@@ -104,6 +105,61 @@ export default function VaultsPage() {
       console.error('Error loading vaults:', error)
     }
   }, [])
+
+  useEffect(() => {
+    let isMounted = true
+    
+    const initializePage = async () => {
+      try {
+        const { data: { user }, error: authError } = await supabase.auth.getUser()
+        
+        if (authError) {
+          console.error('Auth error:', authError)
+          if (isMounted) setLoading(false)
+          return
+        }
+        
+        if (!user) {
+          if (isMounted) setLoading(false)
+          router.push('/login')
+          return
+        }
+        
+        if (!isMounted) return
+        setUser(user)
+
+        // Load user profile
+        const { data: profileData, error: profileError } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', user.id)
+          .single()
+        
+        if (profileError) {
+          console.error('Profile error:', profileError)
+        } else if (isMounted) {
+          setProfile(profileData as unknown as UserProfile)
+        }
+
+        // Load vaults
+        if (isMounted) {
+          await loadVaults(user.id)
+        }
+      } catch (error) {
+        console.error('Error initializing page:', error)
+      } finally {
+        if (isMounted) {
+          setLoading(false)
+        }
+      }
+    }
+
+    initializePage()
+    
+    return () => {
+      isMounted = false
+    }
+  }, [router, loadVaults])
 
   const handleAddVault = async (formData: VaultFormData) => {
     if (!user) return
@@ -270,9 +326,18 @@ export default function VaultsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-lg">Loading...</div>
-      </div>
+      <DashboardLayout userName="Loading..." onSignOut={handleSignOut}>
+        <div className="p-6">
+          <div className="mb-6">
+            <div className="flex justify-between items-center mb-4">
+              <div className="h-9 w-32 bg-background-elevated/50 rounded animate-pulse" />
+              <div className="h-12 w-12 bg-background-elevated/50 rounded-full animate-pulse" />
+            </div>
+            <div className="h-11 bg-background-elevated/50 rounded-xl animate-pulse mb-4" />
+          </div>
+          <VaultListSkeleton />
+        </div>
+      </DashboardLayout>
     )
   }
 

@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Users, Search, Scale } from "lucide-react"
 import { Input } from "@/components/ui/input"
+import { supabase } from "@/lib/supabase"
 
 interface Heir {
   id: string
@@ -53,42 +54,51 @@ export function VaultAssign({
 
   const loadHeirs = useCallback(async () => {
     try {
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        setLoading(false)
+        return
+      }
+
       if (isNotaryMode) {
         // Load notaries from Supabase
-        // const { data } = await supabase.from('notaries').select('*').eq('user_id', userId)
-        const mockNotaries: Notary[] = []
-        setNotaries(mockNotaries)
+        const { data, error } = await supabase
+          .from('notaries')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+
+        if (error) {
+          console.error('Error loading notaries:', error)
+          setNotaries([])
+        } else {
+          setNotaries(data || [])
+        }
       } else {
         // Load heirs from Supabase
-        // const { data } = await supabase.from('heirs').select('*').eq('user_id', userId)
-        const mockHeirs: Heir[] = [
-        {
-          id: '1',
-          full_name: 'John Doe',
-          email: 'john@example.com',
-          relationship: 'Son',
-          invitation_status: 'accepted',
-          access_level: 'full'
-        },
-        {
-          id: '2',
-          full_name: 'Jane Smith',
-          email: 'jane@example.com',
-          relationship: 'Daughter',
-          invitation_status: 'accepted',
-          access_level: 'partial'
-        },
-        {
-          id: '3',
-          full_name: 'Bob Johnson',
-          email: 'bob@example.com',
-          relationship: 'Brother',
-          invitation_status: 'pending',
-          access_level: 'view'
+        const { data, error } = await supabase
+          .from('heirs')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+
+        if (error) {
+          console.error('Error loading heirs:', error)
+          setHeirs([])
+        } else {
+          // Map database fields to component interface
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const mappedHeirs: Heir[] = (data || []).map((heir: any) => ({
+            id: heir.id,
+            full_name: heir.full_name_encrypted || 'Unknown',
+            email: heir.email_encrypted || '',
+            relationship: heir.relationship || 'Unknown',
+            invitation_status: heir.invitation_status || 'pending',
+            access_level: heir.access_level || 'view'
+          }))
+          setHeirs(mappedHeirs)
         }
-      ]
-        
-        setHeirs(mockHeirs)
       }
       setLoading(false)
     } catch (error) {

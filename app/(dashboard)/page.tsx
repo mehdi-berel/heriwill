@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { DashboardLayout } from "@/components/module/dashboard/dashboard-layout"
 import { DashboardOverview } from "@/components/module/dashboard/dashboard-overview"
+import { DashboardSkeleton } from "@/components/ui/skeleton"
 import { supabase } from "@/lib/supabase"
 import { User } from "@supabase/supabase-js"
 
@@ -158,9 +159,9 @@ export default function HomePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-lg">Loading dashboard...</div>
-      </div>
+      <DashboardLayout userName="Loading..." onSignOut={handleSignOut}>
+        <DashboardSkeleton />
+      </DashboardLayout>
     )
   }
 

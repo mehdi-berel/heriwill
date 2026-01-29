@@ -100,3 +100,73 @@ export const syncPurchases = async () => {
     throw error
   }
 }
+
+// Get subscription tier from customer info
+export const getSubscriptionTier = async (): Promise<'free' | 'premium' | 'pro'> => {
+  try {
+    const purchases = getRevenueCat()
+    if (!purchases) return 'free'
+
+    const customerInfo = await purchases.getCustomerInfo()
+    const activeEntitlements = Object.keys(customerInfo.entitlements.active)
+
+    // Check for pro entitlement first
+    if (activeEntitlements.includes('pro')) return 'pro'
+    // Then check for premium/legacy
+    if (activeEntitlements.includes('premium') || activeEntitlements.includes('legacy')) return 'premium'
+    
+    return 'free'
+  } catch (error) {
+    console.error('Error getting subscription tier:', error)
+    return 'free'
+  }
+}
+
+// Get customer info with subscription details
+export const getCustomerInfo = async () => {
+  try {
+    const purchases = getRevenueCat()
+    if (!purchases) return null
+
+    const customerInfo = await purchases.getCustomerInfo()
+    return {
+      activeSubscriptions: Object.keys(customerInfo.activeSubscriptions),
+      entitlements: customerInfo.entitlements.active,
+      originalAppUserId: customerInfo.originalAppUserId,
+      managementURL: customerInfo.managementURL,
+    }
+  } catch (error) {
+    console.error('Error getting customer info:', error)
+    return null
+  }
+}
+
+// Check if user can access a feature based on tier
+export const canAccessFeature = async (feature: 'sign_off' | 'assets' | 'legal' | 'notary'): Promise<boolean> => {
+  const tier = await getSubscriptionTier()
+  
+  // Pro features
+  const proFeatures = ['sign_off', 'assets', 'legal', 'notary']
+  if (proFeatures.includes(feature)) {
+    return tier === 'pro'
+  }
+  
+  return true
+}
+
+// Check vault/heir limits based on tier
+export const checkLimits = async (type: 'vaults' | 'heirs', currentCount: number): Promise<{ allowed: boolean; limit: number }> => {
+  const tier = await getSubscriptionTier()
+  
+  const limits = {
+    free: { vaults: 1, heirs: 1 },
+    premium: { vaults: Infinity, heirs: Infinity },
+    pro: { vaults: Infinity, heirs: Infinity }
+  }
+  
+  const limit = limits[tier][type]
+  return {
+    allowed: currentCount < limit,
+    limit: limit === Infinity ? -1 : limit
+  }
+}

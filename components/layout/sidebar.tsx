@@ -6,6 +6,8 @@ import Image from "next/image"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { supabase } from "@/lib/supabase"
+import { Badge } from "@/components/ui/badge"
+import { Tooltip } from "@/components/ui/tooltip"
 import {
   Home,
   Users,
@@ -15,7 +17,10 @@ import {
   Lock,
   Gift,
   Power,
-  Package
+  Package,
+  Sparkles,
+  ArrowRight,
+  LockKeyhole
 } from "lucide-react"
 
 const navigation = [
@@ -114,13 +119,11 @@ export function Sidebar({ onSignOut }: SidebarProps) {
     isPro?: boolean
   }
 
-  // Filter navigation items based on pro status
-  const filteredNavigation = navigation.filter(item => {
-    if ((item as NavigationItem).isPro && !isProUser) {
-      return false
-    }
-    return true
-  })
+  // Show all navigation items, but mark locked ones
+  const navigationWithLockState = navigation.map(item => ({
+    ...item,
+    isLocked: (item as NavigationItem).isPro && !isProUser
+  }))
 
   return (
     <div 
@@ -150,61 +153,122 @@ export function Sidebar({ onSignOut }: SidebarProps) {
           {isHovered && (
             <div className="flex items-baseline gap-1 overflow-hidden">
               <span className="text-base font-bold text-text-primary tracking-tight">Heriwill</span>
-              <span className="text-[9px] text-primary-400 font-bold uppercase tracking-wider">Pro</span>
             </div>
           )}
         </div>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-2 pb-3 overflow-y-auto scrollbar-thin scrollbar-thumb-border-light scrollbar-track-transparent">
+      <nav className="flex-1 px-2 pb-3 overflow-y-auto overflow-x-hidden" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
         <div className="space-y-1 py-2">
-          {filteredNavigation.map((item: { name: string; href: string; icon: React.ComponentType<{ className?: string }> }) => {
+          {navigationWithLockState.map((item: { name: string; href: string; icon: React.ComponentType<{ className?: string }>; isLocked?: boolean; isPro?: boolean }) => {
             const isActive = pathname === item.href
-            return (
-              <Link
-                key={item.name}
-                href={item.href}
+            const isLocked = item.isLocked
+            
+            const navItem = (
+              <div
                 className={cn(
                   "group relative flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm font-medium transition-all duration-200",
                   isActive
                     ? "bg-primary-600/10 text-primary-400 shadow-sm"
-                    : "text-text-muted hover:bg-background-hover hover:text-text-secondary",
+                    : isLocked
+                    ? "text-text-tertiary hover:bg-background-hover/50 cursor-not-allowed opacity-60"
+                    : "text-text-muted hover:bg-background-hover hover:text-text-secondary cursor-pointer",
                   !isHovered && "justify-center"
                 )}
-                title={!isHovered ? item.name : undefined}
               >
-                {isActive && isHovered && (
+                {isActive && isHovered && !isLocked && (
                   <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-primary-500 rounded-r-full" />
                 )}
                 <div className={cn(
-                  "flex items-center justify-center transition-all duration-200 transform-gpu will-change-transform",
+                  "relative flex items-center justify-center transition-all duration-200 transform-gpu will-change-transform",
                   isActive ? "scale-110" : "group-hover:scale-105"
                 )}>
                   <item.icon className={cn(
                     "h-4 w-4 transition-colors duration-200",
-                    isActive ? "text-primary-400" : "text-text-tertiary group-hover:text-text-muted"
+                    isActive ? "text-primary-400" : isLocked ? "text-text-tertiary" : "text-text-tertiary group-hover:text-text-muted"
                   )} />
+                  {isLocked && (
+                    <div className="absolute -top-1 -right-1 w-3 h-3 bg-background-primary rounded-full flex items-center justify-center">
+                      <LockKeyhole className="h-2 w-2 text-amber-500" />
+                    </div>
+                  )}
                 </div>
                 {isHovered && (
                   <>
-                    <span className="flex-1">
+                    <span className="flex-1 flex items-center gap-2 whitespace-nowrap">
                       {item.name}
-                      {(item as NavigationItem).isPro && (
-                        <span className="ml-1.5 text-[10px] text-primary-400 font-semibold">(pro)</span>
+                      {item.isPro && (
+                        <Badge className="h-4 px-1.5 text-[9px] bg-primary-500 text-white border-0">
+                          PRO
+                        </Badge>
                       )}
                     </span>
-                    {isActive && (
-                      <div className="h-1.5 w-1.5 rounded-full bg-primary-400" />
+                    {isActive && !isLocked && (
+                      <div className="h-1.5 w-1.5 rounded-full bg-primary-400 animate-pulse" />
                     )}
                   </>
                 )}
+              </div>
+            )
+
+            const content = isLocked ? (
+              <Tooltip
+                content={
+                  <div className="flex items-center gap-1.5">
+                    <Sparkles className="h-3 w-3" />
+                    <span>Upgrade to Pro to unlock</span>
+                  </div>
+                }
+                side="right"
+              >
+                <Link href="/upgrade" className="block">
+                  {navItem}
+                </Link>
+              </Tooltip>
+            ) : !isHovered ? (
+              <Tooltip content={item.name} side="right">
+                <Link key={item.name} href={item.href} className="block">
+                  {navItem}
+                </Link>
+              </Tooltip>
+            ) : (
+              <Link key={item.name} href={item.href} className="block">
+                {navItem}
               </Link>
             )
+
+            return <div key={item.name}>{content}</div>
           })}
         </div>
 
       </nav>
+
+      {/* Upgrade CTA for non-pro users */}
+      {!isProUser && (
+        <div className="px-2 pb-2">
+          <Link
+            href="/upgrade"
+            className={cn(
+              "group relative flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm font-medium transition-all duration-200 overflow-hidden",
+              "bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-500 hover:to-primary-600",
+              "text-white shadow-lg hover:shadow-xl",
+              !isHovered && "justify-center"
+            )}
+          >
+            <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
+            <div className="relative flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
+              <Sparkles className="h-4 w-4" />
+            </div>
+            {isHovered && (
+              <>
+                <span className="relative flex-1 font-semibold whitespace-nowrap">Upgrade to Pro</span>
+                <ArrowRight className="relative h-4 w-4 group-hover:translate-x-1 transition-transform duration-200" />
+              </>
+            )}
+          </Link>
+        </div>
+      )}
 
       {/* Divider before sign out */}
       <div className="mx-2 mb-2 h-px bg-gradient-to-r from-transparent via-border-default to-transparent opacity-50"></div>
@@ -222,7 +286,7 @@ export function Sidebar({ onSignOut }: SidebarProps) {
           <div className="group-hover:scale-105 group-hover:rotate-6 transition-all duration-200">
             <LogOut className="h-4 w-4" />
           </div>
-          {isHovered && <span className="flex-1 text-left">Sign Out</span>}
+          {isHovered && <span className="flex-1 text-left whitespace-nowrap">Sign Out</span>}
         </button>
       </div>
     </div>

@@ -79,35 +79,35 @@ export default function HeirDetailPage() {
 
   const loadHeirActivities = useCallback(async (id: string) => {
     try {
-      // Mock data for now - in real app, fetch from activities table
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { data, error } = await supabase
-        .from('user_activity')
+      // Query user_activity table for heir-related activities
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase
+        .from('user_activity') as any)
         .select('*')
-        .eq('metadata->heir_id', id)
+        .eq('metadata->>heir_id', id)
         .order('created_at', { ascending: false })
-        .limit(10)
+        .limit(20)
 
-      if (error) throw error
+      if (error) {
+        console.error('Error fetching activities:', error)
+        setActivities([])
+        return
+      }
 
-      // Transform data if needed, or use mock for now
-      const mockActivities: HeirActivity[] = [
-        {
-          id: '1',
-          type: 'login',
-          description: 'Logged into account',
-          timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()
-        },
-        {
-          id: '2',
-          type: 'vault_access',
-          description: 'Accessed "Family Photos" vault',
-          timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
-        }
-      ]
-      setActivities(mockActivities)
+      // Transform database records to HeirActivity format
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const activities: HeirActivity[] = (data || []).map((activity: any) => ({
+        id: activity.id,
+        type: activity.activity_type as HeirActivity['type'],
+        description: activity.metadata?.description || activity.activity_type,
+        timestamp: activity.created_at,
+        metadata: activity.metadata
+      }))
+
+      setActivities(activities)
     } catch (error) {
       console.error('Error loading heir activities:', error)
+      setActivities([])
     }
   }, [])
 

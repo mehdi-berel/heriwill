@@ -6,7 +6,8 @@ import { DashboardLayout } from "@/components/module/dashboard/dashboard-layout"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Check, Sparkles, Crown, ArrowLeft, Loader2 } from "lucide-react"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Check, Sparkles, Crown, ArrowLeft, Loader2, Zap, Shield, Star, Gift } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { getOfferings, purchasePackage } from "@/lib/revenuecat"
 import { User } from "@supabase/supabase-js"
@@ -120,31 +121,59 @@ function UpgradePageContent() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-lg">Loading...</div>
-      </div>
+      <DashboardLayout userName="Loading..." onSignOut={handleSignOut}>
+        <div className="p-6 max-w-7xl mx-auto">
+          <Skeleton className="h-10 w-32 mb-8" />
+          <div className="text-center mb-8">
+            <Skeleton className="h-12 w-96 mx-auto mb-4" />
+            <Skeleton className="h-6 w-64 mx-auto" />
+          </div>
+          <div className="grid md:grid-cols-3 gap-8">
+            {[1, 2, 3].map((i) => (
+              <Card key={i} className="border">
+                <CardHeader>
+                  <Skeleton className="h-8 w-32 mb-2" />
+                  <Skeleton className="h-10 w-24" />
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3 mb-6">
+                    {[1, 2, 3, 4].map((j) => (
+                      <Skeleton key={j} className="h-5 w-full" />
+                    ))}
+                  </div>
+                  <Skeleton className="h-10 w-full" />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </DashboardLayout>
     )
   }
 
-  const premiumFeatures = [
+  const classicFeatures = [
+    '1 vault',
+    '1 heir',
+    'Store up to 1GB',
+    'Basic security',
+    'Email support',
+    'Essential features',
+  ]
+
+  const legacyFeatures = [
     'Unlimited vaults',
     'Unlimited heirs',
-    'Advanced vault settings',
-    'Priority support',
-    'Email notifications',
-    'Vault sharing',
-    'Encryption options',
+    'Store up to 10GB',
+    'Advanced security',
+    'Priority email & chat support',
   ]
 
   const proFeatures = [
-    'Everything in Premium',
+    'Everything in Legacy',
+    'Store up to 100GB',
     'Asset management',
     'Legal document storage',
     'Notary services',
-    'Sign-off after death vaults',
-    'Advanced analytics',
-    'White-label options',
-    'API access',
   ]
 
   return (
@@ -152,181 +181,215 @@ function UpgradePageContent() {
       userName={profile?.full_name || user?.email} 
       onSignOut={handleSignOut}
     >
-      <div className="p-6 max-w-7xl mx-auto">
+      <div className="p-6 max-w-7xl mx-auto relative">
+        {/* Background blur effects */}
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute top-40 left-0 w-72 h-72 bg-primary-900/10 rounded-full filter blur-3xl"></div>
+          <div className="absolute bottom-20 right-20 w-80 h-80 bg-indigo-900/10 rounded-full filter blur-3xl"></div>
+        </div>
+        
         {/* Header */}
-        <div className="mb-8">
-          <Button
-            variant="ghost"
-            onClick={() => router.back()}
-            className="mb-4"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
-          </Button>
-          
+        <div className="mb-12 relative z-10">
           <div className="text-center">
-            <h1 className="text-4xl font-bold mb-2">Upgrade Your Plan</h1>
-            <p className="text-lg text-muted-foreground">
-              Choose the perfect plan for your estate planning needs
+            <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
+              Simple, Transparent Pricing
+            </h1>
+            <p className="text-lg md:text-xl text-gray-400 mb-6 max-w-3xl mx-auto">
+              Choose the plan that's right for you. Start with Classic for free, or upgrade to Legacy for advanced features and peace of mind.
             </p>
             {currentPlan !== 'free' && (
-              <Badge className="mt-2 bg-primary-500">
-                Current Plan: {currentPlan.charAt(0).toUpperCase() + currentPlan.slice(1)}
+              <Badge className="bg-gradient-to-r from-primary-600 to-indigo-600 text-white text-sm px-4 py-1.5">
+                Current Plan: {currentPlan === 'premium' ? 'Legacy' : currentPlan.charAt(0).toUpperCase() + currentPlan.slice(1)}
               </Badge>
             )}
           </div>
         </div>
 
         {/* Pricing Cards */}
-        <div className="grid md:grid-cols-3 gap-8 mb-12">
-          {/* Free Plan */}
-          <Card className={`border-2 ${currentPlan === 'free' ? 'border-primary-500' : 'border-border'}`}>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                Free
-              </CardTitle>
-              <CardDescription>
-                <span className="text-3xl font-bold">€0</span>
-                <span className="text-muted-foreground">/month</span>
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-3 mb-6">
-                <li className="flex items-start gap-2">
-                  <Check className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
-                  <span className="text-sm">1 vault</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <Check className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
-                  <span className="text-sm">1 heir</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <Check className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
-                  <span className="text-sm">Basic features</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <Check className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
-                  <span className="text-sm">Community support</span>
-                </li>
-              </ul>
-              
-              {currentPlan === 'free' ? (
-                <Badge className="w-full justify-center py-2">Current Plan</Badge>
-              ) : (
-                <Button variant="outline" className="w-full" disabled>
-                  Downgrade
-                </Button>
-              )}
-            </CardContent>
-          </Card>
+        <div className="grid md:grid-cols-3 gap-6 md:gap-8 max-w-6xl mx-auto mb-12 relative z-10">
+          {/* Classic Plan (Free) */}
+          <Card className={`rounded-xl md:rounded-2xl border-2 ${
+            currentPlan === 'free'
+              ? 'border-primary-500 bg-gradient-to-br from-gray-900/80 to-primary-900/20 shadow-xl shadow-primary-500/20'
+              : 'border-gray-800 bg-gray-900/60'
+          } p-6 md:p-8 relative transform transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl`}>
+            {/* Plan Icon */}
+            <div className="mb-4">
+              <div className="inline-flex p-2 rounded-lg bg-gray-800/50 border border-gray-700">
+                <Gift size={20} className="text-gray-400" />
+              </div>
+            </div>
 
-          {/* Premium Plan */}
-          <Card className={`border-2 ${
-            currentPlan === 'premium' 
-              ? 'border-primary-500 bg-primary-50 dark:bg-primary-950/30' 
-              : selectedPlan === 'premium'
-              ? 'border-amber-500 shadow-lg'
-              : 'border-border'
-          }`}>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Crown className="h-6 w-6 text-amber-500" />
-                Premium
-              </CardTitle>
-              <CardDescription>
-                <span className="text-3xl font-bold">€10</span>
-                <span className="text-muted-foreground">/month</span>
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-3 mb-6">
-                {premiumFeatures.map((feature, index) => (
-                  <li key={index} className="flex items-start gap-2">
-                    <Check className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
-                    <span className="text-sm">{feature}</span>
+            <h3 className="text-xl md:text-2xl font-bold mb-2 text-white">Classic</h3>
+            <div className="flex items-baseline mb-3">
+              <span className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">Free</span>
+            </div>
+            <div className="mb-4"></div>
+            <p className="text-gray-400 text-sm mb-6 leading-relaxed">
+              Essential digital legacy management for individuals
+            </p>
+            
+            {/* Features List */}
+            <div className="space-y-3 mb-6">
+              <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+                What's Included
+              </div>
+              <ul className="space-y-3">
+                {classicFeatures.map((feature, index) => (
+                  <li key={index} className="flex items-start group">
+                    <div className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center mr-2 mt-0.5 bg-gray-800 group-hover:bg-gray-700 transition-colors">
+                      <Check size={12} className="text-gray-400" />
+                    </div>
+                    <span className="text-gray-300 text-sm leading-relaxed">{feature}</span>
                   </li>
                 ))}
               </ul>
-              
-              <Button
-                className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white"
-                onClick={() => handlePurchase('premium')}
-                disabled={purchasing !== null || currentPlan === 'premium' || currentPlan === 'pro'}
-              >
-                {purchasing === 'premium' ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Processing...
-                  </>
-                ) : currentPlan === 'premium' ? (
-                  'Current Plan'
-                ) : currentPlan === 'pro' ? (
-                  'Downgrade'
-                ) : (
-                  'Upgrade to Premium'
-                )}
+            </div>
+
+            {/* CTA Button */}
+            {currentPlan === 'free' ? (
+              <div className="w-full py-3 px-4 rounded-xl font-bold text-base bg-gray-800 text-white border-2 border-gray-700 flex items-center justify-center">
+                Current Plan
+              </div>
+            ) : (
+              <Button variant="outline" className="w-full py-3 rounded-xl text-base font-bold bg-gray-800 hover:bg-gray-700 text-white border-2 border-gray-700 hover:border-gray-600" disabled>
+                Current Plan
               </Button>
-            </CardContent>
+            )}
+          </Card>
+
+          {/* Legacy Plan (Premium) */}
+          <Card className={`rounded-xl md:rounded-2xl border-2 border-primary-500 bg-gradient-to-br from-gray-900/80 to-primary-900/20 shadow-xl shadow-primary-500/20 p-6 md:p-8 relative transform transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl md:scale-105`}>
+            {/* Plan Icon */}
+            <div className="mb-4">
+              <div className="inline-flex p-2 rounded-lg bg-gradient-to-br from-primary-600/20 to-indigo-600/20 border border-primary-500/30">
+                <Zap size={20} className="text-primary-400" />
+              </div>
+            </div>
+
+            <h3 className="text-xl md:text-2xl font-bold mb-2 text-white">Legacy</h3>
+            <div className="flex items-baseline mb-3">
+              <span className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">€10</span>
+              <span className="text-primary-400 ml-2 text-lg font-medium">/month</span>
+            </div>
+            <div className="mb-4"></div>
+            <p className="text-gray-400 text-sm mb-6 leading-relaxed">
+              Complete solution for families and their digital assets
+            </p>
+            
+            {/* Features List */}
+            <div className="space-y-3 mb-6">
+              <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+                What's Included
+              </div>
+              <ul className="space-y-3">
+                {legacyFeatures.map((feature, index) => (
+                  <li key={index} className="flex items-start group">
+                    <div className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center mr-2 mt-0.5 bg-primary-600/20 border border-primary-500/30 group-hover:bg-primary-600/30 transition-colors">
+                      <Check size={12} className="text-primary-400" />
+                    </div>
+                    <span className="text-gray-300 text-sm leading-relaxed">{feature}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* CTA Button */}
+            <button
+              onClick={() => handlePurchase('premium')}
+              disabled={purchasing !== null || currentPlan === 'premium' || currentPlan === 'pro'}
+              className="w-full py-3 px-4 rounded-xl font-bold text-base transition-all duration-300 transform active:scale-95 flex items-center justify-center bg-gradient-to-r from-primary-600 to-indigo-600 hover:from-primary-700 hover:to-indigo-700 text-white shadow-lg shadow-primary-500/30 hover:shadow-xl hover:shadow-primary-500/40 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {purchasing === 'premium' ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Processing...
+                </>
+              ) : currentPlan === 'premium' || currentPlan === 'pro' ? (
+                'Current Plan'
+              ) : (
+                'Subscribe to Legacy'
+              )}
+            </button>
           </Card>
 
           {/* Pro Plan */}
-          <Card className={`border-2 ${
+          <Card className={`rounded-xl md:rounded-2xl border-2 ${
             currentPlan === 'pro'
-              ? 'border-primary-500 bg-primary-50 dark:bg-primary-950/30'
-              : selectedPlan === 'pro'
-              ? 'border-primary-500 shadow-lg bg-gradient-to-br from-primary-50/50 to-transparent dark:from-primary-950/20'
-              : 'border-primary-500 bg-gradient-to-br from-primary-50/30 to-transparent dark:from-primary-950/10'
-          }`}>
-            {currentPlan !== 'pro' && (
-              <Badge className="absolute top-4 right-4 bg-primary-500">Recommended</Badge>
+              ? 'border-amber-500 bg-gradient-to-br from-gray-900/80 to-amber-900/20 shadow-xl shadow-amber-500/20'
+              : 'border-gray-800 bg-gray-900/60'
+          } p-6 md:p-8 relative transform transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl`}>
+            {currentPlan === 'pro' && (
+              <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-amber-600 to-orange-600 text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-lg flex items-center gap-1">
+                <Crown size={12} className="fill-current" />
+                Enterprise
+              </div>
             )}
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Sparkles className="h-6 w-6 text-primary-500" />
-                Pro
-              </CardTitle>
-              <CardDescription>
-                <span className="text-3xl font-bold">€20</span>
-                <span className="text-muted-foreground">/month</span>
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-3 mb-6">
+            
+            {/* Plan Icon */}
+            <div className="mb-4">
+              <div className={`inline-flex p-2 rounded-lg ${
+                currentPlan === 'pro'
+                  ? 'bg-gradient-to-br from-amber-600/20 to-orange-600/20 border border-amber-500/30'
+                  : 'bg-gray-800/50 border border-gray-700'
+              }`}>
+                <Crown size={20} className={currentPlan === 'pro' ? 'text-amber-400' : 'text-gray-400'} />
+              </div>
+            </div>
+
+            <h3 className="text-xl md:text-2xl font-bold mb-2 text-white">Pro</h3>
+            <div className="flex items-baseline mb-3">
+              <span className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">€20</span>
+              <span className="text-amber-400 ml-2 text-lg font-medium">/month</span>
+            </div>
+            <div className="mb-4"></div>
+            <p className="text-gray-400 text-sm mb-6 leading-relaxed">
+              Advanced features for comprehensive estate planning
+            </p>
+            
+            {/* Features List */}
+            <div className="space-y-3 mb-6">
+              <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+                What's Included
+              </div>
+              <ul className="space-y-3">
                 {proFeatures.map((feature, index) => (
-                  <li key={index} className="flex items-start gap-2">
-                    <Check className="h-5 w-5 text-primary-500 flex-shrink-0 mt-0.5" />
-                    <span className="text-sm font-medium">{feature}</span>
+                  <li key={index} className="flex items-start group">
+                    <div className={`flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center mr-2 mt-0.5 ${
+                      currentPlan === 'pro'
+                        ? 'bg-amber-600/20 border border-amber-500/30 group-hover:bg-amber-600/30'
+                        : 'bg-gray-800 group-hover:bg-gray-700'
+                    } transition-colors`}>
+                      <Check size={12} className={currentPlan === 'pro' ? 'text-amber-400' : 'text-gray-400'} />
+                    </div>
+                    <span className="text-gray-300 text-sm leading-relaxed">{feature}</span>
                   </li>
                 ))}
               </ul>
-              
-              <Button
-                className="w-full bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white shadow-lg"
-                onClick={() => handlePurchase('pro')}
-                disabled={purchasing !== null || currentPlan === 'pro'}
-              >
-                {purchasing === 'pro' ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Processing...
-                  </>
-                ) : currentPlan === 'pro' ? (
-                  'Current Plan'
-                ) : (
-                  'Upgrade to Pro'
-                )}
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
+            </div>
 
-        {/* FAQ / Additional Info */}
-        <div className="text-center text-sm text-muted-foreground space-y-2">
-          <p className="text-lg font-semibold text-foreground mb-4">Frequently Asked Questions</p>
-          <p>✓ All plans include a 14-day free trial</p>
-          <p>✓ Cancel anytime, no questions asked</p>
-          <p>✓ Secure payment processing via Stripe</p>
-          <p>✓ Instant access to all features upon upgrade</p>
+            {/* CTA Button */}
+            <button
+              onClick={() => handlePurchase('pro')}
+              disabled={purchasing !== null || currentPlan === 'pro'}
+              className={`w-full py-3 px-4 rounded-xl font-bold text-base transition-all duration-300 transform active:scale-95 flex items-center justify-center ${
+                currentPlan === 'pro'
+                  ? 'bg-gray-800 text-white border-2 border-gray-700'
+                  : 'bg-gradient-to-r from-primary-600 to-indigo-600 hover:from-primary-700 hover:to-indigo-700 text-white shadow-lg shadow-primary-500/30 hover:shadow-xl hover:shadow-primary-500/40'
+              } disabled:opacity-50 disabled:cursor-not-allowed`}
+            >
+              {purchasing === 'pro' ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Processing...
+                </>
+              ) : currentPlan === 'pro' ? (
+                'Current Plan'
+              ) : (
+                'Upgrade to Pro'
+              )}
+            </button>
+          </Card>
         </div>
       </div>
     </DashboardLayout>
