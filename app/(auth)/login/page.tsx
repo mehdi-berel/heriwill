@@ -51,13 +51,13 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-dark px-4 py-8">
-      <Card className="w-full max-w-md shadow-2xl border-border-default/50">
-        <CardHeader className="text-center space-y-6 pt-8 pb-6">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background-primary via-background-secondary to-background-tertiary px-4 py-12">
+      <Card className="w-full max-w-md shadow-2xl border-gray-700">
+        <CardHeader className="text-center space-y-6 pt-10 pb-8">
           {/* Logo Section */}
-          <div className="flex flex-col items-center space-y-4">
-            <div className="relative w-28 h-28 rounded-full bg-gradient-purple/10 flex items-center justify-center shadow-lg shadow-primary-600/20">
-              <div className="relative w-20 h-20">
+          <div className="flex flex-col items-center space-y-5">
+            <div className="relative w-32 h-32 rounded-full bg-gradient-to-br from-primary-500/20 to-primary-600/10 flex items-center justify-center shadow-xl shadow-primary-600/30 border border-primary-500/30">
+              <div className="relative w-24 h-24">
                 <Image
                   src="/heriwill-transparent.png"
                   alt="Heriwill Logo"
@@ -67,16 +67,19 @@ export default function LoginPage() {
                 />
               </div>
             </div>
-            <div className="space-y-2">
-              <CardTitle className="text-3xl font-bold">Welcome Back</CardTitle>
+            <div className="space-y-3">
+              <CardTitle className="text-4xl font-bold bg-gradient-to-r from-primary-400 to-primary-600 bg-clip-text text-transparent">
+                Welcome Back
+              </CardTitle>
               <CardDescription className="text-base text-text-secondary">
                 Sign in to continue planning your digital legacy
               </CardDescription>
             </div>
+            <div className="h-1 w-20 bg-gradient-to-r from-primary-500 to-primary-600 rounded-full" />
           </div>
         </CardHeader>
-        <CardContent className="px-6 pb-8">
-          <form onSubmit={handleLogin} className="space-y-5">
+        <CardContent className="px-8 pb-8">
+          <form onSubmit={handleLogin} className="space-y-6">
             {/* Error Message */}
             {error && (
               <div className="flex items-start gap-3 p-3 rounded-lg bg-status-error/10 border-l-4 border-status-error">

@@ -43,15 +43,15 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background-primary/80 backdrop-blur-xl" style={{ borderColor: '#232629' }}>
-      <div className="flex h-14 items-center justify-end px-6">
+      <div className="flex h-14 items-center justify-end px-3 md:px-6 ml-12 md:ml-0">
         {/* Right side - Feedback, Help, and Inheritance links */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 md:gap-2">
           {/* Subscription Tier Badge */}
           {config && (
             <Link href="/upgrade">
-              <Badge variant="outline" className={`flex items-center gap-1.5 cursor-pointer transition-all hover:scale-105 ${config.className}`}>
-                {Icon && <Icon className="h-3.5 w-3.5" />}
-                <span className="font-semibold">{config.label}</span>
+              <Badge variant="outline" className={`flex items-center gap-1 md:gap-1.5 cursor-pointer transition-all hover:scale-105 text-xs md:text-sm ${config.className}`}>
+                {Icon && <Icon className="h-3 w-3 md:h-3.5 md:w-3.5" />}
+                <span className="font-semibold hidden sm:inline">{config.label}</span>
               </Badge>
             </Link>
           )}
@@ -59,11 +59,11 @@ export function Header() {
           {/* Feedback Button */}
           <FeedbackButton />
 
-          {/* Help Link */}
+          {/* Help Link - Hidden on small mobile */}
           <Button
             variant="ghost"
             size="sm"
-            className="text-text-secondary hover:text-text-primary"
+            className="text-text-secondary hover:text-text-primary hidden sm:flex text-xs md:text-sm px-2 md:px-3"
             asChild
           >
             <Link href="/help">
@@ -71,11 +71,11 @@ export function Header() {
             </Link>
           </Button>
 
-          {/* Inheritance Link */}
+          {/* Inheritance Link - Hidden on small mobile */}
           <Button
             variant="ghost"
             size="sm"
-            className="text-text-secondary hover:text-text-primary"
+            className="text-text-secondary hover:text-text-primary hidden sm:flex text-xs md:text-sm px-2 md:px-3"
             asChild
           >
             <Link href="/inheritance">

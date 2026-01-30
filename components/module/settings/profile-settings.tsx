@@ -13,14 +13,7 @@ import { validateEmail, validatePhone, validateFullName, validateTextField, sani
 export function ProfileSettings() {
   const [formData, setFormData] = useState({
     fullName: '',
-    email: '',
-    phone: '',
-    address: '',
-    timezone: 'UTC',
-    language: 'en',
-    currency: 'USD',
-    dateFormat: 'MM/DD/YYYY',
-    timeFormat: '12h'
+    email: ''
   })
   const [isSaving, setIsSaving] = useState(false)
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle')
@@ -42,18 +35,10 @@ export function ProfileSettings() {
         if (profileError) throw profileError
 
         if (profile) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const p = profile as any
           setFormData({
             fullName: p.full_name || '',
-            email: p.email || '',
-            phone: p.phone || '',
-            address: p.address || '',
-            timezone: p.timezone || 'UTC',
-            language: p.language || 'en',
-            currency: p.currency || 'USD',
-            dateFormat: p.date_format || 'MM/DD/YYYY',
-            timeFormat: p.time_format || '12h'
+            email: p.email || ''
           })
         }
       } catch (error) {
@@ -90,19 +75,6 @@ export function ProfileSettings() {
       errors.email = emailValidation.error!
     }
 
-    // Validate phone (optional)
-    if (formData.phone) {
-      const phoneValidation = validatePhone(formData.phone)
-      if (!phoneValidation.isValid) {
-        errors.phone = phoneValidation.error!
-      }
-    }
-
-    // Validate address (optional but with length limit)
-    const addressValidation = validateTextField(formData.address, 'Address', { maxLength: 500 })
-    if (!addressValidation.isValid) {
-      errors.address = addressValidation.error!
-    }
 
     setValidationErrors(errors)
     return Object.keys(errors).length === 0
@@ -126,16 +98,25 @@ export function ProfileSettings() {
       // Sanitize text inputs
       const sanitizedData = {
         full_name: sanitizeText(formData.fullName.trim()),
-        phone: formData.phone ? sanitizeText(formData.phone.trim()) : null,
-        address: formData.address ? sanitizeText(formData.address.trim()) : null,
-        timezone: formData.timezone,
-        language: formData.language,
-        currency: formData.currency,
-        date_format: formData.dateFormat,
-        time_format: formData.timeFormat,
         updated_at: new Date().toISOString()
       }
 
+      // Update auth.users metadata (display name)
+      const authUpdateData: { data?: { full_name: string }, email?: string } = {
+        data: {
+          full_name: sanitizeText(formData.fullName.trim())
+        }
+      }
+
+      // Only update email if it has changed
+      if (formData.email !== user.email) {
+        authUpdateData.email = formData.email
+      }
+
+      const { error: authUpdateError } = await supabase.auth.updateUser(authUpdateData)
+      if (authUpdateError) throw authUpdateError
+
+      // Update public.users table
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { error } = await (supabase.from('users') as any)
         .update(sanitizedData)
@@ -199,39 +180,6 @@ export function ProfileSettings() {
                 <div className="flex items-center gap-1 text-xs text-status-error">
                   <AlertCircle className="h-3 w-3" />
                   <span>{validationErrors.email}</span>
-                </div>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="phone">Phone Number</Label>
-              <Input
-                id="phone"
-                type="tel"
-                value={formData.phone}
-                onChange={(e) => onInputChange('phone', e.target.value)}
-                placeholder="+1 (555) 123-4567"
-                className={validationErrors.phone ? 'border-status-error' : ''}
-              />
-              {validationErrors.phone && (
-                <div className="flex items-center gap-1 text-xs text-status-error">
-                  <AlertCircle className="h-3 w-3" />
-                  <span>{validationErrors.phone}</span>
-                </div>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="address">Address</Label>
-              <Input
-                id="address"
-                value={formData.address}
-                onChange={(e) => onInputChange('address', e.target.value)}
-                placeholder="123 Main St, City, State"
-                className={validationErrors.address ? 'border-status-error' : ''}
-              />
-              {validationErrors.address && (
-                <div className="flex items-center gap-1 text-xs text-status-error">
-                  <AlertCircle className="h-3 w-3" />
-                  <span>{validationErrors.address}</span>
                 </div>
               )}
             </div>

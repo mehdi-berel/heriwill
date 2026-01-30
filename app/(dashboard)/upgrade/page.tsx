@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Skeleton } from "@/components/ui/skeleton"
 import { Check, Sparkles, Crown, ArrowLeft, Loader2, Zap, Shield, Star, Gift } from "lucide-react"
 import { supabase } from "@/lib/supabase"
-import { getOfferings, purchasePackage } from "@/lib/revenuecat"
+import { REVENUECAT_PAYWALL } from "@/lib/revenuecat-config"
 import { User } from "@supabase/supabase-js"
 
 interface UserProfile {
@@ -64,52 +64,19 @@ function UpgradePageContent() {
   }, [router])
 
   const handlePurchase = async (plan: 'premium' | 'pro') => {
+    if (!user) return
+    
     setPurchasing(plan)
     
     try {
-      // Get offerings from RevenueCat
-      const offerings = await getOfferings()
-      
-      if (!offerings?.current) {
-        alert('No subscription plans available. Please contact support.')
-        setPurchasing(null)
-        return
-      }
-
-      // Select the appropriate package
-      const packageToPurchase = plan === 'premium' 
-        ? offerings.current.availablePackages.find((p) => (p.identifier as string).includes('premium'))
-        : offerings.current.availablePackages.find((p) => (p.identifier as string).includes('pro'))
-
-      if (!packageToPurchase) {
-        alert(`${plan} plan not found. Please contact support.`)
-        setPurchasing(null)
-        return
-      }
-
-      // Purchase the package
-      await purchasePackage(packageToPurchase)
-      
-      // Update Supabase with new subscription tier
-      if (user) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await (supabase.from('users') as any)
-          .update({ 
-            subscription_tier: plan,
-            subscription_status: 'active',
-            subscription_expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
-          })
-          .eq('id', user.id)
-      }
-
-      // Success! Redirect to dashboard
-      alert(`Successfully upgraded to ${plan.charAt(0).toUpperCase() + plan.slice(1)}!`)
-      router.push('/dashboard')
+      // Redirect to RevenueCat paywall with user ID as path parameter
+      // Format: https://pay.rev.cat/{token}/{app_user_id}
+      const paywallUrl = `${REVENUECAT_PAYWALL.URL}${encodeURIComponent(user.id)}`
+      window.location.href = paywallUrl
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Purchase failed. Please try again.'
-      console.error('Purchase error:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Failed to redirect to payment page.'
+      console.error('Redirect error:', error)
       alert(errorMessage)
-    } finally {
       setPurchasing(null)
     }
   }

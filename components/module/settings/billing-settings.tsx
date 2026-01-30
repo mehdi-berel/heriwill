@@ -7,8 +7,9 @@ import { Badge } from "@/components/ui/badge"
 import { CreditCard, Download, AlertTriangle, CheckCircle, Crown, Zap, Loader2, ExternalLink } from "lucide-react"
 import { useRevenueCat } from "@/contexts/RevenueCatContext"
 import { getOfferings, purchasePackage, getCustomerInfo, getSubscriptionTier } from "@/lib/revenuecat"
-import { isPremiumPackage, isProPackage, isMonthlyPackage, isYearlyPackage } from "@/lib/revenuecat-config"
+import { isPremiumPackage, isProPackage, isMonthlyPackage, isYearlyPackage, REVENUECAT_PAYWALL } from "@/lib/revenuecat-config"
 import { SyncSubscriptionButton } from "./sync-subscription-button"
+import { supabase } from "@/lib/supabase"
 
 interface BillingSettingsProps {
   subscriptionTier?: string
@@ -459,10 +460,26 @@ export function BillingSettings({
 
           {subscriptionTier === 'free' && (
             <div className="flex gap-3">
-              <Button className="flex-1 bg-primary-500 hover:bg-primary-600">
+              <Button 
+                className="flex-1 bg-primary-500 hover:bg-primary-600"
+                onClick={async () => {
+                  const { data: { user } } = await supabase.auth.getUser()
+                  if (user) {
+                    window.location.href = `${REVENUECAT_PAYWALL.URL}${encodeURIComponent(user.id)}`
+                  }
+                }}
+              >
                 Upgrade to Legacy
               </Button>
-              <Button className="flex-1 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700">
+              <Button 
+                className="flex-1 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700"
+                onClick={async () => {
+                  const { data: { user } } = await supabase.auth.getUser()
+                  if (user) {
+                    window.location.href = `${REVENUECAT_PAYWALL.URL}${encodeURIComponent(user.id)}`
+                  }
+                }}
+              >
                 Upgrade to Pro
               </Button>
             </div>
@@ -470,7 +487,15 @@ export function BillingSettings({
 
           {subscriptionTier === 'premium' && (
             <div className="flex gap-3">
-              <Button className="flex-1 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700">
+              <Button 
+                className="flex-1 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700"
+                onClick={async () => {
+                  const { data: { user } } = await supabase.auth.getUser()
+                  if (user) {
+                    window.location.href = `${REVENUECAT_PAYWALL.URL}${encodeURIComponent(user.id)}`
+                  }
+                }}
+              >
                 Upgrade to Pro
               </Button>
               <Button variant="outline" className="flex-1">

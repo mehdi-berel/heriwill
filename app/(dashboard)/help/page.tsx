@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { DashboardLayout } from "@/components/module/dashboard/dashboard-layout"
-import { SupportOverview } from "@/components/module/support/support-overview"
+import { HelpCenter } from "@/components/module/help/help-center"
 import { supabase } from "@/lib/supabase"
 import { User } from "@supabase/supabase-js"
 
@@ -15,7 +15,7 @@ interface UserProfile {
   subscription_tier?: string
 }
 
-export default function SupportPage() {
+export default function HelpPage() {
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
@@ -62,7 +62,7 @@ export default function SupportPage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-lg">Loading support...</div>
+        <div className="text-lg">Loading help center...</div>
       </div>
     )
   }
@@ -72,7 +72,7 @@ export default function SupportPage() {
       userName={profile?.full_name || user?.email} 
       onSignOut={handleSignOut}
     >
-      <SupportOverview userId={user?.id || ''} profile={profile || undefined} />
+      <HelpCenter />
     </DashboardLayout>
   )
 }

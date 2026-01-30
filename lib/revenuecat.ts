@@ -33,6 +33,9 @@ export const getRevenueCat = () => {
 // Check if user has pro entitlement
 export const checkProEntitlement = async (): Promise<boolean> => {
   try {
+    // If RevenueCat is not configured, return false (use Supabase subscription_tier instead)
+    if (!REVENUECAT_API_KEY) return false
+    
     const purchases = getRevenueCat()
     if (!purchases) return false
 
@@ -49,6 +52,9 @@ export const checkProEntitlement = async (): Promise<boolean> => {
 // Get all active entitlements
 export const getActiveEntitlements = async (): Promise<string[]> => {
   try {
+    // If RevenueCat is not configured, return empty array (use Supabase subscription_tier instead)
+    if (!REVENUECAT_API_KEY) return []
+    
     const purchases = getRevenueCat()
     if (!purchases) return []
 

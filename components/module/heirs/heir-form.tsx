@@ -145,64 +145,6 @@ export function HeirForm({ onSubmit, onCancel, initialData, isEditing = false }:
             </div>
           </div>
 
-          {/* Access Level */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium flex items-center space-x-2">
-              <Eye className="h-5 w-5" />
-              <span>Access Level</span>
-            </h3>
-            <div className="space-y-3">
-              {[
-                { value: 'view', label: 'View Only', description: 'Read-only access to designated content' },
-                { value: 'partial', label: 'Partial Access', description: 'Limited access to selected vaults' },
-                { value: 'full', label: 'Full Access', description: 'Complete access to all vaults and settings' }
-              ].map((level) => (
-                <div
-                  key={level.value}
-                  className={`p-4 border rounded-lg cursor-pointer transition-colors ${
-                    formData.access_level === level.value
-                      ? 'border-primary bg-primary/5'
-                      : 'hover:border-gray-300'
-                  }`}
-                  style={{ borderColor: formData.access_level === level.value ? undefined : '#232629' }}
-                  onClick={() => setFormData({ ...formData, access_level: level.value as 'full' | 'partial' | 'view' })}
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="font-medium">{level.label}</div>
-                      <div className="text-sm text-muted-foreground">{level.description}</div>
-                    </div>
-                    <Badge className={getAccessLevelColor(level.value)}>
-                      {level.value}
-                    </Badge>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Invitation Expiration */}
-          {!isEditing && (
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium flex items-center space-x-2">
-                <Save className="h-5 w-5" />
-                <span>Invitation Settings</span>
-              </h3>
-              <div>
-                <Label htmlFor="expires_at">Invitation expires (optional)</Label>
-                <Input
-                  id="expires_at"
-                  type="datetime-local"
-                  value={formData.invitation_expires_at}
-                  onChange={(e) => setFormData({ ...formData, invitation_expires_at: e.target.value })}
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Leave empty for no expiration
-                </p>
-              </div>
-            </div>
-          )}
-
           {/* Form Actions */}
           <div className="flex gap-2">
             <Button type="submit">

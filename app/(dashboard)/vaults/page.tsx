@@ -80,8 +80,18 @@ export default function VaultsPage() {
       }
 
       if (data) {
+        // Get user's subscription tier
+        const { data: userProfile } = await supabase
+          .from('users')
+          .select('subscription_tier')
+          .eq('id', userId)
+          .single()
+        
+        const subscriptionTier = (userProfile as { subscription_tier?: string } | null)?.subscription_tier ?? 'free'
+        const isFreeUser = subscriptionTier === 'free'
+        
         const vaultsWithCounts = await Promise.all(
-          data.map(async (vault) => {
+          data.map(async (vault, index) => {
             const { count, error: countError } = await supabase
               .from('vault_items')
               .select('*', { count: 'exact', head: true })
@@ -91,9 +101,16 @@ export default function VaultsPage() {
               console.error('Error loading vault item count:', countError)
             }
             
+            // Lock vaults for free users:
+            // 1. Lock all vaults after the first one (index > 0)
+            // 2. Lock pro-tier vaults (sign_off_after_death category)
+            const isProVault = (vault as { category?: string }).category === 'sign_off_after_death'
+            const shouldLock = isFreeUser && (index > 0 || isProVault)
+            
             return {
               ...(vault as Record<string, unknown>),
-              item_count: count || 0
+              item_count: count || 0,
+              is_locked: shouldLock || (vault as { is_locked?: boolean }).is_locked || false
             }
           })
         )

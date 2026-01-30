@@ -20,6 +20,10 @@ export function RevenueCatProvider({ children }: { children: React.ReactNode }) 
 
   const refreshEntitlements = async () => {
     try {
+      // Skip if RevenueCat API key is not configured
+      const apiKey = process.env.NEXT_PUBLIC_REVENUECAT_API_KEY
+      if (!apiKey) return
+      
       const isPro = await checkProEntitlement()
       const activeEntitlements = await getActiveEntitlements()
       
@@ -33,6 +37,15 @@ export function RevenueCatProvider({ children }: { children: React.ReactNode }) 
   useEffect(() => {
     const initializeAndCheckEntitlements = async () => {
       try {
+        // Check if RevenueCat API key is configured
+        const apiKey = process.env.NEXT_PUBLIC_REVENUECAT_API_KEY
+        if (!apiKey) {
+          // Skip RevenueCat initialization if API key not configured
+          // App will use Supabase subscription_tier instead
+          setLoading(false)
+          return
+        }
+
         // Get current user
         const { data: { user } } = await supabase.auth.getUser()
         
@@ -54,6 +67,9 @@ export function RevenueCatProvider({ children }: { children: React.ReactNode }) 
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      const apiKey = process.env.NEXT_PUBLIC_REVENUECAT_API_KEY
+      if (!apiKey) return // Skip if API key not configured
+      
       if (session?.user) {
         await initializeRevenueCat(session.user.id)
         await refreshEntitlements()

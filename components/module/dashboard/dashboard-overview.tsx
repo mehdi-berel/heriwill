@@ -84,9 +84,6 @@ interface ChecklistItem {
 }
 
 export function DashboardOverview({ stats, userName }: DashboardOverviewProps) {
-  const completionPercentage = Math.round((stats.completedSections / stats.totalSections) * 100)
-  const isSetupComplete = completionPercentage >= 80
-
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
@@ -103,30 +100,6 @@ export function DashboardOverview({ stats, userName }: DashboardOverviewProps) {
           <Sparkles className="h-8 w-8 text-primary-400" />
         </div>
       </div>
-
-      {/* Setup Progress Banner */}
-      {!isSetupComplete && (
-        <Card className="bg-gradient-to-r from-primary-600/10 to-primary-400/10" style={{ borderColor: '#232629' }}>
-          <CardContent className="flex items-start gap-4 p-5">
-            <div className="w-12 h-12 rounded-full bg-primary-500/20 flex items-center justify-center flex-shrink-0">
-              <TrendingUp className="h-6 w-6 text-primary-400" />
-            </div>
-            <div className="flex-1">
-              <h3 className="text-lg font-semibold text-text-primary mb-1">
-                Complete Your Setup
-              </h3>
-              <p className="text-sm text-text-secondary mb-3">
-                You're {completionPercentage}% done! Complete these steps to fully secure your digital legacy.
-              </p>
-              <Progress value={completionPercentage} className="mb-2 h-2" />
-              <div className="flex items-center justify-between text-xs text-text-tertiary">
-                <span>{stats.completedSections} of {stats.totalSections} sections completed</span>
-                <span>{stats.pendingTasks} tasks remaining</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Stats Grid */}
       <div className="grid gap-3 md:grid-cols-3">

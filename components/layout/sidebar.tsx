@@ -21,7 +21,9 @@ import {
   Sparkles,
   ArrowRight,
   LockKeyhole,
-  Settings
+  Settings,
+  Menu,
+  X
 } from "lucide-react"
 
 const navigation = [
@@ -80,6 +82,7 @@ interface SidebarProps {
 export function Sidebar({ onSignOut }: SidebarProps) {
   const pathname = usePathname()
   const [isHovered, setIsHovered] = useState(false)
+  const [isMobileOpen, setIsMobileOpen] = useState(false)
   const [isProUser, setIsProUser] = useState(false)
 
   useEffect(() => {
@@ -121,23 +124,51 @@ export function Sidebar({ onSignOut }: SidebarProps) {
   }))
 
   return (
-    <div 
-      className={cn(
-        "flex h-full flex-col bg-black/30 backdrop-blur-xl border-r transition-all duration-200 relative",
-        isHovered ? "w-64" : "w-20"
+    <>
+      {/* Mobile Menu Toggle Button */}
+      <button
+        onClick={() => setIsMobileOpen(!isMobileOpen)}
+        className="md:hidden fixed top-3 left-3 z-50 p-2 rounded-lg bg-background-secondary/90 backdrop-blur-sm border border-border-default shadow-lg hover:bg-background-hover transition-all duration-200"
+        aria-label="Toggle menu"
+      >
+        {isMobileOpen ? (
+          <X className="h-5 w-5 text-text-primary" />
+        ) : (
+          <Menu className="h-5 w-5 text-text-primary" />
+        )}
+      </button>
+
+      {/* Mobile Overlay */}
+      {isMobileOpen && (
+        <div
+          className="md:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-40 transition-opacity duration-300"
+          onClick={() => setIsMobileOpen(false)}
+        />
       )}
-      style={{ 
-        transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)',
-        borderColor: '#232629'
-      }}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-    >
+
+      {/* Sidebar */}
+      <div 
+        className={cn(
+          "flex h-full flex-col bg-black/30 backdrop-blur-xl border-r transition-all duration-300 relative",
+          "md:relative",
+          // Desktop behavior
+          "hidden md:flex",
+          isHovered ? "md:w-64" : "md:w-20",
+          // Mobile behavior
+          isMobileOpen && "fixed inset-y-0 left-0 z-40 flex w-72 shadow-2xl"
+        )}
+        style={{ 
+          transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)',
+          borderColor: '#232629'
+        }}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+      >
       {/* Logo */}
       <div className="flex h-14 items-center px-4 border-b justify-between" style={{ borderColor: '#232629' }}>
         <div className={cn(
           "flex items-center gap-2.5 transition-all duration-300",
-          !isHovered && "justify-center w-full"
+          !isHovered && !isMobileOpen && "md:justify-center md:w-full"
         )}>
           <div className="relative h-8 w-8 flex-shrink-0">
             <Image
@@ -148,7 +179,7 @@ export function Sidebar({ onSignOut }: SidebarProps) {
               priority
             />
           </div>
-          {isHovered && (
+          {(isHovered || isMobileOpen) && (
             <div className="flex items-baseline gap-1 overflow-hidden">
               <span className="text-base font-bold text-text-primary tracking-tight">Heriwill</span>
             </div>
@@ -306,5 +337,6 @@ export function Sidebar({ onSignOut }: SidebarProps) {
         </button>
       </div>
     </div>
+    </>
   )
 }

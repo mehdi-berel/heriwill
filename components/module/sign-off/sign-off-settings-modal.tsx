@@ -35,7 +35,21 @@ export function SignOffSettingsModal({
     email_encrypted?: string
   }
   
+  interface Notary {
+    id: string
+    name: string
+    email: string
+  }
+  
+  interface TrustedContact {
+    id: string
+    name: string
+    type: 'heir' | 'notary'
+  }
+  
   const [heirs, setHeirs] = useState<Heir[]>([])
+  const [notaries, setNotaries] = useState<Notary[]>([])
+  const [trustedContacts, setTrustedContacts] = useState<TrustedContact[]>([])
   
   const [inactivityDays, setInactivityDays] = useState('90')
   const [reminderEnabled, setReminderEnabled] = useState(false)
@@ -96,14 +110,54 @@ export function SignOffSettingsModal({
     }
   }, [userId])
 
+  const loadNotaries = useCallback(async () => {
+    try {
+      const { data } = await supabase
+        .from('notaries')
+        .select('*')
+        .eq('user_id', userId)
+
+      setNotaries(data || [])
+    } catch (error) {
+      console.error('Error loading notaries:', error)
+    }
+  }, [userId])
+
+  const combineTrustedContacts = useCallback(() => {
+    const contacts: TrustedContact[] = []
+    
+    heirs.forEach(heir => {
+      contacts.push({
+        id: heir.id,
+        name: heir.full_name_encrypted || heir.email_encrypted || 'Unknown Heir',
+        type: 'heir'
+      })
+    })
+    
+    notaries.forEach(notary => {
+      contacts.push({
+        id: notary.id,
+        name: notary.name || notary.email || 'Unknown Notary',
+        type: 'notary'
+      })
+    })
+    
+    setTrustedContacts(contacts)
+  }, [heirs, notaries])
+
   useEffect(() => {
     if (isOpen && method) {
       loadSettings()
       if (method === 'trusted_contact') {
         loadHeirs()
+        loadNotaries()
       }
     }
-  }, [isOpen, method, loadSettings, loadHeirs])
+  }, [isOpen, method, loadSettings, loadHeirs, loadNotaries])
+
+  useEffect(() => {
+    combineTrustedContacts()
+  }, [heirs, notaries, combineTrustedContacts])
 
   const handleSave = async () => {
     try {
@@ -216,18 +270,18 @@ export function SignOffSettingsModal({
               <Label htmlFor="trusted-contact">Select Trusted Contact</Label>
               <Select value={trustedContactHeirId} onValueChange={setTrustedContactHeirId}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Choose an heir as trusted contact" />
+                  <SelectValue placeholder="Choose a trusted contact" />
                 </SelectTrigger>
                 <SelectContent>
-                  {heirs.map((heir) => (
-                    <SelectItem key={heir.id} value={heir.id}>
-                      {heir.full_name_encrypted || heir.email_encrypted}
+                  {trustedContacts.map((contact) => (
+                    <SelectItem key={contact.id} value={contact.id}>
+                      {contact.name} ({contact.type === 'heir' ? 'Heir' : 'Notary'})
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
               <p className="text-xs text-text-tertiary">
-                This person will be able to confirm your passing
+                This person will be able to confirm your passing. You can choose from your heirs or notaries.
               </p>
             </div>
           )}

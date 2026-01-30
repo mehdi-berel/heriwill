@@ -18,6 +18,14 @@ export const REVENUECAT_ENTITLEMENTS = {
 
 export const REVENUECAT_OFFERING = {
   CURRENT: 'current',
+  ID: 'ofrng6e1981ca64',
+} as const
+
+/**
+ * RevenueCat Paywall Configuration
+ */
+export const REVENUECAT_PAYWALL = {
+  URL: 'https://pay.rev.cat/fjyfycitnereerpd/',
 } as const
 
 /**
