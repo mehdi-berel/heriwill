@@ -20,6 +20,15 @@ export default function SettingsPage() {
   const router = useRouter()
 
   useEffect(() => {
+    // Check for tab parameter in URL
+    const urlParams = new URLSearchParams(window.location.search)
+    const tabParam = urlParams.get('tab')
+    if (tabParam && ['profile', 'security', 'notifications', 'billing'].includes(tabParam)) {
+      setActiveTab(tabParam)
+    }
+  }, [])
+
+  useEffect(() => {
     const getUser = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {

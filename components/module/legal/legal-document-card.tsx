@@ -149,7 +149,7 @@ export function LegalDocumentCard({
 
   return (
     <Card 
-      className="hover:shadow-lg transition-shadow cursor-pointer group"
+      className="border-gray-700 hover:shadow-lg transition-shadow cursor-pointer group"
     >
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">

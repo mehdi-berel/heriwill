@@ -92,7 +92,7 @@ export function LegalDashboard({
     <div className="space-y-6">
       {/* Main Stats Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
+        <Card className="border-gray-700">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Documents</CardTitle>
             <FileText className="h-4 w-4 text-muted-foreground" />
@@ -105,7 +105,7 @@ export function LegalDashboard({
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-gray-700">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Uploaded</CardTitle>
             <Upload className="h-4 w-4 text-muted-foreground" />
@@ -118,7 +118,7 @@ export function LegalDashboard({
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-gray-700">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Notarized</CardTitle>
             <Gavel className="h-4 w-4 text-muted-foreground" />
@@ -131,7 +131,7 @@ export function LegalDashboard({
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-gray-700">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Compliance Score</CardTitle>
             <Shield className="h-4 w-4 text-muted-foreground" />
@@ -148,7 +148,7 @@ export function LegalDashboard({
       </div>
 
       {/* Document Types */}
-      <Card>
+      <Card className="border-gray-700">
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
             <FileText className="h-5 w-5" />

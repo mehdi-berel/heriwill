@@ -161,17 +161,27 @@ Access your app dashboard at: `https://app.revenuecat.com/apps/app8388d0e3e6`
 
 ### Required Configuration
 
-1. **Products**: Create products in RevenueCat dashboard
-   - Legacy Plan (premium entitlement)
-   - Pro Plan (pro entitlement)
+1. **Products**: Products created in RevenueCat dashboard
+   - **Premium Monthly**: `prod82b1c69dec` (€10/month)
+   - **Premium Yearly**: `prodba9755bf25` (€100/year - Save 17%)
+   - **Pro Monthly**: `prodba087df647` (€20/month)
+   - **Pro Yearly**: `prod43d4476b53` (€200/year - Save 17%)
 
 2. **Entitlements**: 
-   - `premium` - For Legacy plan features
+   - `premium` - For Premium/Legacy plan features
    - `pro` - For Pro plan features
 
-3. **Offerings**: Create a "current" offering with both packages
+3. **Offerings**: Create a "current" offering with all 4 packages
+   - Add Premium Monthly and Premium Yearly packages
+   - Add Pro Monthly and Pro Yearly packages
+   - Set as the **current offering**
 
 4. **API Keys**: Generate web SDK API key (already configured)
+
+5. **Stripe Integration**: 
+   - Connect Stripe account in RevenueCat dashboard
+   - RevenueCat will sync products to Stripe automatically
+   - Payment processing handled through Stripe
 
 ## Testing
 

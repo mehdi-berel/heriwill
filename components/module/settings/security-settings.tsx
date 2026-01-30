@@ -106,7 +106,7 @@ export function SecuritySettings() {
   return (
     <div className="space-y-6">
       {/* Password Change */}
-      <Card>
+      <Card className="border-gray-700">
         <CardHeader>
           <div className="flex items-center gap-2">
             <Key className="h-5 w-5 text-primary-400" />
@@ -217,81 +217,6 @@ export function SecuritySettings() {
                 'Change Password'
               )}
             </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Two-Factor Authentication */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <Shield className="h-5 w-5 text-primary-400" />
-            <CardTitle>Two-Factor Authentication</CardTitle>
-          </div>
-          <CardDescription>
-            Add an extra layer of security to your account
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="font-medium">Enable 2FA</p>
-              <p className="text-sm text-text-tertiary">
-                Require a verification code in addition to your password
-              </p>
-            </div>
-            <button
-              onClick={() => onNestedChange('privacy', 'twoFactorEnabled', !formData.privacy.twoFactorEnabled)}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                formData.privacy.twoFactorEnabled ? 'bg-primary-500' : 'bg-gray-700'
-              }`}
-            >
-              <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                  formData.privacy.twoFactorEnabled ? 'translate-x-6' : 'translate-x-1'
-                }`}
-              />
-            </button>
-          </div>
-
-          {formData.privacy.twoFactorEnabled && (
-            <div className="p-4 bg-blue-600/10 border rounded-lg" style={{ borderColor: '#232629' }}>
-              <p className="text-sm text-blue-400">
-                Two-factor authentication is enabled. You'll need to enter a verification code when signing in.
-              </p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Session Management */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Session Management</CardTitle>
-          <CardDescription>
-            Control how long you stay logged in
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="sessionTimeout">Session Timeout (hours)</Label>
-            <select
-              id="sessionTimeout"
-              value={formData.privacy.sessionTimeout}
-              onChange={(e) => onNestedChange('privacy', 'sessionTimeout', parseInt(e.target.value))}
-              className="w-full px-3 py-2 bg-background-secondary border rounded-md"
-              style={{ borderColor: '#232629' }}
-            >
-              <option value="1">1 hour</option>
-              <option value="4">4 hours</option>
-              <option value="8">8 hours</option>
-              <option value="24">24 hours</option>
-              <option value="168">1 week</option>
-              <option value="720">30 days</option>
-            </select>
-            <p className="text-sm text-text-tertiary">
-              You'll be automatically logged out after this period of inactivity
-            </p>
           </div>
         </CardContent>
       </Card>

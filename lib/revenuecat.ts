@@ -1,7 +1,11 @@
 import { Purchases } from '@revenuecat/purchases-js'
+import { REVENUECAT_ENTITLEMENTS, REVENUECAT_PRODUCTS } from './revenuecat-config'
 
 // RevenueCat configuration
 const REVENUECAT_API_KEY = process.env.NEXT_PUBLIC_REVENUECAT_API_KEY || ''
+
+// Export product IDs for reference
+export { REVENUECAT_PRODUCTS, REVENUECAT_ENTITLEMENTS }
 
 let purchasesInstance: Purchases | null = null
 
@@ -35,7 +39,7 @@ export const checkProEntitlement = async (): Promise<boolean> => {
     const customerInfo = await purchases.getCustomerInfo()
     
     // Check if user has 'pro' entitlement
-    return customerInfo.entitlements.active['pro'] !== undefined
+    return customerInfo.entitlements.active[REVENUECAT_ENTITLEMENTS.PRO] !== undefined
   } catch (error) {
     console.error('Error checking pro entitlement:', error)
     return false
@@ -111,9 +115,9 @@ export const getSubscriptionTier = async (): Promise<'free' | 'premium' | 'pro'>
     const activeEntitlements = Object.keys(customerInfo.entitlements.active)
 
     // Check for pro entitlement first
-    if (activeEntitlements.includes('pro')) return 'pro'
-    // Then check for premium/legacy
-    if (activeEntitlements.includes('premium') || activeEntitlements.includes('legacy')) return 'premium'
+    if (activeEntitlements.includes(REVENUECAT_ENTITLEMENTS.PRO)) return 'pro'
+    // Then check for premium entitlement
+    if (activeEntitlements.includes(REVENUECAT_ENTITLEMENTS.PREMIUM)) return 'premium'
     
     return 'free'
   } catch (error) {

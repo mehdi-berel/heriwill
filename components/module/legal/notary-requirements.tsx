@@ -93,7 +93,7 @@ export function NotaryRequirements({ requirements, onRequirementComplete, onRequ
 
   return (
     <div className="space-y-6">
-      <Card>
+      <Card className="border-gray-700">
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
             <Gavel className="h-5 w-5" />
@@ -106,7 +106,7 @@ export function NotaryRequirements({ requirements, onRequirementComplete, onRequ
         <CardContent>
           <div className="space-y-4">
             {requirements.map((requirement) => (
-              <Card key={requirement.id} className="border-l-4 border-l-transparent">
+              <Card key={requirement.id} className="border-gray-700 border-l-4 border-l-transparent">
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
@@ -270,7 +270,7 @@ export function NotaryRequirements({ requirements, onRequirementComplete, onRequ
       </Card>
 
       {/* Summary Stats */}
-      <Card>
+      <Card className="border-gray-700">
         <CardHeader>
           <CardTitle>Summary</CardTitle>
         </CardHeader>

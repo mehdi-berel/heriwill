@@ -130,7 +130,7 @@ export function LegalDocumentDetail({ document, onEdit, onDelete, onUpload, onDo
       <div className="grid gap-6 md:grid-cols-3">
         {/* Main Content */}
         <div className="md:col-span-2 space-y-6">
-          <Card>
+          <Card className="border-gray-700">
             <CardHeader>
               <CardTitle>Description</CardTitle>
             </CardHeader>
@@ -140,7 +140,7 @@ export function LegalDocumentDetail({ document, onEdit, onDelete, onUpload, onDo
           </Card>
 
           {document.instructions && (
-            <Card>
+            <Card className="border-gray-700">
               <CardHeader>
                 <CardTitle>Instructions</CardTitle>
               </CardHeader>
@@ -150,7 +150,7 @@ export function LegalDocumentDetail({ document, onEdit, onDelete, onUpload, onDo
             </Card>
           )}
 
-          <Card>
+          <Card className="border-gray-700">
             <CardHeader>
               <CardTitle>File Details</CardTitle>
             </CardHeader>
@@ -204,7 +204,7 @@ export function LegalDocumentDetail({ document, onEdit, onDelete, onUpload, onDo
 
         {/* Sidebar */}
         <div className="space-y-6">
-          <Card>
+          <Card className="border-gray-700">
             <CardHeader>
               <CardTitle>Details</CardTitle>
             </CardHeader>

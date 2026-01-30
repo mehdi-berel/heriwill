@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { logger } from '@/lib/utils/logger'
 import { rateLimit, RateLimitPresets } from '@/lib/middleware/rateLimit'
+import { REVENUECAT_PRODUCTS } from '@/lib/revenuecat-config'
 
 // RevenueCat webhook handler
 // Handles subscription events from RevenueCat
@@ -40,7 +41,15 @@ export async function POST(request: NextRequest) {
     const isTrialConversion = event.event?.is_trial_conversion || false
 
     // Map product IDs to subscription tiers
+    // Note: RevenueCat sends the actual product ID, not the package identifier
     const tierMapping: Record<string, 'free' | 'premium' | 'pro'> = {
+      // Premium products
+      [REVENUECAT_PRODUCTS.PREMIUM_MONTHLY]: 'premium',
+      [REVENUECAT_PRODUCTS.PREMIUM_YEARLY]: 'premium',
+      // Pro products
+      [REVENUECAT_PRODUCTS.PRO_MONTHLY]: 'pro',
+      [REVENUECAT_PRODUCTS.PRO_YEARLY]: 'pro',
+      // Legacy package identifiers (for backwards compatibility)
       'premium_monthly': 'premium',
       'premium_yearly': 'premium',
       'legacy_monthly': 'premium',

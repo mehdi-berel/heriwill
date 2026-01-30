@@ -341,7 +341,7 @@ export default function LegalPage() {
               {filteredDocuments.map((document) => (
                 <div
                   key={document.id}
-                  className="flex items-center p-4 bg-background-card border border-border rounded-xl cursor-pointer hover:border-primary/50 transition-all group"
+                  className="flex items-center p-4 bg-background-card border border-gray-700 rounded-xl cursor-pointer hover:border-primary/50 transition-all group"
                   onClick={() => console.log('View document:', document)}
                 >
                   {/* Icon Container */}

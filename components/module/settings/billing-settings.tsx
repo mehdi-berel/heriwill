@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge"
 import { CreditCard, Download, AlertTriangle, CheckCircle, Crown, Zap, Loader2, ExternalLink } from "lucide-react"
 import { useRevenueCat } from "@/contexts/RevenueCatContext"
 import { getOfferings, purchasePackage, getCustomerInfo, getSubscriptionTier } from "@/lib/revenuecat"
+import { isPremiumPackage, isProPackage, isMonthlyPackage, isYearlyPackage } from "@/lib/revenuecat-config"
+import { SyncSubscriptionButton } from "./sync-subscription-button"
 
 interface BillingSettingsProps {
   subscriptionTier?: string
@@ -29,6 +31,7 @@ export function BillingSettings({
   const [subscriptionExpiresAt, setSubscriptionExpiresAt] = useState(propExpiresAt)
   const [loading, setLoading] = useState(false)
   const [purchaseLoading, setPurchaseLoading] = useState<string | null>(null)
+  const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'yearly'>('monthly')
   const formatDate = (dateString?: string) => {
     if (!dateString) return 'N/A'
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -163,9 +166,27 @@ export function BillingSettings({
 
   return (
     <div className="space-y-6">
+      {/* Sync Subscription Tool */}
+      {subscriptionTier !== propTier && (
+        <Card className="border-gray-700 bg-gray-800/30">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-amber-400">
+              <AlertTriangle className="h-5 w-5" />
+              Subscription Mismatch Detected
+            </CardTitle>
+            <CardDescription>
+              Your RevenueCat subscription doesn't match your database. Click below to sync.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <SyncSubscriptionButton />
+          </CardContent>
+        </Card>
+      )}
+
       {/* Available Plans */}
       {offerings?.current && subscriptionTier === 'free' && (
-        <Card>
+        <Card className="border-gray-700">
           <CardHeader>
             <CardTitle>Available Plans</CardTitle>
             <CardDescription>
@@ -173,27 +194,54 @@ export function BillingSettings({
             </CardDescription>
           </CardHeader>
           <CardContent>
+            {/* Billing Period Toggle */}
+            <div className="flex justify-center mb-6">
+              <div className="inline-flex rounded-lg border border-gray-700 bg-gray-800/50 p-1">
+                <button
+                  onClick={() => setBillingPeriod('monthly')}
+                  className={`px-6 py-2 rounded-md text-sm font-medium transition-all ${
+                    billingPeriod === 'monthly'
+                      ? 'bg-primary-500 text-white shadow-lg'
+                      : 'text-gray-400 hover:text-white'
+                  }`}
+                >
+                  Monthly
+                </button>
+                <button
+                  onClick={() => setBillingPeriod('yearly')}
+                  className={`px-6 py-2 rounded-md text-sm font-medium transition-all ${
+                    billingPeriod === 'yearly'
+                      ? 'bg-primary-500 text-white shadow-lg'
+                      : 'text-gray-400 hover:text-white'
+                  }`}
+                >
+                  Yearly
+                  <span className="ml-1 text-xs text-green-400">Save 17%</span>
+                </button>
+              </div>
+            </div>
+
             <div className="grid gap-6 md:grid-cols-2">
-              {offerings.current.availablePackages.map((pkg: any) => {
+              {offerings.current.availablePackages
+                .filter((pkg: any) => {
+                  return billingPeriod === 'monthly' 
+                    ? isMonthlyPackage(pkg.identifier)
+                    : isYearlyPackage(pkg.identifier)
+                })
+                .map((pkg: any) => {
                 const packageId = pkg.identifier
-                const isPremium = packageId.toLowerCase().includes('premium') || packageId.toLowerCase().includes('legacy')
-                const isPro = packageId.toLowerCase().includes('pro')
+                const isPremium = isPremiumPackage(packageId)
+                const isPro = isProPackage(packageId)
                 
                 return (
                   <div 
                     key={packageId} 
-                    className={`rounded-xl border-2 p-6 md:p-8 relative transform transition-all duration-300 hover:scale-[1.02] hover:shadow-xl ${
-                      isPro
-                        ? 'border-amber-500 bg-gradient-to-br from-gray-900/80 to-amber-900/20 shadow-lg shadow-amber-500/20'
-                        : 'border-primary-500 bg-gradient-to-br from-gray-900/80 to-primary-900/20 shadow-lg shadow-primary-500/20'
-                    }`}
+                    className="rounded-xl border-2 border-gray-700 bg-gray-900/60 p-6 md:p-8 relative transform transition-all duration-300 hover:scale-[1.02] hover:shadow-xl"
                   >
                     {/* Plan Icon */}
                     <div className="mb-4">
-                      <div className={`inline-flex p-2 rounded-lg ${
-                        isPro
-                          ? 'bg-gradient-to-br from-amber-600/20 to-orange-600/20 border border-amber-500/30'
-                          : 'bg-gradient-to-br from-primary-600/20 to-indigo-600/20 border border-primary-500/30'
+                      <div className={`inline-flex p-2 rounded-lg bg-gray-800/50 border border-gray-700 ${
+                        isPro ? 'text-amber-400' : 'text-primary-400'
                       }`}>
                         {isPro ? (
                           <Crown size={20} className="text-amber-400" />
@@ -282,7 +330,7 @@ export function BillingSettings({
       )}
 
       {/* Payment Method */}
-      <Card>
+      <Card className="border-gray-700">
         <CardHeader>
           <CardTitle>Payment Method</CardTitle>
           <CardDescription>
@@ -291,19 +339,25 @@ export function BillingSettings({
         </CardHeader>
         <CardContent className="space-y-4">
           {subscriptionTier !== 'free' ? (
-            <div className="p-4 border rounded-lg" style={{ borderColor: '#232629' }}>
+            <div className="p-4 bg-gray-800/50 border rounded-lg" style={{ borderColor: '#232629' }}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-gray-800 rounded">
                     <CreditCard className="h-5 w-5" />
                   </div>
                   <div>
-                    <p className="font-medium">•••• •••• •••• 4242</p>
-                    <p className="text-sm text-text-tertiary">Expires 12/2025</p>
+                    <p className="font-medium">Payment method managed by Stripe</p>
+                    <p className="text-sm text-text-tertiary">Update your payment details through the customer portal</p>
                   </div>
                 </div>
-                <Button variant="outline" size="sm">
-                  Update
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={handleManageSubscription}
+                  disabled={!customerInfo?.managementURL}
+                >
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  Manage
                 </Button>
               </div>
             </div>
@@ -317,7 +371,7 @@ export function BillingSettings({
       </Card>
 
       {/* Billing History */}
-      <Card>
+      <Card className="border-gray-700">
         <CardHeader>
           <CardTitle>Billing History</CardTitle>
           <CardDescription>
@@ -326,25 +380,27 @@ export function BillingSettings({
         </CardHeader>
         <CardContent className="space-y-4">
           {subscriptionTier !== 'free' ? (
-            <div className="space-y-2">
-              {[
-                { date: '2026-01-01', amount: subscriptionTier === 'pro' ? '€20.00' : '€10.00', status: 'Paid' },
-                { date: '2025-12-01', amount: subscriptionTier === 'pro' ? '€20.00' : '€10.00', status: 'Paid' },
-                { date: '2025-11-01', amount: subscriptionTier === 'pro' ? '€20.00' : '€10.00', status: 'Paid' }
-              ].map((invoice, index) => (
-                <div key={index} className="flex items-center justify-between p-4 border rounded-lg" style={{ borderColor: '#232629' }}>
-                  <div>
-                    <p className="font-medium">{formatDate(invoice.date)}</p>
-                    <p className="text-sm text-text-tertiary">{invoice.amount}</p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Badge className="bg-status-success">{invoice.status}</Badge>
-                    <Button variant="ghost" size="sm">
-                      <Download className="h-4 w-4" />
-                    </Button>
-                  </div>
+            <div className="p-4 bg-gray-800/50 border rounded-lg text-center" style={{ borderColor: '#232629' }}>
+              <div className="flex flex-col items-center gap-3">
+                <div className="p-3 bg-gray-800 rounded-lg">
+                  <Download className="h-6 w-6 text-gray-400" />
                 </div>
-              ))}
+                <div>
+                  <p className="font-medium mb-1">View Billing History</p>
+                  <p className="text-sm text-text-tertiary mb-3">
+                    Access your invoices and payment history through the Stripe customer portal
+                  </p>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={handleManageSubscription}
+                    disabled={!customerInfo?.managementURL}
+                  >
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    Open Customer Portal
+                  </Button>
+                </div>
+              </div>
             </div>
           ) : (
             <div className="p-4 bg-gray-800/50 border rounded-lg text-center" style={{ borderColor: '#232629' }}>
@@ -356,7 +412,7 @@ export function BillingSettings({
       </Card>
 
       {/* Current Plan */}
-      <Card>
+      <Card className="border-gray-700">
         <CardHeader>
           <div className="flex items-center gap-2">
             <CreditCard className="h-5 w-5 text-primary-400" />
