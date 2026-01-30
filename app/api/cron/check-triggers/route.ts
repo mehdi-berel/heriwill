@@ -21,7 +21,7 @@ import { rateLimit, RateLimitPresets } from '@/lib/middleware/rateLimit'
 export async function GET(request: NextRequest) {
   try {
     // Apply rate limiting (strict for cron jobs)
-    const rateLimitResult = rateLimit({
+    const rateLimitResult = await rateLimit({
       windowMs: 1 * 60 * 1000, // 1 minute
       maxRequests: 2, // Max 2 requests per minute
       message: 'Cron endpoint rate limit exceeded'

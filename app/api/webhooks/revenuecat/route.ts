@@ -8,7 +8,7 @@ import { rateLimit, RateLimitPresets } from '@/lib/middleware/rateLimit'
 export async function POST(request: NextRequest) {
   try {
     // Apply rate limiting for webhooks
-    const rateLimitResult = rateLimit(RateLimitPresets.webhook)(request)
+    const rateLimitResult = await rateLimit(RateLimitPresets.webhook)(request)
     
     if (rateLimitResult) {
       return rateLimitResult

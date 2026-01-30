@@ -115,9 +115,6 @@ export function LegalDocumentForm({ isOpen, onClose, onSave, initialData }: Lega
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{initialData ? 'Edit Legal Document' : 'Add New Legal Document'}</DialogTitle>
-          <DialogDescription>
-            Create or update important legal documents for notarization and estate planning
-          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6 py-4">
@@ -162,19 +159,6 @@ export function LegalDocumentForm({ isOpen, onClose, onSave, initialData }: Lega
             </div>
           </div>
 
-          {/* Description */}
-          {/* Metadata Fields */}
-          <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
-            <Textarea
-              id="description"
-              value={formData.description}
-              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-              placeholder="Brief description of this document..."
-              rows={3}
-            />
-          </div>
-
           {/* File Upload */}
           <div className="space-y-2">
             <Label>Upload Document (Optional)</Label>
@@ -196,109 +180,6 @@ export function LegalDocumentForm({ isOpen, onClose, onSave, initialData }: Lega
                 </p>
               </label>
             </div>
-          </div>
-
-          {/* Notary Requirements */}
-          <div className="space-y-4 p-4 border rounded-lg bg-muted/50">
-            <h3 className="font-semibold text-sm">Notary Requirements</h3>
-            
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="notarization"
-                checked={formData.notarization_required}
-                onCheckedChange={(checked) => 
-                  setFormData(prev => ({ ...prev, notarization_required: checked as boolean }))
-                }
-              />
-              <label
-                htmlFor="notarization"
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-              >
-                Notarization Required
-              </label>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="witnesses">Number of Witnesses Required</Label>
-              <Select
-                value={formData.witnesses_required.toString()}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, witnesses_required: parseInt(value) }))}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="0">None</SelectItem>
-                  <SelectItem value="1">1 Witness</SelectItem>
-                  <SelectItem value="2">2 Witnesses</SelectItem>
-                  <SelectItem value="3">3 Witnesses</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="required"
-                checked={formData.is_required}
-                onCheckedChange={(checked) => 
-                  setFormData(prev => ({ ...prev, is_required: checked as boolean }))
-                }
-              />
-              <label
-                htmlFor="required"
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-              >
-                Mark as Required Document
-              </label>
-            </div>
-          </div>
-
-          {/* Instructions */}
-          <div className="space-y-2">
-            <Label htmlFor="instructions">Special Instructions</Label>
-            <Textarea
-              id="instructions"
-              value={formData.instructions}
-              onChange={(e) => setFormData(prev => ({ ...prev, instructions: e.target.value }))}
-              placeholder="Any special instructions for notarization or execution..."
-              rows={3}
-            />
-          </div>
-
-          {/* Tags */}
-          <div className="space-y-2">
-            <Label htmlFor="tags">Tags</Label>
-            <div className="flex gap-2">
-              <Input
-                id="tags"
-                value={tagInput}
-                onChange={(e) => setTagInput(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag())}
-                placeholder="Add tags (press Enter)"
-              />
-              <Button type="button" onClick={handleAddTag} variant="outline">
-                Add
-              </Button>
-            </div>
-            {formData.tags.length > 0 && (
-              <div className="flex flex-wrap gap-2 mt-2">
-                {formData.tags.map((tag) => (
-                  <div
-                    key={tag}
-                    className="px-2 py-1 bg-primary/10 text-primary rounded-md text-sm flex items-center gap-1"
-                  >
-                    {tag}
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveTag(tag)}
-                      className="hover:text-primary/70"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
 
         </div>

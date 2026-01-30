@@ -17,8 +17,9 @@ import {
   X
 } from "lucide-react"
 
-interface Notary {
+interface NotaryFormData {
   id?: string
+  user_id?: string
   name: string
   firm_name?: string
   email: string
@@ -31,12 +32,33 @@ interface Notary {
   specialization?: string
   notes?: string
   is_primary: boolean
+  created_at?: string
+  updated_at?: string
+}
+
+interface Notary {
+  id: string
+  user_id: string
+  name: string
+  firm_name?: string
+  email: string
+  phone: string
+  address: string
+  city: string
+  state: string
+  zip_code: string
+  license_number?: string
+  specialization?: string
+  notes?: string
+  is_primary: boolean
+  created_at: string
+  updated_at: string
 }
 
 interface NotarySelectorProps {
   notaries: Notary[]
-  onAddNotary: (notary: Notary) => void
-  onUpdateNotary: (id: string, notary: Notary) => void
+  onAddNotary: (notary: NotaryFormData) => void
+  onUpdateNotary: (id: string, notary: NotaryFormData) => void
   onDeleteNotary: (id: string) => void
   onSetPrimary: (id: string) => void
   onViewDetails?: (notary: Notary) => void
@@ -54,7 +76,7 @@ export function NotarySelector({
 }: NotarySelectorProps) {
   const [showForm, setShowForm] = useState(false)
   const [editingNotary, setEditingNotary] = useState<Notary | null>(null)
-  const [formData, setFormData] = useState<Notary>({
+  const [formData, setFormData] = useState<NotaryFormData>({
     name: '',
     firm_name: '',
     email: '',

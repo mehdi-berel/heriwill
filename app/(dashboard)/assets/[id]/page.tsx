@@ -7,7 +7,6 @@ import { AssetDetail } from "@/components/module/assets/asset-detail"
 import { AssetForm } from "@/components/module/assets/asset-form"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
-import { ArrowLeft } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { physicalAssetActions } from "@/app/actions/physical-assets"
 import { User } from "@supabase/supabase-js"
@@ -277,16 +276,6 @@ export default function AssetDetailPage() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center space-x-4">
-            <Button variant="ghost" onClick={() => router.push("/assets")}>
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Assets
-            </Button>
-          </div>
-        </div>
-
         {/* Asset Detail Component */}
         <AssetDetail
           asset={asset}

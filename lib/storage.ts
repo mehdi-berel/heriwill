@@ -2,7 +2,7 @@ import { supabase } from './supabase'
 
 // Storage bucket names
 export const STORAGE_BUCKETS = {
-  VAULT_ITEMS: 'vault-items',
+  VAULT_ITEMS: 'vault-files',
   LEGAL_DOCUMENTS: 'legal-documents',
   AVATARS: 'avatars',
   ASSETS: 'assets',

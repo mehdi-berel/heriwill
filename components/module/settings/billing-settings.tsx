@@ -1,9 +1,12 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { CreditCard, Download, AlertTriangle, CheckCircle, Crown, Zap } from "lucide-react"
+import { CreditCard, Download, AlertTriangle, CheckCircle, Crown, Zap, Loader2, ExternalLink } from "lucide-react"
+import { useRevenueCat } from "@/contexts/RevenueCatContext"
+import { getOfferings, purchasePackage, getCustomerInfo, getSubscriptionTier } from "@/lib/revenuecat"
 
 interface BillingSettingsProps {
   subscriptionTier?: string
@@ -12,10 +15,20 @@ interface BillingSettingsProps {
 }
 
 export function BillingSettings({
-  subscriptionTier = 'free',
-  subscriptionStatus = 'active',
-  subscriptionExpiresAt
+  subscriptionTier: propTier,
+  subscriptionStatus: propStatus,
+  subscriptionExpiresAt: propExpiresAt
 }: BillingSettingsProps) {
+  const { entitlements, loading: contextLoading, refreshEntitlements } = useRevenueCat()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [offerings, setOfferings] = useState<any>(null)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [customerInfo, setCustomerInfo] = useState<any>(null)
+  const [subscriptionTier, setSubscriptionTier] = useState(propTier || 'free')
+  const [subscriptionStatus, setSubscriptionStatus] = useState(propStatus || 'active')
+  const [subscriptionExpiresAt, setSubscriptionExpiresAt] = useState(propExpiresAt)
+  const [loading, setLoading] = useState(false)
+  const [purchaseLoading, setPurchaseLoading] = useState<string | null>(null)
   const formatDate = (dateString?: string) => {
     if (!dateString) return 'N/A'
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -75,11 +88,199 @@ export function BillingSettings({
     }
   }
 
+  useEffect(() => {
+    const loadRevenueCatData = async () => {
+      setLoading(true)
+      try {
+        const [offeringsData, customerData, revenueCatTier] = await Promise.all([
+          getOfferings(),
+          getCustomerInfo(),
+          getSubscriptionTier()
+        ])
+        
+        setOfferings(offeringsData)
+        setCustomerInfo(customerData)
+        
+        // Use database tier (propTier) if provided, otherwise use RevenueCat tier
+        if (!propTier) {
+          setSubscriptionTier(revenueCatTier)
+        }
+        
+        if (entitlements.length > 0) {
+          setSubscriptionStatus('active')
+        }
+      } catch (error) {
+        console.error('Error loading RevenueCat data:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    if (!contextLoading) {
+      loadRevenueCatData()
+    }
+  }, [contextLoading, entitlements, propTier])
+
+  const handlePurchase = async (packageToPurchase: any, packageId: string) => {
+    setPurchaseLoading(packageId)
+    try {
+      await purchasePackage(packageToPurchase)
+      await refreshEntitlements()
+      
+      const tier = await getSubscriptionTier()
+      setSubscriptionTier(tier)
+      setSubscriptionStatus('active')
+      
+      alert('Subscription purchased successfully!')
+    } catch (error: any) {
+      console.error('Purchase error:', error)
+      if (error.userCancelled) {
+        alert('Purchase cancelled')
+      } else {
+        alert('Purchase failed: ' + (error.message || 'Unknown error'))
+      }
+    } finally {
+      setPurchaseLoading(null)
+    }
+  }
+
+  const handleManageSubscription = () => {
+    if (customerInfo?.managementURL) {
+      window.open(customerInfo.managementURL, '_blank')
+    }
+  }
+
   const planDetails = getPlanDetails()
   const PlanIcon = planDetails.icon
 
+  if (contextLoading || loading) {
+    return (
+      <div className="flex items-center justify-center p-12">
+        <Loader2 className="h-8 w-8 animate-spin text-primary-400" />
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
+      {/* Available Plans */}
+      {offerings?.current && subscriptionTier === 'free' && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Available Plans</CardTitle>
+            <CardDescription>
+              Choose the plan that's right for you
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-6 md:grid-cols-2">
+              {offerings.current.availablePackages.map((pkg: any) => {
+                const packageId = pkg.identifier
+                const isPremium = packageId.toLowerCase().includes('premium') || packageId.toLowerCase().includes('legacy')
+                const isPro = packageId.toLowerCase().includes('pro')
+                
+                return (
+                  <div 
+                    key={packageId} 
+                    className={`rounded-xl border-2 p-6 md:p-8 relative transform transition-all duration-300 hover:scale-[1.02] hover:shadow-xl ${
+                      isPro
+                        ? 'border-amber-500 bg-gradient-to-br from-gray-900/80 to-amber-900/20 shadow-lg shadow-amber-500/20'
+                        : 'border-primary-500 bg-gradient-to-br from-gray-900/80 to-primary-900/20 shadow-lg shadow-primary-500/20'
+                    }`}
+                  >
+                    {/* Plan Icon */}
+                    <div className="mb-4">
+                      <div className={`inline-flex p-2 rounded-lg ${
+                        isPro
+                          ? 'bg-gradient-to-br from-amber-600/20 to-orange-600/20 border border-amber-500/30'
+                          : 'bg-gradient-to-br from-primary-600/20 to-indigo-600/20 border border-primary-500/30'
+                      }`}>
+                        {isPro ? (
+                          <Crown size={20} className="text-amber-400" />
+                        ) : (
+                          <Zap size={20} className="text-primary-400" />
+                        )}
+                      </div>
+                    </div>
+
+                    <h3 className="text-xl md:text-2xl font-bold mb-2 text-white">
+                      {isPro ? 'Pro' : 'Legacy'}
+                    </h3>
+                    
+                    <div className="flex items-baseline mb-3">
+                      <span className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
+                        {pkg.product.priceString}
+                      </span>
+                      <span className={`ml-2 text-lg font-medium ${isPro ? 'text-amber-400' : 'text-primary-400'}`}>
+                        /{pkg.product.subscriptionPeriod || 'month'}
+                      </span>
+                    </div>
+                    
+                    <div className="mb-4"></div>
+                    
+                    <p className="text-gray-400 text-sm mb-6 leading-relaxed">
+                      {isPro 
+                        ? 'Advanced features for comprehensive estate planning'
+                        : 'Complete solution for families and their digital assets'
+                      }
+                    </p>
+                    
+                    {/* Features List */}
+                    <div className="space-y-3 mb-6">
+                      <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+                        What's Included
+                      </div>
+                      <ul className="space-y-3">
+                        {(isPro ? [
+                          'Everything in Legacy',
+                          'Store up to 100GB',
+                          'Asset management',
+                          'Legal document storage',
+                          'Notary services'
+                        ] : [
+                          'Unlimited vaults',
+                          'Unlimited heirs',
+                          'Store up to 10GB',
+                          'Advanced security',
+                          'Priority email & chat support'
+                        ]).map((feature, index) => (
+                          <li key={index} className="flex items-start group">
+                            <div className={`flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center mr-2 mt-0.5 ${
+                              isPro
+                                ? 'bg-amber-600/20 border border-amber-500/30 group-hover:bg-amber-600/30'
+                                : 'bg-primary-600/20 border border-primary-500/30 group-hover:bg-primary-600/30'
+                            } transition-colors`}>
+                              <CheckCircle size={12} className={isPro ? 'text-amber-400' : 'text-primary-400'} />
+                            </div>
+                            <span className="text-gray-300 text-sm leading-relaxed">{feature}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    {/* CTA Button */}
+                    <button
+                      onClick={() => handlePurchase(pkg, packageId)}
+                      disabled={purchaseLoading === packageId}
+                      className="w-full py-3 px-4 rounded-xl font-bold text-base transition-all duration-300 transform active:scale-95 flex items-center justify-center bg-gradient-to-r from-primary-600 to-indigo-600 hover:from-primary-700 hover:to-indigo-700 text-white shadow-lg shadow-primary-500/30 hover:shadow-xl hover:shadow-primary-500/40 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {purchaseLoading === packageId ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Processing...
+                        </>
+                      ) : (
+                        `Subscribe to ${isPro ? 'Pro' : 'Legacy'}`
+                      )}
+                    </button>
+                  </div>
+                )
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Payment Method */}
       <Card>
         <CardHeader>
@@ -153,32 +354,6 @@ export function BillingSettings({
           )}
         </CardContent>
       </Card>
-
-      {/* Danger Zone */}
-      {subscriptionTier !== 'free' && (
-        <Card className="border-red-500/50">
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-red-500" />
-              <CardTitle className="text-red-500">Danger Zone</CardTitle>
-            </div>
-            <CardDescription>
-              Irreversible actions that affect your subscription
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
-              <p className="font-medium mb-2">Cancel Subscription</p>
-              <p className="text-sm text-text-tertiary mb-4">
-                Once you cancel, you'll lose access to all premium features at the end of your billing period.
-              </p>
-              <Button variant="outline" className="border-red-500 text-red-500 hover:bg-red-500/10">
-                Cancel Subscription
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Current Plan */}
       <Card>
