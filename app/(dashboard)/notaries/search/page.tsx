@@ -5,9 +5,8 @@ import { useRouter } from "next/navigation"
 import { DashboardLayout } from "@/components/module/dashboard/dashboard-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Search, Mail, Phone, FileText, CheckCircle, XCircle, Loader2 } from "lucide-react"
+import { Search, Mail, Phone, FileText, CheckCircle, Loader2 } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { User } from "@supabase/supabase-js"
 
@@ -31,7 +30,6 @@ interface Notary {
 export default function NotarySearchPage() {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
-  const [searching, setSearching] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [notaries, setNotaries] = useState<Notary[]>([])
   const [filteredNotaries, setFilteredNotaries] = useState<Notary[]>([])
@@ -64,8 +62,7 @@ export default function NotarySearchPage() {
   const loadNotaries = async () => {
     try {
       setLoading(true)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase
+      const { data, error } = await supabase
         .from('notaries')
         .select(`
           *,
@@ -74,7 +71,7 @@ export default function NotarySearchPage() {
             email
           )
         `)
-        .order('created_at', { ascending: false }) as any)
+        .order('created_at', { ascending: false })
 
       if (error) throw error
       setNotaries(data || [])

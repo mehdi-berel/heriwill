@@ -28,7 +28,7 @@ const DropdownMenu = ({
     <div className="relative inline-block">
       {React.Children.map(children, (child) => {
         if (React.isValidElement(child)) {
-          return React.cloneElement(child as React.ReactElement<any>, {
+          return React.cloneElement(child as React.ReactElement<{ isOpen?: boolean; onOpenChange?: (open: boolean) => void }>, {
             isOpen,
             onOpenChange: handleOpenChange,
           })
@@ -43,18 +43,16 @@ const DropdownMenuTrigger = React.forwardRef<
   HTMLButtonElement,
   React.ButtonHTMLAttributes<HTMLButtonElement> & {
     asChild?: boolean
-    isOpen?: boolean
     onOpenChange?: (open: boolean) => void
   }
->(({ className, children, asChild, isOpen, onOpenChange, ...props }, ref) => {
+>(({ className, children, asChild, onOpenChange, ...props }, ref) => {
   const handleClick = () => {
-    onOpenChange?.(!isOpen)
+    onOpenChange?.(false)
   }
 
   if (asChild && React.isValidElement(children)) {
-    const childElement = children as React.ReactElement<any>
+    const childElement = children as React.ReactElement<{ onClick?: (e: React.MouseEvent) => void }>
     return React.cloneElement(childElement, {
-      ref,
       onClick: (e: React.MouseEvent) => {
         childElement.props.onClick?.(e)
         handleClick()
@@ -83,7 +81,7 @@ const DropdownMenuContent = React.forwardRef<
     isOpen?: boolean
     onOpenChange?: (open: boolean) => void
   }
->(({ className, children, align = "center", isOpen, onOpenChange, ...props }, ref) => {
+>(({ className, children, align = "center", isOpen, onOpenChange, ...props }) => {
   const contentRef = React.useRef<HTMLDivElement>(null)
 
   React.useEffect(() => {
@@ -131,7 +129,7 @@ const DropdownMenuItem = React.forwardRef<
   }
 >(({ className, children, asChild, disabled, ...props }, ref) => {
   if (asChild && React.isValidElement(children)) {
-    const childElement = children as React.ReactElement<any>
+    const childElement = children as React.ReactElement<{ className?: string }>
     return React.cloneElement(childElement, {
       className: cn(
         "relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors",
@@ -204,7 +202,7 @@ const DropdownMenuSub = ({
     <div className="relative">
       {React.Children.map(children, (child) => {
         if (React.isValidElement(child)) {
-          return React.cloneElement(child as React.ReactElement<any>, {
+          return React.cloneElement(child as React.ReactElement<{ isOpen?: boolean; onOpenChange?: (open: boolean) => void }>, {
             isOpen: open,
             onOpenChange: setOpen,
           })
@@ -221,7 +219,7 @@ const DropdownMenuSubTrigger = React.forwardRef<
     isOpen?: boolean
     onOpenChange?: (open: boolean) => void
   }
->(({ className, children, isOpen, onOpenChange, ...props }, ref) => (
+>(({ className, children, onOpenChange, ...props }, ref) => (
   <div
     ref={ref}
     className={cn(

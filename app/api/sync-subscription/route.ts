@@ -38,28 +38,33 @@ export async function POST(request: NextRequest) {
     
     // Get expiration date from first active entitlement
     let expirationDate = null
-    const entitlementKeys = Object.keys(customerInfo.entitlements)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const entitlements = customerInfo.entitlements as any
+    const entitlementKeys = Object.keys(entitlements)
     if (entitlementKeys.length > 0) {
-      const firstEntitlement = customerInfo.entitlements[entitlementKeys[0]]
+      const firstEntitlement = entitlements[entitlementKeys[0]]
       expirationDate = firstEntitlement.expirationDate || null
     }
 
     // Update database
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (supabase
-      .from('users') as any)
-      .update({
-        subscription_tier: tier,
-        subscription_status: subscriptionStatus,
-        subscription_expires_at: expirationDate,
-        updated_at: new Date().toISOString()
-      })
+    const updatePayload = {
+      subscription_tier: tier,
+      subscription_status: subscriptionStatus,
+      subscription_expires_at: expirationDate,
+      updated_at: new Date().toISOString()
+    }
+
+    const { error } = await (supabase.from('users') as unknown as {
+      update: (data: unknown) => { eq: (column: string, value: string) => Promise<{ error: unknown }> }
+    })
+      .update(updatePayload)
       .eq('id', userId)
 
     if (error) {
       logger.error('Failed to update user subscription in database', error)
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
       return NextResponse.json(
-        { error: 'Failed to update database', details: error.message },
+        { error: 'Failed to update database', details: errorMessage },
         { status: 500 }
       )
     }

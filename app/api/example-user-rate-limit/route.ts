@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
     }
     
     // Your operation logic here
-    const body = await request.json()
+    // const body = await request.json()
     logger.info('Operation processed', { userTier: userTier || 'anonymous' })
     
     return NextResponse.json({

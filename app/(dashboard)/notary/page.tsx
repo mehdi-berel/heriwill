@@ -55,7 +55,7 @@ export default function NotaryPage() {
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [notaries, setNotaries] = useState<Notary[]>([])
-  const [selectedFilter, setSelectedFilter] = useState<'all' | 'primary' | 'secondary' | null>(null)
+  const [selectedFilter] = useState<'all' | 'primary' | 'secondary' | null>(null)
   const [selectedNotary, setSelectedNotary] = useState<Notary | null>(null)
   const router = useRouter()
 

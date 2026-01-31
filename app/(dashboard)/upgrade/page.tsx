@@ -1,13 +1,13 @@
 "use client"
 
 import { useState, useEffect, Suspense } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
+import { useRouter } from "next/navigation"
 import { DashboardLayout } from "@/components/module/dashboard/dashboard-layout"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Check, Sparkles, Crown, ArrowLeft, Loader2, Zap, Shield, Star, Gift } from "lucide-react"
+import { Check, Crown, Loader2, Zap, Gift } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { REVENUECAT_PAYWALL } from "@/lib/revenuecat-config"
 import { User } from "@supabase/supabase-js"
@@ -21,16 +21,8 @@ interface UserProfile {
   subscription_expires_at?: string
 }
 
-// Remove local Package interface if importing from library, or keep if library not available
-// interface Package {
-//   identifier: string
-//   [key: string]: unknown
-// }
-
 function UpgradePageContent() {
   const router = useRouter()
-  const searchParams = useSearchParams()
-  const selectedPlan = searchParams.get('plan') as 'premium' | 'pro' | null
 
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<UserProfile | null>(null)
@@ -162,7 +154,7 @@ function UpgradePageContent() {
               Simple, Transparent Pricing
             </h1>
             <p className="text-lg md:text-xl text-gray-400 mb-6 max-w-3xl mx-auto">
-              Choose the plan that's right for you. Start with Classic for free, or upgrade to Legacy for advanced features and peace of mind.
+              Choose the plan that&apos;s right for you. Start with Classic for free, or upgrade to Legacy for advanced features and peace of mind.
             </p>
             {currentPlan !== 'free' && (
               <Badge className="bg-gradient-to-r from-primary-600 to-indigo-600 text-white text-sm px-4 py-1.5">
@@ -192,14 +184,12 @@ function UpgradePageContent() {
               <span className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">Free</span>
             </div>
             <div className="mb-4"></div>
-            <p className="text-gray-400 text-sm mb-6 leading-relaxed">
-              Essential digital legacy management for individuals
-            </p>
+            <p className="text-sm text-gray-400">Perfect for individuals who want to get started with digital legacy planning</p>
             
             {/* Features List */}
             <div className="space-y-3 mb-6">
               <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
-                What's Included
+                What&apos;s Included
               </div>
               <ul className="space-y-3">
                 {classicFeatures.map((feature, index) => (
@@ -247,7 +237,7 @@ function UpgradePageContent() {
             {/* Features List */}
             <div className="space-y-3 mb-6">
               <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
-                What's Included
+                What&apos;s Included
               </div>
               <ul className="space-y-3">
                 {legacyFeatures.map((feature, index) => (
@@ -317,7 +307,7 @@ function UpgradePageContent() {
             {/* Features List */}
             <div className="space-y-3 mb-6">
               <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
-                What's Included
+                What&apos;s Included
               </div>
               <ul className="space-y-3">
                 {proFeatures.map((feature, index) => (

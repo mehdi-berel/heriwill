@@ -1,13 +1,12 @@
 "use client"
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { 
   FileText, 
   Download, 
   Upload, 
-  CheckCircle, 
   Lock, 
   Calendar, 
   Trash2,
@@ -49,15 +48,15 @@ interface LegalDocumentDetailProps {
 }
 
 export function LegalDocumentDetail({ document, onEdit, onDelete, onUpload, onDownload }: LegalDocumentDetailProps) {
-  const getDocumentIcon = (type: string) => {
+  const renderDocumentIcon = (type: string) => {
     switch (type) {
-      case 'will': return FileText
-      case 'trust': return Shield
-      case 'power_of_attorney': return Gavel
-      case 'healthcare_directive': return User
-      case 'life_insurance': return Scale
-      case 'deed': return FileCheck
-      default: return FileText
+      case 'will': return <FileText className="h-8 w-8 text-primary" />
+      case 'trust': return <Shield className="h-8 w-8 text-primary" />
+      case 'power_of_attorney': return <Gavel className="h-8 w-8 text-primary" />
+      case 'healthcare_directive': return <User className="h-8 w-8 text-primary" />
+      case 'life_insurance': return <Scale className="h-8 w-8 text-primary" />
+      case 'deed': return <FileCheck className="h-8 w-8 text-primary" />
+      default: return <FileText className="h-8 w-8 text-primary" />
     }
   }
 
@@ -89,15 +88,13 @@ export function LegalDocumentDetail({ document, onEdit, onDelete, onUpload, onDo
     })
   }
 
-  const Icon = getDocumentIcon(document.document_type)
-
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-4">
           <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
-            <Icon className="h-8 w-8 text-primary" />
+            {renderDocumentIcon(document.document_type)}
           </div>
           <div>
             <div className="flex items-center gap-2 mb-1">

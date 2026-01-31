@@ -56,7 +56,7 @@ export default function HomePage() {
       if (data) {
         setProfile(data as UserProfile)
       }
-    } catch (error) {
+    } catch {
       // Silent error - user can still use dashboard with limited profile data
       setProfile(null)
     }
@@ -119,7 +119,7 @@ export default function HomePage() {
         securityScore,
         pendingTasks: 6 - completedSections
       })
-    } catch (error) {
+    } catch {
       // Set default stats on error
       setStats({
         totalAssets: 0,

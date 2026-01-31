@@ -3,11 +3,8 @@
 import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { 
   ChevronDown, 
-  ChevronUp, 
-  Search, 
   HelpCircle, 
   Mail,
   FileText,
@@ -153,18 +150,12 @@ const CATEGORIES = [
 ]
 
 export function HelpCenter() {
-  const [searchQuery, setSearchQuery] = useState("")
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const [expandedFAQ, setExpandedFAQ] = useState<string | null>(null)
 
   const filteredFAQs = FAQ_DATA.filter(faq => {
-    const matchesSearch = searchQuery === "" || 
-      faq.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      faq.answer.toLowerCase().includes(searchQuery.toLowerCase())
-    
     const matchesCategory = !selectedCategory || faq.category === selectedCategory
-
-    return matchesSearch && matchesCategory
+    return matchesCategory
   })
 
   const toggleFAQ = (question: string) => {
@@ -230,7 +221,7 @@ export function HelpCenter() {
           <Card className="border-gray-700 shadow-md">
             <CardContent className="py-16 text-center">
               <HelpCircle className="h-16 w-16 mx-auto mb-6 text-text-tertiary opacity-50" />
-              <p className="text-text-secondary text-lg">No results found. Try a different search term.</p>
+              <p className="text-text-secondary text-lg">No results found. Try a different category.</p>
             </CardContent>
           </Card>
         ) : (
@@ -293,7 +284,7 @@ export function HelpCenter() {
             Still need help?
           </CardTitle>
           <CardDescription className="text-base mt-3 leading-relaxed">
-            Can't find what you're looking for? Our support team is here to help you with any questions.
+            Can&apos;t find what you&apos;re looking for? Our support team is here to help you with any questions.
           </CardDescription>
         </CardHeader>
         <CardContent className="pt-2">

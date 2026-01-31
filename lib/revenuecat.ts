@@ -1,5 +1,6 @@
-import { Purchases } from '@revenuecat/purchases-js'
+import { Purchases, Package } from '@revenuecat/purchases-js'
 import { REVENUECAT_ENTITLEMENTS, REVENUECAT_PRODUCTS } from './revenuecat-config'
+import { logger } from "@/lib/utils/logger"
 
 // RevenueCat configuration
 const REVENUECAT_API_KEY = process.env.NEXT_PUBLIC_REVENUECAT_API_KEY || ''
@@ -11,7 +12,10 @@ let purchasesInstance: Purchases | null = null
 
 export const initializeRevenueCat = async (userId: string) => {
   if (!REVENUECAT_API_KEY) {
-    console.error('RevenueCat API key is not set')
+    // Only log warning in development to avoid spam
+    if (process.env.NODE_ENV === 'development') {
+      logger.warn('RevenueCat API key is not set')
+    }
     return null
   }
 
@@ -21,7 +25,7 @@ export const initializeRevenueCat = async (userId: string) => {
     }
     return purchasesInstance
   } catch (error) {
-    console.error('Error initializing RevenueCat:', error)
+    logger.error('Error initializing RevenueCat:', error)
     return null
   }
 }
@@ -43,8 +47,8 @@ export const checkProEntitlement = async (): Promise<boolean> => {
     
     // Check if user has 'pro' entitlement
     return customerInfo.entitlements.active[REVENUECAT_ENTITLEMENTS.PRO] !== undefined
-  } catch (error) {
-    console.error('Error checking pro entitlement:', error)
+  } catch {
+    // Suppress network errors to avoid console spam
     return false
   }
 }
@@ -60,8 +64,8 @@ export const getActiveEntitlements = async (): Promise<string[]> => {
 
     const customerInfo = await purchases.getCustomerInfo()
     return Object.keys(customerInfo.entitlements.active)
-  } catch (error) {
-    console.error('Error getting active entitlements:', error)
+  } catch {
+    // Silently fail - this is expected when RevenueCat is not configured or network issues occur
     return []
   }
 }
@@ -74,24 +78,22 @@ export const getOfferings = async () => {
 
     const offerings = await purchases.getOfferings()
     return offerings
-  } catch (error) {
-    console.error('Error getting offerings:', error)
+  } catch {
+    logger.error('Error getting offerings')
     return null
   }
 }
 
 // Purchase a package
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const purchasePackage = async (packageToPurchase: any) => {
+export const purchasePackage = async (packageToPurchase: Package) => {
   try {
     const purchases = getRevenueCat()
     if (!purchases) throw new Error('RevenueCat not initialized')
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { customerInfo } = await purchases.purchasePackage(packageToPurchase as any)
+    const { customerInfo } = await purchases.purchasePackage(packageToPurchase)
     return customerInfo
   } catch (error) {
-    console.error('Error purchasing package:', error)
+    logger.error('Error purchasing package:', error)
     throw error
   }
 }
@@ -106,7 +108,7 @@ export const syncPurchases = async () => {
     const customerInfo = await purchases.getCustomerInfo()
     return customerInfo
   } catch (error) {
-    console.error('Error syncing purchases:', error)
+    logger.error('Error syncing purchases:', error)
     throw error
   }
 }
@@ -126,8 +128,8 @@ export const getSubscriptionTier = async (): Promise<'free' | 'premium' | 'pro'>
     if (activeEntitlements.includes(REVENUECAT_ENTITLEMENTS.PREMIUM)) return 'premium'
     
     return 'free'
-  } catch (error) {
-    console.error('Error getting subscription tier:', error)
+  } catch {
+    // Suppress errors to avoid spam
     return 'free'
   }
 }
@@ -139,14 +141,9 @@ export const getCustomerInfo = async () => {
     if (!purchases) return null
 
     const customerInfo = await purchases.getCustomerInfo()
-    return {
-      activeSubscriptions: Object.keys(customerInfo.activeSubscriptions),
-      entitlements: customerInfo.entitlements.active,
-      originalAppUserId: customerInfo.originalAppUserId,
-      managementURL: customerInfo.managementURL,
-    }
-  } catch (error) {
-    console.error('Error getting customer info:', error)
+    return customerInfo
+  } catch {
+    // Suppress errors
     return null
   }
 }

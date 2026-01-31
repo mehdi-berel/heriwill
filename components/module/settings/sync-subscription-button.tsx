@@ -47,7 +47,7 @@ export function SyncSubscriptionButton() {
           message: data.error || 'Sync failed' 
         })
       }
-    } catch (error) {
+    } catch {
       setResult({ 
         success: false, 
         message: 'Network error' 

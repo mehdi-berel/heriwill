@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import { initializeRevenueCat, checkProEntitlement, getActiveEntitlements } from '@/lib/revenuecat'
 import { supabase } from '@/lib/supabase'
+import { logger } from '@/lib/utils/logger'
 
 interface RevenueCatContextType {
   isProUser: boolean
@@ -30,7 +31,7 @@ export function RevenueCatProvider({ children }: { children: React.ReactNode }) 
       setIsProUser(isPro)
       setEntitlements(activeEntitlements)
     } catch (error) {
-      console.error('Error refreshing entitlements:', error)
+      logger.error('Error refreshing entitlements:', error)
     }
   }
 
@@ -57,7 +58,7 @@ export function RevenueCatProvider({ children }: { children: React.ReactNode }) 
           await refreshEntitlements()
         }
       } catch (error) {
-        console.error('Error initializing RevenueCat:', error)
+        logger.error('Error initializing RevenueCat:', error)
       } finally {
         setLoading(false)
       }

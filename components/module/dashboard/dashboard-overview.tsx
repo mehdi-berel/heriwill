@@ -2,22 +2,16 @@
 
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Progress } from "@/components/ui/progress"
 import Link from "next/link"
 import { 
   Lock,
   Users,
   FolderOpen,
-  Shield,
   AlertCircle,
   CheckCircle2,
-  TrendingUp,
   ArrowRight,
   Sparkles,
-  Power,
-  FileText,
-  Bell
+  Power
 } from "lucide-react"
 
 interface DashboardStats {
@@ -72,17 +66,6 @@ const QUICK_ACTIONS: QuickAction[] = [
   },
 ]
 
-interface ChecklistItem {
-  id: string
-  title: string
-  description: string
-  icon: React.ReactNode
-  isCompleted: boolean
-  href: string
-  priority: 'high' | 'medium' | 'low'
-  category: 'app_setup' | 'pre_death'
-}
-
 export function DashboardOverview({ stats, userName }: DashboardOverviewProps) {
   return (
     <div className="p-6 space-y-6">
@@ -93,7 +76,7 @@ export function DashboardOverview({ stats, userName }: DashboardOverviewProps) {
             Welcome back, {userName?.split(' ')[0] || 'User'}
           </h1>
           <p className="text-text-secondary mt-1">
-            Here's your digital legacy overview
+            Here&apos;s your digital legacy overview
           </p>
         </div>
         <div className="flex items-center gap-2">

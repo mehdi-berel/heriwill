@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
     const eventType = event.type
     const appUserId = event.event?.app_user_id
     const productId = event.event?.product_id
-    const entitlementIds = event.event?.entitlement_ids || []
+    // const entitlementIds = event.event?.entitlement_ids || [] // Unused
     const expirationDate = event.event?.expiration_at_ms
     const isTrialConversion = event.event?.is_trial_conversion || false
 
@@ -133,9 +133,9 @@ async function updateUserSubscription(
   }
 ) {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (supabase
-      .from('users') as any)
+    const { error } = await (supabase.from('users') as unknown as { 
+      update: (data: unknown) => { eq: (column: string, value: string) => Promise<{ error: unknown }> } 
+    })
       .update(updates)
       .eq('id', userId)
 

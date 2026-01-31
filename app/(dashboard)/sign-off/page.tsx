@@ -6,7 +6,15 @@ import { DashboardLayout } from "@/components/module/dashboard/dashboard-layout"
 import { SignOffMethodSelector } from "@/components/module/sign-off/sign-off-method-selector"
 import { SignOffSettingsModal } from "@/components/module/sign-off/sign-off-settings-modal"
 import { Card, CardContent } from "@/components/ui/card"
-import { Clock, Users, Bell, Calendar, Hand, Shield, AlertCircle, Power } from "lucide-react"
+import { 
+  Power, 
+  AlertCircle, 
+  Clock, 
+  Calendar,
+  Users,
+  Bell,
+  Hand
+} from "lucide-react"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { supabase } from "@/lib/supabase"

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState, useEffect, useCallback, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import { Button } from "@/components/ui/button"
@@ -25,7 +25,7 @@ interface InviteData {
   expired: boolean
 }
 
-export default function InvitePage() {
+function InvitePageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [loading, setLoading] = useState(true)
@@ -40,25 +40,11 @@ export default function InvitePage() {
   })
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
 
-  useEffect(() => {
-    const code = searchParams.get('code')
-    const type = searchParams.get('type') as InviteType
-
-    if (!code || !type || (type !== 'heir' && type !== 'notary')) {
-      setError('Invalid invitation link')
-      setLoading(false)
-      return
-    }
-
-    loadInviteData(code, type)
-  }, [searchParams])
-
-  const loadInviteData = async (code: string, type: InviteType) => {
+  const loadInviteData = useCallback(async (code: string, type: InviteType) => {
     try {
       if (type === 'heir') {
         // Load heir invitation
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { data: heir, error: heirError } = await (supabase
+        const result = await supabase
           .from('heirs')
           .select(`
             id,
@@ -74,7 +60,19 @@ export default function InvitePage() {
             )
           `)
           .eq('invitation_code', code)
-          .single() as any)
+          .single()
+        
+        const heir = result.data as unknown as {
+          id: string
+          invitation_code: string
+          invitation_status: string
+          invitation_expires_at: string | null
+          email_encrypted: string
+          full_name_encrypted: string
+          user_id: string
+          users: { full_name: string; email: string } | null
+        }
+        const heirError = result.error
 
         if (heirError) throw heirError
         if (!heir) throw new Error('Invitation not found')
@@ -124,10 +122,23 @@ export default function InvitePage() {
       setLoading(false)
     } catch (error) {
       logger.error('Failed to load invite data', error)
-      setError('Failed to load invitation. Please check the link and try again.')
+      setError('Failed to load invitation data')
       setLoading(false)
     }
-  }
+  }, [router])
+
+  useEffect(() => {
+    const code = searchParams.get('code')
+    const type = searchParams.get('type') as InviteType
+
+    if (!code || !type || (type !== 'heir' && type !== 'notary')) {
+      setError('Invalid invitation link')
+      setLoading(false)
+      return
+    }
+
+    loadInviteData(code, type)
+  }, [searchParams, loadInviteData])
 
   const validateForm = (): boolean => {
     const errors: Record<string, string> = {}
@@ -171,7 +182,7 @@ export default function InvitePage() {
           data: {
             full_name: sanitizeText(formData.fullName.trim())
           },
-          emailRedirectTo: `${window.location.origin}/login`
+          emailRedirectTo: 'https://app.heriwill.com'
         }
       })
 
@@ -180,7 +191,9 @@ export default function InvitePage() {
 
       // Create user profile in public.users
       const { error: profileError } = await (supabase
-        .from('users') as any)
+        .from('users') as unknown as {
+          insert: (data: unknown) => Promise<{ error: unknown }>
+        })
         .insert({
           id: authData.user.id,
           email: formData.email,
@@ -193,7 +206,9 @@ export default function InvitePage() {
       if (inviteData.type === 'heir') {
         // Update heir record with user_id and mark as accepted
         const { error: heirUpdateError } = await (supabase
-          .from('heirs') as any)
+          .from('heirs') as unknown as {
+            update: (data: unknown) => { eq: (column: string, value: string) => Promise<{ error: unknown }> }
+          })
           .update({
             heir_user_id: authData.user.id,
             invitation_status: 'accepted',
@@ -234,7 +249,9 @@ export default function InvitePage() {
     try {
       if (inviteData.type === 'heir') {
         const { error } = await (supabase
-          .from('heirs') as any)
+          .from('heirs') as unknown as {
+            update: (data: unknown) => { eq: (column: string, value: string) => Promise<{ error: unknown }> }
+          })
           .update({
             invitation_status: 'rejected',
             rejected_at: new Date().toISOString()
@@ -420,5 +437,17 @@ export default function InvitePage() {
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+export default function InvitePage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gradient-dark">
+        <Loader2 className="h-8 w-8 animate-spin text-primary-400" />
+      </div>
+    }>
+      <InvitePageContent />
+    </Suspense>
   )
 }

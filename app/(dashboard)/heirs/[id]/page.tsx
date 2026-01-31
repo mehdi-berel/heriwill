@@ -80,9 +80,8 @@ export default function HeirDetailPage() {
   const loadHeirActivities = useCallback(async (id: string) => {
     try {
       // Query user_activity table for heir-related activities
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase
-        .from('user_activity') as any)
+      const { data, error } = await supabase
+        .from('user_activity')
         .select('*')
         .eq('metadata->>heir_id', id)
         .order('created_at', { ascending: false })

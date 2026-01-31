@@ -8,7 +8,8 @@ import { Label } from "@/components/ui/label"
 import { User, CheckCircle, AlertCircle } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { logger } from "@/lib/utils/logger"
-import { validateEmail, validatePhone, validateFullName, validateTextField, sanitizeText } from "@/lib/utils/validation"
+import { validateEmail, validateFullName, sanitizeText } from "@/lib/utils/validation"
+import { Database } from "@/lib/database.types"
 
 export function ProfileSettings() {
   const [formData, setFormData] = useState({
@@ -35,7 +36,7 @@ export function ProfileSettings() {
         if (profileError) throw profileError
 
         if (profile) {
-          const p = profile as any
+          const p = profile as Database['public']['Tables']['users']['Row']
           setFormData({
             fullName: p.full_name || '',
             email: p.email || ''

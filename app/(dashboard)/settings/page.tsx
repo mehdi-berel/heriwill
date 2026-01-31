@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useState, useEffect, Suspense } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { DashboardLayout } from "@/components/module/dashboard/dashboard-layout"
 import { ProfileSettings } from "@/components/module/settings/profile-settings"
 import { SecuritySettings } from "@/components/module/settings/security-settings"
@@ -12,21 +12,17 @@ import { User, Shield, Bell, CreditCard } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import type { User as SupabaseUser } from "@supabase/supabase-js"
 
-export default function SettingsPage() {
+function SettingsPageContent() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
   const [user, setUser] = useState<SupabaseUser | null>(null)
   const [profile, setProfile] = useState<Record<string, unknown> | null>(null)
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState('profile')
-  const router = useRouter()
-
-  useEffect(() => {
-    // Check for tab parameter in URL
-    const urlParams = new URLSearchParams(window.location.search)
-    const tabParam = urlParams.get('tab')
-    if (tabParam && ['profile', 'security', 'notifications', 'billing'].includes(tabParam)) {
-      setActiveTab(tabParam)
-    }
-  }, [])
+  
+  // Initialize activeTab from URL parameter
+  const tabParam = searchParams.get('tab')
+  const initialTab = tabParam && ['profile', 'security', 'notifications', 'billing'].includes(tabParam) ? tabParam : 'profile'
+  const [activeTab, setActiveTab] = useState(initialTab)
 
   useEffect(() => {
     const getUser = async () => {
@@ -121,5 +117,17 @@ export default function SettingsPage() {
         </Tabs>
       </div>
     </DashboardLayout>
+  )
+}
+
+export default function SettingsPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-lg">Loading...</div>
+      </div>
+    }>
+      <SettingsPageContent />
+    </Suspense>
   )
 }

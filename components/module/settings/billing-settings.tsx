@@ -7,14 +7,23 @@ import { Badge } from "@/components/ui/badge"
 import { CreditCard, Download, AlertTriangle, CheckCircle, Crown, Zap, Loader2, ExternalLink } from "lucide-react"
 import { useRevenueCat } from "@/contexts/RevenueCatContext"
 import { getOfferings, purchasePackage, getCustomerInfo, getSubscriptionTier } from "@/lib/revenuecat"
-import { isPremiumPackage, isProPackage, isMonthlyPackage, isYearlyPackage, REVENUECAT_PAYWALL } from "@/lib/revenuecat-config"
+import { isProPackage, isMonthlyPackage, isYearlyPackage, REVENUECAT_PAYWALL } from "@/lib/revenuecat-config"
 import { SyncSubscriptionButton } from "./sync-subscription-button"
 import { supabase } from "@/lib/supabase"
+import { logger } from "@/lib/utils/logger"
+import { CustomerInfo, Offerings, Package } from "@revenuecat/purchases-js"
 
 interface BillingSettingsProps {
   subscriptionTier?: string
   subscriptionStatus?: string
   subscriptionExpiresAt?: string
+}
+
+interface RevenueCatPackage extends Package {
+  product: {
+    priceString: string
+    subscriptionPeriod: string
+  }
 }
 
 export function BillingSettings({
@@ -23,13 +32,11 @@ export function BillingSettings({
   subscriptionExpiresAt: propExpiresAt
 }: BillingSettingsProps) {
   const { entitlements, loading: contextLoading, refreshEntitlements } = useRevenueCat()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [offerings, setOfferings] = useState<any>(null)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [customerInfo, setCustomerInfo] = useState<any>(null)
+  const [offerings, setOfferings] = useState<Offerings | null>(null)
+  const [customerInfo, setCustomerInfo] = useState<CustomerInfo | null>(null)
   const [subscriptionTier, setSubscriptionTier] = useState(propTier || 'free')
   const [subscriptionStatus, setSubscriptionStatus] = useState(propStatus || 'active')
-  const [subscriptionExpiresAt, setSubscriptionExpiresAt] = useState(propExpiresAt)
+  const [subscriptionExpiresAt] = useState(propExpiresAt)
   const [loading, setLoading] = useState(false)
   const [purchaseLoading, setPurchaseLoading] = useState<string | null>(null)
   const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'yearly'>('monthly')
@@ -114,7 +121,7 @@ export function BillingSettings({
           setSubscriptionStatus('active')
         }
       } catch (error) {
-        console.error('Error loading RevenueCat data:', error)
+        logger.error('Error loading RevenueCat data:', error)
       } finally {
         setLoading(false)
       }
@@ -125,7 +132,7 @@ export function BillingSettings({
     }
   }, [contextLoading, entitlements, propTier])
 
-  const handlePurchase = async (packageToPurchase: any, packageId: string) => {
+  const handlePurchase = async (packageToPurchase: Package, packageId: string) => {
     setPurchaseLoading(packageId)
     try {
       await purchasePackage(packageToPurchase)
@@ -136,12 +143,13 @@ export function BillingSettings({
       setSubscriptionStatus('active')
       
       alert('Subscription purchased successfully!')
-    } catch (error: any) {
-      console.error('Purchase error:', error)
-      if (error.userCancelled) {
+    } catch (error: unknown) {
+      logger.error('Purchase error:', error)
+      if (error && typeof error === 'object' && 'userCancelled' in error && error.userCancelled) {
         alert('Purchase cancelled')
       } else {
-        alert('Purchase failed: ' + (error.message || 'Unknown error'))
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+        alert('Purchase failed: ' + errorMessage)
       }
     } finally {
       setPurchaseLoading(null)
@@ -176,7 +184,7 @@ export function BillingSettings({
               Subscription Mismatch Detected
             </CardTitle>
             <CardDescription>
-              Your RevenueCat subscription doesn't match your database. Click below to sync.
+              Your RevenueCat subscription doesn&apos;t match your database. Click below to sync.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -191,7 +199,7 @@ export function BillingSettings({
           <CardHeader>
             <CardTitle>Available Plans</CardTitle>
             <CardDescription>
-              Choose the plan that's right for you
+              Choose the plan that&apos;s right for you
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -224,15 +232,15 @@ export function BillingSettings({
 
             <div className="grid gap-6 md:grid-cols-2">
               {offerings.current.availablePackages
-                .filter((pkg: any) => {
+                .filter((pkg: Package) => {
                   return billingPeriod === 'monthly' 
                     ? isMonthlyPackage(pkg.identifier)
                     : isYearlyPackage(pkg.identifier)
                 })
-                .map((pkg: any) => {
+                .map((pkg: Package) => {
                 const packageId = pkg.identifier
-                const isPremium = isPremiumPackage(packageId)
                 const isPro = isProPackage(packageId)
+                const rcPkg = pkg as RevenueCatPackage
                 
                 return (
                   <div 
@@ -258,10 +266,10 @@ export function BillingSettings({
                     
                     <div className="flex items-baseline mb-3">
                       <span className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
-                        {pkg.product.priceString}
+                        {rcPkg.product.priceString}
                       </span>
                       <span className={`ml-2 text-lg font-medium ${isPro ? 'text-amber-400' : 'text-primary-400'}`}>
-                        /{pkg.product.subscriptionPeriod || 'month'}
+                        /{rcPkg.product.subscriptionPeriod || 'month'}
                       </span>
                     </div>
                     
@@ -277,7 +285,7 @@ export function BillingSettings({
                     {/* Features List */}
                     <div className="space-y-3 mb-6">
                       <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
-                        What's Included
+                        What&apos;s Included
                       </div>
                       <ul className="space-y-3">
                         {(isPro ? [
@@ -365,7 +373,7 @@ export function BillingSettings({
           ) : (
             <div className="p-4 bg-gray-800/50 border rounded-lg text-center" style={{ borderColor: '#232629' }}>
               <p className="text-text-tertiary">No payment method on file</p>
-              <p className="text-sm text-text-tertiary mt-1">Upgrade to add a payment method</p>
+              <p className="text-sm text-text-tertiary mt-1">You&apos;re currently on the free plan</p>
             </div>
           )}
         </CardContent>
@@ -406,7 +414,7 @@ export function BillingSettings({
           ) : (
             <div className="p-4 bg-gray-800/50 border rounded-lg text-center" style={{ borderColor: '#232629' }}>
               <p className="text-text-tertiary">No billing history</p>
-              <p className="text-sm text-text-tertiary mt-1">You're on the free plan</p>
+              <p className="text-sm text-text-secondary">You&apos;re currently on the {subscriptionTier} plan</p>
             </div>
           )}
         </CardContent>

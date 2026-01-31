@@ -15,7 +15,6 @@ import {
   Scale,
   LogOut,
   Lock,
-  Gift,
   Power,
   Package,
   Sparkles,

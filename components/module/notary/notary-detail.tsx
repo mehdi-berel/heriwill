@@ -1,6 +1,6 @@
 "use client"
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { 
@@ -46,7 +46,7 @@ interface NotaryDetailProps {
   onClose?: () => void
 }
 
-export function NotaryDetail({ notary, onEdit, onDelete, onSetPrimary, onClose }: NotaryDetailProps) {
+export function NotaryDetail({ notary, onEdit, onDelete, onSetPrimary }: NotaryDetailProps) {
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',

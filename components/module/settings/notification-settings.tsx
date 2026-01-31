@@ -79,24 +79,6 @@ export function NotificationSettings() {
     }
   ]
 
-  const notificationCategories = [
-    {
-      id: 'security',
-      title: 'Security Alerts',
-      description: 'Get notified about security-related activities'
-    },
-    {
-      id: 'updates',
-      title: 'Product Updates',
-      description: 'Stay informed about new features and improvements'
-    },
-    {
-      id: 'marketing',
-      title: 'Marketing & Promotions',
-      description: 'Receive promotional emails and special offers'
-    }
-  ]
-
   return (
     <div className="space-y-6">
       {/* Notification Channels */}

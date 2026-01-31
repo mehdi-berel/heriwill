@@ -5,12 +5,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Badge } from "@/components/ui/badge"
 import { 
   User, 
-  Heart, 
-  Eye, 
-  Save
+  Heart
 } from "lucide-react"
 
 interface HeirFormData {
@@ -44,15 +41,6 @@ export function HeirForm({ onSubmit, onCancel, initialData, isEditing = false }:
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     onSubmit(formData)
-  }
-
-  const getAccessLevelColor = (level: string) => {
-    switch (level) {
-      case 'full': return 'bg-purple-100 text-purple-800'
-      case 'partial': return 'bg-blue-100 text-blue-800'
-      case 'view': return 'bg-gray-100 text-gray-800'
-      default: return 'bg-gray-100 text-gray-800'
-    }
   }
 
   return (
