@@ -1,5 +1,6 @@
 import { supabase } from '../../lib/supabase'
 import type { Database } from '../../lib/database.types'
+import { checkStorageLimit, checkVaultLimit } from '../../lib/subscription-limits'
 
 type VaultRow = Database['public']['Tables']['vaults']['Row']
 type VaultInsert = Database['public']['Tables']['vaults']['Insert']
@@ -33,6 +34,25 @@ interface VaultItemData {
 export const vaultActions = {
   // Create Vault
   createVault: async (vaultData: VaultInsert) => {
+    // Check vault limit
+    if (vaultData.user_id) {
+      const vaultLimitCheck = await checkVaultLimit(vaultData.user_id)
+      if (!vaultLimitCheck.canCreate) {
+        throw new Error(`Vault limit reached. You can create up to ${vaultLimitCheck.limit} vault(s) on your ${vaultLimitCheck.tier} plan. Upgrade to create more vaults.`)
+      }
+
+      // Check storage limit if vault has initial data
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const vaultDataObj = (vaultData as any).vault_data as { size?: number } | null
+      const initialSize = vaultDataObj?.size || 0
+      if (initialSize > 0) {
+        const storageLimitCheck = await checkStorageLimit(vaultData.user_id, initialSize)
+        if (!storageLimitCheck.canUpload) {
+          throw new Error(`Storage limit exceeded. You're using ${storageLimitCheck.currentUsageGB}GB of ${storageLimitCheck.limitGB}GB. Upgrade to get more storage.`)
+        }
+      }
+    }
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data, error } = await (supabase.from('vaults') as any)
       .insert(vaultData)

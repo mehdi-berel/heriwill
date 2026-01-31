@@ -1,13 +1,10 @@
 import { supabase } from "@/lib/supabase"
 import { logger } from "@/lib/utils/logger"
-import { Database } from '@/lib/database.types'
-
-type Heir = Database['public']['Tables']['heirs']['Row']
 
 /**
  * Generate a unique invitation code
  */
-export function generateInvitationCode() {
+export function generateInvitationCode(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789'
   let code = ''
   for (let i = 0; i < 32; i++) {
@@ -32,17 +29,15 @@ export async function generateHeirInvitationLink(
     expiresAt.setDate(expiresAt.getDate() + expiresInDays)
 
     // Update heir with invitation code and expiration
-    const updateData = {
-      invitation_code: code,
-      invitation_status: 'pending',
-      invitation_expires_at: expiresAt.toISOString(),
-      invited_at: new Date().toISOString()
-    }
-
-    const { error } = await (supabase.from('heirs') as unknown as {
-      update: (data: unknown) => { eq: (column: string, value: string) => Promise<{ error: unknown }> }
-    })
-      .update(updateData)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase
+      .from('heirs') as any)
+      .update({
+        invitation_code: code,
+        invitation_status: 'pending',
+        invitation_expires_at: expiresAt.toISOString(),
+        invited_at: new Date().toISOString()
+      })
       .eq('id', heirId)
 
     if (error) {
@@ -111,17 +106,15 @@ export async function validateInvitationCode(
 ): Promise<{ valid: boolean; expired: boolean; message?: string }> {
   try {
     if (type === 'heir') {
-      const { data: heirData, error } = await supabase
+      const { data: heir, error } = await (supabase
         .from('heirs')
         .select('invitation_status, invitation_expires_at')
         .eq('invitation_code', code)
-        .single()
+        .single() as any)
 
-      if (error || !heirData) {
+      if (error || !heir) {
         return { valid: false, expired: false, message: 'Invitation not found' }
       }
-
-      const heir = heirData as unknown as Heir
 
       if (heir.invitation_status === 'accepted') {
         return { valid: false, expired: false, message: 'Invitation already accepted' }
@@ -162,18 +155,16 @@ export async function resendHeirInvitation(
 ): Promise<{ url: string; code: string } | null> {
   try {
     // Check current invitation status
-    const { data: heirData, error: fetchError } = await supabase
+    const { data: heir, error: fetchError } = await (supabase
       .from('heirs')
       .select('invitation_status')
       .eq('id', heirId)
-      .single()
+      .single() as any)
 
-    if (fetchError || !heirData) {
+    if (fetchError || !heir) {
       logger.error('Heir not found for resend', fetchError)
       return null
     }
-
-    const heir = heirData as unknown as Heir
 
     if (heir.invitation_status === 'accepted') {
       logger.warn('Cannot resend invitation - already accepted', { heirId })

@@ -5,16 +5,13 @@ import { useRouter } from "next/navigation"
 import { DashboardLayout } from "@/components/module/dashboard/dashboard-layout"
 import { SignOffMethodSelector } from "@/components/module/sign-off/sign-off-method-selector"
 import { SignOffSettingsModal } from "@/components/module/sign-off/sign-off-settings-modal"
+import { ManualTriggerSection } from "@/components/module/sign-off/manual-trigger-section"
+import { ScheduledDateSection } from "@/components/module/sign-off/scheduled-date-section"
+import { InactivitySection } from "@/components/module/sign-off/inactivity-section"
+import { TrustedContactSection } from "@/components/module/sign-off/trusted-contact-section"
+import { HeirNotificationSection } from "@/components/module/sign-off/heir-notification-section"
 import { Card, CardContent } from "@/components/ui/card"
-import { 
-  Power, 
-  AlertCircle, 
-  Clock, 
-  Calendar,
-  Users,
-  Bell,
-  Hand
-} from "lucide-react"
+import { Clock, Users, Bell, Calendar, Hand, Shield, AlertCircle, Power } from "lucide-react"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { supabase } from "@/lib/supabase"
@@ -85,6 +82,7 @@ export default function SignOffPage() {
   const [isActivated, setIsActivated] = useState(false)
   const [saving, setSaving] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [methodSettings, setMethodSettings] = useState<any>(null)
   const router = useRouter()
 
   useEffect(() => {
@@ -137,8 +135,19 @@ export default function SignOffPage() {
         setSelectedMethod(method)
         setActiveMethod(method)
         setIsActivated(true)
+        
+        // Store the settings data for display
+        setMethodSettings({
+          method: method,
+          scheduledDate: globalTrigger.global_scheduled_date,
+          inactivityDays: globalTrigger.global_trigger_settings?.inactivity_days,
+          trustedContactHeirId: globalTrigger.trusted_contact_heir_id,
+          heirNotificationFrequency: globalTrigger.global_trigger_settings?.heir_notification_frequency,
+          heirVerificationThreshold: globalTrigger.global_trigger_settings?.heir_verification_threshold,
+        })
       } else {
         setIsActivated(false)
+        setMethodSettings(null)
       }
     } catch (error) {
       console.error('Error loading sign-off settings:', error)
@@ -247,6 +256,34 @@ export default function SignOffPage() {
             }}
           />
         </div>
+
+        {/* Active Method Display Sections */}
+        {isActivated && methodSettings && (
+          <>
+            {activeMethod === 'manual_trigger' && user && (
+              <ManualTriggerSection userId={user.id} />
+            )}
+
+            {activeMethod === 'scheduled_date' && methodSettings.scheduledDate && (
+              <ScheduledDateSection scheduledDate={methodSettings.scheduledDate} />
+            )}
+
+            {activeMethod === 'inactivity' && methodSettings.inactivityDays && (
+              <InactivitySection inactivityDays={methodSettings.inactivityDays} />
+            )}
+
+            {activeMethod === 'trusted_contact' && methodSettings.trustedContactHeirId && (
+              <TrustedContactSection trustedContactHeirId={methodSettings.trustedContactHeirId} />
+            )}
+
+            {activeMethod === 'heir_notification' && methodSettings.heirNotificationFrequency && methodSettings.heirVerificationThreshold && (
+              <HeirNotificationSection 
+                notificationFrequency={methodSettings.heirNotificationFrequency}
+                verificationThreshold={methodSettings.heirVerificationThreshold}
+              />
+            )}
+          </>
+        )}
 
         {/* Settings Modal */}
         <SignOffSettingsModal

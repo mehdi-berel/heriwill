@@ -1,22 +1,31 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect } from "react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Copy, Check, Loader2, ExternalLink } from "lucide-react"
+import { logger } from "@/lib/utils/logger"
 
 interface NotaryInviteModalProps {
   isOpen: boolean
   onClose: () => void
+  userId: string
 }
 
-export function NotaryInviteModal({ isOpen, onClose }: NotaryInviteModalProps) {
+export function NotaryInviteModal({ isOpen, onClose, userId }: NotaryInviteModalProps) {
   const [loading, setLoading] = useState(false)
   const [copied, setCopied] = useState(false)
   const [invitationLink, setInvitationLink] = useState('')
   const [error, setError] = useState('')
+
+  // Auto-generate link when modal opens
+  useEffect(() => {
+    if (isOpen && !invitationLink && !loading) {
+      generateLink()
+    }
+  }, [isOpen])
 
   const generateInvitationCode = (): string => {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789'
@@ -27,7 +36,7 @@ export function NotaryInviteModal({ isOpen, onClose }: NotaryInviteModalProps) {
     return code
   }
 
-  const generateLink = useCallback(async () => {
+  const generateLink = async () => {
     setLoading(true)
     setError('')
     try {
@@ -38,27 +47,23 @@ export function NotaryInviteModal({ isOpen, onClose }: NotaryInviteModalProps) {
 
       const url = `${baseUrl}/invite?code=${code}&type=notary`
       setInvitationLink(url)
-    } catch {
+
+      logger.info('Notary invitation link generated', { userId, code })
+    } catch (error) {
+      logger.error('Failed to generate notary invitation link', error)
       setError('Failed to generate invitation link. Please try again.')
     } finally {
       setLoading(false)
     }
-  }, []) // Removed userId dependency as it's not used in generation
-
-  // Auto-generate link when modal opens
-  useEffect(() => {
-    if (isOpen && !invitationLink && !loading) {
-      generateLink()
-    }
-  }, [isOpen, invitationLink, loading, generateLink])
+  }
 
   const handleCopyLink = async () => {
     try {
       await navigator.clipboard.writeText(invitationLink)
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
-    } catch {
-      // Failed to copy
+    } catch (error) {
+      logger.error('Failed to copy link', error)
     }
   }
 

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
-import { logger } from '@/lib/utils/logger'
-import { Database } from '@/lib/database.types'
+import { getSubscriptionTier } from '@/lib/revenuecat'
 
 /**
  * Subscription Tier Enforcement Middleware
@@ -72,11 +71,11 @@ export async function getUserTier(userId: string): Promise<'free' | 'premium' | 
       return 'free'
     }
 
-    const user = data as Database['public']['Tables']['users']['Row']
-    const tier = user.subscription_tier as string
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const tier = (data as any).subscription_tier as string
     return (tier === 'premium' || tier === 'pro') ? tier : 'free'
   } catch (error) {
-    logger.error('Error getting user tier:', error)
+    console.error('Error getting user tier:', error)
     return 'free'
   }
 }
@@ -95,7 +94,7 @@ export async function canCreateVault(userId: string): Promise<{ allowed: boolean
     .eq('user_id', userId)
 
   if (error) {
-    logger.error('Error counting vaults:', error)
+    console.error('Error counting vaults:', error)
     return { allowed: false, limit: limits.vaults, current: 0 }
   }
 
@@ -124,7 +123,7 @@ export async function canCreateHeir(userId: string): Promise<{ allowed: boolean;
     .eq('is_active', true)
 
   if (error) {
-    logger.error('Error counting heirs:', error)
+    console.error('Error counting heirs:', error)
     return { allowed: false, limit: limits.heirs, current: 0 }
   }
 
@@ -161,13 +160,14 @@ export async function checkStorageLimit(
   const limits = TIER_LIMITS[tier]
 
   // Get current storage usage from vault_items
-  const { data, error } = await supabase
-    .from('vault_items')
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase
+    .from('vault_items') as any)
     .select('file_size')
     .eq('user_id', userId)
 
   if (error) {
-    logger.error('Error calculating storage:', error)
+    console.error('Error calculating storage:', error)
     return {
       allowed: false,
       limit: limits.storage,
@@ -176,8 +176,8 @@ export async function checkStorageLimit(
     }
   }
 
-  type VaultItemRow = Database['public']['Tables']['vault_items']['Row']
-  const currentUsage = (data as Pick<VaultItemRow, 'file_size'>[] || []).reduce((sum: number, item) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const currentUsage = (data || []).reduce((sum: number, item: any) => {
     return sum + (item.file_size || 0)
   }, 0)
 
@@ -272,7 +272,7 @@ export async function enforceTierLimit(
     // All checks passed
     return null
   } catch (error) {
-    logger.error('Error enforcing tier limit:', error)
+    console.error('Error enforcing tier limit:', error)
     return NextResponse.json(
       { error: 'Failed to validate subscription' },
       { status: 500 }

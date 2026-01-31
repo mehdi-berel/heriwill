@@ -1,5 +1,4 @@
 import { supabase } from "@/lib/supabase"
-import { logger } from "@/lib/utils/logger"
 
 export interface UploadResult {
   success: boolean
@@ -37,7 +36,7 @@ export async function uploadFile(
     const filePath = pathParts.join('/')
 
     // Upload file to Supabase Storage
-    const { error } = await supabase.storage
+    const { data, error } = await supabase.storage
       .from(bucket)
       .upload(filePath, file, {
         cacheControl: '3600',
@@ -45,7 +44,7 @@ export async function uploadFile(
       })
 
     if (error) {
-      logger.error('Supabase upload error:', error)
+      console.error('Supabase upload error:', error)
       return {
         success: false,
         error: error.message
@@ -63,7 +62,7 @@ export async function uploadFile(
       filePath: filePath
     }
   } catch (error) {
-    logger.error('File upload error:', error)
+    console.error('File upload error:', error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error occurred'
@@ -87,7 +86,7 @@ export async function deleteFile(
       .remove([filePath])
 
     if (error) {
-      logger.error('Supabase delete error:', error)
+      console.error('Supabase delete error:', error)
       return {
         success: false,
         error: error.message
@@ -96,7 +95,7 @@ export async function deleteFile(
 
     return { success: true }
   } catch (error) {
-    logger.error('File delete error:', error)
+    console.error('File delete error:', error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error occurred'
@@ -122,7 +121,7 @@ export async function getSignedUrl(
       .createSignedUrl(filePath, expiresIn)
 
     if (error) {
-      logger.error('Supabase signed URL error:', error)
+      console.error('Supabase signed URL error:', error)
       return {
         success: false,
         error: error.message
@@ -134,7 +133,7 @@ export async function getSignedUrl(
       signedUrl: data.signedUrl
     }
   } catch (error) {
-    logger.error('Signed URL error:', error)
+    console.error('Signed URL error:', error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error occurred'

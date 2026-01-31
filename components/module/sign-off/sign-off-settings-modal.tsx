@@ -126,6 +126,8 @@ export function SignOffSettingsModal({
   const combineTrustedContacts = useCallback(() => {
     const contacts: TrustedContact[] = []
     
+    console.log('Combining trusted contacts - Heirs:', heirs.length, 'Notaries:', notaries.length)
+    
     heirs.forEach(heir => {
       contacts.push({
         id: heir.id,
@@ -142,6 +144,7 @@ export function SignOffSettingsModal({
       })
     })
     
+    console.log('Total trusted contacts:', contacts.length)
     setTrustedContacts(contacts)
   }, [heirs, notaries])
 
@@ -268,21 +271,31 @@ export function SignOffSettingsModal({
           {method === 'trusted_contact' && (
             <div className="space-y-2">
               <Label htmlFor="trusted-contact">Select Trusted Contact</Label>
-              <Select value={trustedContactHeirId} onValueChange={setTrustedContactHeirId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Choose a trusted contact" />
-                </SelectTrigger>
-                <SelectContent>
-                  {trustedContacts.map((contact) => (
-                    <SelectItem key={contact.id} value={contact.id}>
-                      {contact.name} ({contact.type === 'heir' ? 'Heir' : 'Notary'})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-text-tertiary">
-                This person will be able to confirm your passing. You can choose from your heirs or notaries.
-              </p>
+              {trustedContacts.length === 0 ? (
+                <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                  <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                    No heirs or notaries available. Please add heirs or notaries first before configuring trusted contact detection.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <Select value={trustedContactHeirId} onValueChange={setTrustedContactHeirId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose a trusted contact" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {trustedContacts.map((contact) => (
+                        <SelectItem key={contact.id} value={contact.id}>
+                          {contact.name} ({contact.type === 'heir' ? 'Heir' : 'Notary'})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-text-tertiary">
+                    This person will be able to confirm your passing. You can choose from your heirs or notaries.
+                  </p>
+                </>
+              )}
             </div>
           )}
 

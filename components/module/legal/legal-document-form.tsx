@@ -1,11 +1,24 @@
 "use client"
 
 import { useState } from "react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Save, X, Upload, FileText, Shield, Gavel, User, Scale, FileCheck } from "lucide-react"
+import { Textarea } from "@/components/ui/textarea"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Checkbox } from "@/components/ui/checkbox"
+import { 
+  Save, 
+  X, 
+  Upload,
+  FileText,
+  Shield,
+  Gavel,
+  User,
+  Scale,
+  FileCheck
+} from "lucide-react"
 
 type DocumentType = 'will' | 'trust' | 'power_of_attorney' | 'healthcare_directive' | 'life_insurance' | 'deed' | 'other'
 
@@ -40,6 +53,7 @@ const DOCUMENT_TYPES = [
 export function LegalDocumentForm({ isOpen, onClose, onSave, initialData }: LegalDocumentFormProps) {
   const [loading, setLoading] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [tagInput, setTagInput] = useState('')
   
   const [formData, setFormData] = useState<LegalDocumentFormData>({
     title: initialData?.title || '',
@@ -57,6 +71,23 @@ export function LegalDocumentForm({ isOpen, onClose, onSave, initialData }: Lega
     if (file) {
       setSelectedFile(file)
     }
+  }
+
+  const handleAddTag = () => {
+    if (tagInput.trim() && !formData.tags.includes(tagInput.trim())) {
+      setFormData(prev => ({
+        ...prev,
+        tags: [...prev.tags, tagInput.trim()]
+      }))
+      setTagInput('')
+    }
+  }
+
+  const handleRemoveTag = (tag: string) => {
+    setFormData(prev => ({
+      ...prev,
+      tags: prev.tags.filter(t => t !== tag)
+    }))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
