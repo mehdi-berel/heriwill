@@ -172,7 +172,7 @@ export function HeirInvitationCard({
           <div className="pt-4">
             <div className="p-4 bg-success/10 rounded-lg border border-success/20">
               <p className="text-sm text-center">
-                You have accepted this invitation. You will be notified when access is granted according to {ownerName}'s instructions.
+                You have accepted this invitation. You will be notified when access is granted according to {ownerName}&apos;s instructions.
               </p>
             </div>
           </div>

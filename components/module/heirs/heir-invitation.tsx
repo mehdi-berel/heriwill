@@ -6,7 +6,6 @@ import {
   Mail, 
   Copy, 
   CheckCircle,
-  QrCode,
   Share2
 } from "lucide-react"
 import { useState } from "react"
