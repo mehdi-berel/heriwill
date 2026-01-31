@@ -130,6 +130,7 @@ CREATE TABLE public.legal (
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
   user_id uuid,
+  metadata jsonb DEFAULT '{}'::jsonb,
   CONSTRAINT legal_pkey PRIMARY KEY (id),
   CONSTRAINT legal_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
 );

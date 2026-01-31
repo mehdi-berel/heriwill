@@ -31,7 +31,7 @@ interface Notary {
 interface VaultAssignProps {
   vaultId: string
   vaultName: string
-  vaultCategory?: 'share_after_death' | 'delete_after_death' | 'sign_off_after_death'
+  vaultCategory?: 'share' | 'delete' | 'pro'
   assignedHeirIds: string[]
   onAssignHeirs: (heirIds: string[]) => void
   onClose?: () => void
@@ -39,7 +39,7 @@ interface VaultAssignProps {
 
 export function VaultAssign({ 
   vaultName,
-  vaultCategory = 'share_after_death',
+  vaultCategory = 'share',
   assignedHeirIds, 
   onAssignHeirs,
   onClose 
@@ -50,7 +50,7 @@ export function VaultAssign({
   const [searchTerm, setSearchTerm] = useState('')
   const [loading, setLoading] = useState(true)
   
-  const isNotaryMode = vaultCategory === 'sign_off_after_death'
+  const isNotaryMode = vaultCategory === 'pro'
 
   const loadHeirs = useCallback(async () => {
     try {

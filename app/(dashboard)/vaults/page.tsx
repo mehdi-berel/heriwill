@@ -34,7 +34,7 @@ interface Vault {
   user_id: string
   name: string
   description: string | null
-  category: 'share_after_death' | 'delete_after_death' | 'sign_off_after_death'
+  category: 'share' | 'delete' | 'pro'
   is_encrypted: boolean | null
   is_locked: boolean | null
   is_favorite: boolean | null
@@ -59,7 +59,7 @@ export default function VaultsPage() {
   const [vaults, setVaults] = useState<Vault[]>([])
   const [selectedVault, setSelectedVault] = useState<Vault | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
-  const [selectedCategory, setSelectedCategory] = useState<'share_after_death' | 'delete_after_death' | 'sign_off_after_death' | null>(null)
+  const [selectedCategory, setSelectedCategory] = useState<'share' | 'delete' | 'pro' | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [editingVault, setEditingVault] = useState<Vault | null>(null)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
@@ -103,8 +103,8 @@ export default function VaultsPage() {
             
             // Lock vaults for free users:
             // 1. Lock all vaults after the first one (index > 0)
-            // 2. Lock pro-tier vaults (sign_off_after_death category)
-            const isProVault = (vault as { category?: string }).category === 'sign_off_after_death'
+            // 2. Lock pro-tier vaults (pro category)
+            const isProVault = (vault as { category?: string }).category === 'pro'
             const shouldLock = isFreeUser && (index > 0 || isProVault)
             
             return {
@@ -188,7 +188,7 @@ export default function VaultsPage() {
           user_id: user.id,
           name: formData.name,
           description: formData.description || null,
-          category: formData.category || 'share_after_death',
+          category: formData.category || 'share',
           is_encrypted: formData.is_encrypted || false,
           is_favorite: false, // Default to false
           is_locked: false,
@@ -381,28 +381,28 @@ export default function VaultsPage() {
           
           <div className="flex justify-center gap-2 mb-4">
             <Button
-              variant={selectedCategory === 'share_after_death' ? 'default' : 'outline'}
+              variant={selectedCategory === 'share' ? 'default' : 'outline'}
               size="sm"
-              onClick={() => setSelectedCategory(selectedCategory === 'share_after_death' ? null : 'share_after_death')}
+              onClick={() => setSelectedCategory(selectedCategory === 'share' ? null : 'share')}
               className="rounded-lg"
             >
-              Share ({vaults.filter(v => v.category === 'share_after_death').length})
+              Share ({vaults.filter(v => v.category === 'share').length})
             </Button>
             <Button
-              variant={selectedCategory === 'delete_after_death' ? 'default' : 'outline'}
+              variant={selectedCategory === 'delete' ? 'default' : 'outline'}
               size="sm"
-              onClick={() => setSelectedCategory(selectedCategory === 'delete_after_death' ? null : 'delete_after_death')}
+              onClick={() => setSelectedCategory(selectedCategory === 'delete' ? null : 'delete')}
               className="rounded-lg"
             >
-              Delete ({vaults.filter(v => v.category === 'delete_after_death').length})
+              Delete ({vaults.filter(v => v.category === 'delete').length})
             </Button>
             <Button
-              variant={selectedCategory === 'sign_off_after_death' ? 'default' : 'outline'}
+              variant={selectedCategory === 'pro' ? 'default' : 'outline'}
               size="sm"
-              onClick={() => setSelectedCategory(selectedCategory === 'sign_off_after_death' ? null : 'sign_off_after_death')}
+              onClick={() => setSelectedCategory(selectedCategory === 'pro' ? null : 'pro')}
               className="rounded-lg"
             >
-              Pro ({vaults.filter(v => v.category === 'sign_off_after_death').length})
+              Pro ({vaults.filter(v => v.category === 'pro').length})
             </Button>
           </div>
           

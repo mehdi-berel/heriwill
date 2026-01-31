@@ -41,7 +41,7 @@ interface Vault {
   id: string
   name: string
   description: string
-  category: 'share_after_death' | 'delete_after_death' | 'sign_off_after_death'
+  category: 'share' | 'delete' | 'pro'
   is_encrypted: boolean
   is_locked: boolean
   is_favorite: boolean
@@ -284,26 +284,31 @@ export default function VaultDetailPage() {
     }
   }
 
-  const handleSaveItem = async (itemData: ItemData) => {
+  const handleSaveItem = async (itemData: VaultItem | ItemData) => {
     if (!vault || !user) return
 
     try {
+      // Handle both VaultItem (from ItemForm) and ItemData (legacy) formats
+      const isVaultItem = 'isEncrypted' in itemData
+      const metadata = isVaultItem ? (itemData as VaultItem).metadata : (itemData.metadata || {})
+      
       if (itemData.id) {
         // Update existing item
         await vaultItemActions.updateVaultItem(itemData.id, {
           title_encrypted: itemData.title,
           item_type: itemData.type,
-          tags: itemData.tags
+          tags: itemData.tags,
+          metadata: JSON.parse(JSON.stringify(metadata))
         })
       } else {
-        // Create new item
+        // Create new item with proper type and metadata
         await vaultItemActions.createVaultItem({
           user_id: user.id,
           vault_id: vaultId,
           title_encrypted: itemData.title,
           item_type: itemData.type,
           tags: itemData.tags || [],
-          metadata: (itemData.metadata || {}) as Record<string, unknown>
+          metadata: JSON.parse(JSON.stringify(metadata))
         })
       }
       
@@ -376,12 +381,12 @@ export default function VaultDetailPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {vault.category === 'sign_off_after_death' ? (
+            {vault.category === 'pro' ? (
               <Button variant="outline" onClick={handleAssignHeirs}>
                 <Scale className="h-4 w-4 mr-2" />
                 Assign Notary
               </Button>
-            ) : vault.category !== 'delete_after_death' && (
+            ) : vault.category !== 'delete' && (
               <Button variant="outline" onClick={handleAssignHeirs}>
                 <Users className="h-4 w-4 mr-2" />
                 Assign Heirs
@@ -436,7 +441,7 @@ export default function VaultDetailPage() {
         {/* Assign Heirs/Notary Modal */}
         <Dialog open={showAssignModal} onOpenChange={setShowAssignModal}>
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-            <DialogTitle>{vault?.category === 'sign_off_after_death' ? 'Assign Notary to Vault' : 'Assign Heirs to Vault'}</DialogTitle>
+            <DialogTitle>{vault?.category === 'pro' ? 'Assign Notary to Vault' : 'Assign Heirs to Vault'}</DialogTitle>
             {vault && (
               <VaultAssign
                 vaultId={vault.id}

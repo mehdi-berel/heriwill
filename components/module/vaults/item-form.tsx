@@ -72,7 +72,7 @@ interface ItemFormProps {
   onSave: (item: VaultItem) => Promise<void>
   initialData?: VaultItem
   vaultId: string
-  vaultCategory?: 'share_after_death' | 'delete_after_death' | 'sign_off_after_death'
+  vaultCategory?: 'share' | 'delete' | 'pro'
 }
 
 const ITEM_TYPES = [
@@ -127,7 +127,7 @@ export function ItemForm({ isOpen, onClose, onSave, initialData, vaultCategory }
     tags: initialData?.tags || [],
   }))
   
-  const isProVault = vaultCategory === 'sign_off_after_death'
+  const isProVault = vaultCategory === 'pro'
 
   const handleTypeChange = (type: VaultItemType) => {
     setFormData(prev => ({

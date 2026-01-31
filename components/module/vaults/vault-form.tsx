@@ -16,7 +16,7 @@ import {
 interface VaultFormData {
   name: string
   description: string
-  category: 'share_after_death' | 'delete_after_death' | 'sign_off_after_death'
+  category: 'share' | 'delete' | 'pro'
   is_encrypted: boolean
   is_favorite: boolean
   tags: string[]
@@ -37,7 +37,7 @@ export function VaultForm({ onSubmit, onCancel, initialData }: VaultFormProps) {
   const [formData, setFormData] = useState<VaultFormData>({
     name: initialData?.name || '',
     description: initialData?.description || '',
-    category: initialData?.category || 'share_after_death',
+    category: initialData?.category || 'share',
     is_encrypted: initialData?.is_encrypted || false,
     is_favorite: initialData?.is_favorite || false,
     tags: initialData?.tags || [],
@@ -115,9 +115,9 @@ export function VaultForm({ onSubmit, onCancel, initialData }: VaultFormProps) {
             <Label>Vault Category</Label>
             <div className="flex gap-2 mt-2">
               {[
-                { value: 'share_after_death', label: 'Share After Death', icon: Share2, isPro: false },
-                { value: 'delete_after_death', label: 'Delete After Death', icon: Trash2, isPro: false },
-                { value: 'sign_off_after_death', label: 'Sign Off After Death (Pro)', icon: Lock, isPro: true }
+                { value: 'share', label: 'Share After Death', icon: Share2, isPro: false },
+                { value: 'delete', label: 'Delete After Death', icon: Trash2, isPro: false },
+                { value: 'pro', label: 'Sign Off After Death (Pro)', icon: Lock, isPro: true }
               ].map((category) => {
                 const isDisabled = category.isPro && !isProUser
                 return (
