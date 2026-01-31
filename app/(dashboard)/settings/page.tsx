@@ -110,8 +110,6 @@ function SettingsPageContent() {
           <TabsContent value="billing">
             <BillingSettings 
               subscriptionTier={profile?.subscription_tier as string}
-              subscriptionStatus={profile?.subscription_status as string}
-              subscriptionExpiresAt={profile?.subscription_expires_at as string}
             />
           </TabsContent>
         </Tabs>

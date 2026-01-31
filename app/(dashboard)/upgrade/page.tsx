@@ -161,9 +161,6 @@ function UpgradePageContent() {
             <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
               Simple, Transparent Pricing
             </h1>
-            <p className="text-lg md:text-xl text-gray-400 mb-6 max-w-3xl mx-auto">
-              Choose the plan that&apos;s right for you. Start with Classic for free, or upgrade to Legacy for advanced features and peace of mind.
-            </p>
             {currentPlan !== 'free' && (
               <Badge className="bg-gradient-to-r from-primary-600 to-indigo-600 text-white text-sm px-4 py-1.5">
                 Current Plan: {currentPlan === 'premium' ? 'Legacy' : currentPlan.charAt(0).toUpperCase() + currentPlan.slice(1)}
@@ -200,13 +197,13 @@ function UpgradePageContent() {
         </div>
 
         {/* Pricing Cards */}
-        <div className="grid md:grid-cols-3 gap-6 md:gap-8 max-w-6xl mx-auto mb-12 relative z-10">
+        <div className="flex overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-4 -mx-6 px-6 md:overflow-visible md:snap-none md:pb-0 md:mx-0 md:px-0 md:grid md:grid-cols-3 gap-6 md:gap-8 max-w-6xl mx-auto mb-12 relative z-10">
           {/* Classic Plan (Free) */}
           <Card className={`rounded-xl md:rounded-2xl border-2 ${
             currentPlan === 'free'
               ? 'border-primary-500 bg-gradient-to-br from-gray-900/80 to-primary-900/20 shadow-xl shadow-primary-500/20'
               : 'border-gray-800 bg-gray-900/60'
-          } p-6 md:p-8 relative transform transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl`}>
+          } p-6 md:p-8 relative transform transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl flex-shrink-0 w-[85vw] md:w-auto snap-center`}>
             {/* Plan Icon */}
             <div className="mb-4">
               <div className="inline-flex p-2 rounded-lg bg-gray-800/50 border border-gray-700">
@@ -253,7 +250,7 @@ function UpgradePageContent() {
           </Card>
 
           {/* Legacy Plan (Premium) */}
-          <Card className={`rounded-xl md:rounded-2xl border-2 border-primary-500 bg-gradient-to-br from-gray-900/80 to-primary-900/20 shadow-xl shadow-primary-500/20 p-6 md:p-8 relative transform transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl md:scale-105`}>
+          <Card className={`rounded-xl md:rounded-2xl border-2 border-primary-500 bg-gradient-to-br from-gray-900/80 to-primary-900/20 shadow-xl shadow-primary-500/20 p-6 md:p-8 relative transform transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl md:scale-105 flex-shrink-0 w-[85vw] md:w-auto snap-center`}>
             {/* Plan Icon */}
             <div className="mb-4">
               <div className="inline-flex p-2 rounded-lg bg-gradient-to-br from-primary-600/20 to-indigo-600/20 border border-primary-500/30">
@@ -300,10 +297,11 @@ function UpgradePageContent() {
             </div>
 
             {/* CTA Button */}
-            <button
+            <Button
               onClick={() => handlePurchase('premium')}
               disabled={purchasing !== null || currentPlan === 'premium' || currentPlan === 'pro'}
-              className="w-full py-3 px-4 rounded-xl font-bold text-base transition-all duration-300 transform active:scale-95 flex items-center justify-center bg-gradient-to-r from-primary-600 to-indigo-600 hover:from-primary-700 hover:to-indigo-700 text-white shadow-lg shadow-primary-500/30 hover:shadow-xl hover:shadow-primary-500/40 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full"
+              size="lg"
             >
               {purchasing === 'premium' ? (
                 <>
@@ -315,7 +313,7 @@ function UpgradePageContent() {
               ) : (
                 'Subscribe to Legacy'
               )}
-            </button>
+            </Button>
           </Card>
 
           {/* Pro Plan */}
@@ -323,7 +321,7 @@ function UpgradePageContent() {
             currentPlan === 'pro'
               ? 'border-amber-500 bg-gradient-to-br from-gray-900/80 to-amber-900/20 shadow-xl shadow-amber-500/20'
               : 'border-gray-800 bg-gray-900/60'
-          } p-6 md:p-8 relative transform transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl`}>
+          } p-6 md:p-8 relative transform transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl flex-shrink-0 w-[85vw] md:w-auto snap-center`}>
             {currentPlan === 'pro' && (
               <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-amber-600 to-orange-600 text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-lg flex items-center gap-1">
                 <Crown size={12} className="fill-current" />
@@ -385,14 +383,12 @@ function UpgradePageContent() {
             </div>
 
             {/* CTA Button */}
-            <button
+            <Button
               onClick={() => handlePurchase('pro')}
               disabled={purchasing !== null || currentPlan === 'pro'}
-              className={`w-full py-3 px-4 rounded-xl font-bold text-base transition-all duration-300 transform active:scale-95 flex items-center justify-center ${
-                currentPlan === 'pro'
-                  ? 'bg-gray-800 text-white border-2 border-gray-700'
-                  : 'bg-gradient-to-r from-primary-600 to-indigo-600 hover:from-primary-700 hover:to-indigo-700 text-white shadow-lg shadow-primary-500/30 hover:shadow-xl hover:shadow-primary-500/40'
-              } disabled:opacity-50 disabled:cursor-not-allowed`}
+              className="w-full"
+              size="lg"
+              variant={currentPlan === 'pro' ? 'secondary' : 'default'}
             >
               {purchasing === 'pro' ? (
                 <>
@@ -404,7 +400,7 @@ function UpgradePageContent() {
               ) : (
                 'Upgrade to Pro'
               )}
-            </button>
+            </Button>
           </Card>
         </div>
       </div>

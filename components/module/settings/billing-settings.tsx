@@ -3,24 +3,18 @@
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { CreditCard, Download, AlertTriangle, CheckCircle, Crown, Zap, Loader2, ExternalLink } from "lucide-react"
 import { useRevenueCat } from "@/contexts/RevenueCatContext"
 import { getOfferings, purchasePackage, getCustomerInfo, getSubscriptionTier } from "@/lib/revenuecat"
-import { isProPackage, isMonthlyPackage, isYearlyPackage, getCheckoutUrl } from "@/lib/revenuecat-config"
+import { isProPackage, isMonthlyPackage, isYearlyPackage } from "@/lib/revenuecat-config"
 import { SyncSubscriptionButton } from "./sync-subscription-button"
-import { supabase } from "@/lib/supabase"
 
 interface BillingSettingsProps {
   subscriptionTier?: string
-  subscriptionStatus?: string
-  subscriptionExpiresAt?: string
 }
 
 export function BillingSettings({
   subscriptionTier: propTier,
-  subscriptionStatus: propStatus,
-  subscriptionExpiresAt: propExpiresAt
 }: BillingSettingsProps) {
   const { entitlements, loading: contextLoading, refreshEntitlements } = useRevenueCat()
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -28,19 +22,9 @@ export function BillingSettings({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [customerInfo, setCustomerInfo] = useState<any>(null)
   const [subscriptionTier, setSubscriptionTier] = useState(propTier || 'free')
-  const [subscriptionStatus, setSubscriptionStatus] = useState(propStatus || 'active')
-  const [subscriptionExpiresAt] = useState(propExpiresAt)
   const [loading, setLoading] = useState(false)
   const [purchaseLoading, setPurchaseLoading] = useState<string | null>(null)
   const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'yearly'>('monthly')
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return 'N/A'
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    })
-  }
 
   const getPlanDetails = () => {
     switch (subscriptionTier) {
@@ -102,19 +86,26 @@ export function BillingSettings({
           getSubscriptionTier()
         ])
         
-        setOfferings(offeringsData)
-        setCustomerInfo(customerData)
+        // Only set offerings if data is available
+        if (offeringsData) {
+          setOfferings(offeringsData)
+        }
+        
+        if (customerData) {
+          setCustomerInfo(customerData)
+        }
         
         // Use database tier (propTier) if provided, otherwise use RevenueCat tier
-        if (!propTier) {
+        if (!propTier && revenueCatTier) {
           setSubscriptionTier(revenueCatTier)
         }
         
-        if (entitlements.length > 0) {
-          setSubscriptionStatus('active')
-        }
+        // Entitlements loaded successfully
       } catch (error) {
-        console.error('Error loading RevenueCat data:', error)
+        // Silently handle errors - RevenueCat may not be configured
+        if (process.env.NODE_ENV === 'development') {
+          console.debug('RevenueCat data not available:', error)
+        }
       } finally {
         setLoading(false)
       }
@@ -133,7 +124,6 @@ export function BillingSettings({
       
       const tier = await getSubscriptionTier()
       setSubscriptionTier(tier)
-      setSubscriptionStatus('active')
       
       alert('Subscription purchased successfully!')
     } catch (error: unknown) {
@@ -154,9 +144,6 @@ export function BillingSettings({
       window.open(customerInfo.managementURL, '_blank')
     }
   }
-
-  const planDetails = getPlanDetails()
-  const PlanIcon = planDetails.icon
 
   if (contextLoading || loading) {
     return (
@@ -413,105 +400,6 @@ export function BillingSettings({
         </CardContent>
       </Card>
 
-      {/* Current Plan */}
-      <Card className="border-gray-700">
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <CreditCard className="h-5 w-5 text-primary-400" />
-            <CardTitle>Current Plan</CardTitle>
-          </div>
-          <CardDescription>
-            Manage your subscription and billing information
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className={`p-6 ${planDetails.bgColor} border rounded-lg`} style={{ borderColor: '#232629' }}>
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className={`p-3 ${planDetails.bgColor} rounded-lg`}>
-                  <PlanIcon className={`h-6 w-6 ${planDetails.color}`} />
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold">{planDetails.name}</h3>
-                  <p className="text-2xl font-bold text-primary-400 mt-1">{planDetails.price}</p>
-                </div>
-              </div>
-              <Badge className={subscriptionStatus === 'active' ? 'bg-status-success' : 'bg-status-warning'}>
-                {subscriptionStatus}
-              </Badge>
-            </div>
-
-            <div className="space-y-2 mb-4">
-              {planDetails.features.map((feature, index) => (
-                <div key={index} className="flex items-center gap-2 text-sm">
-                  <CheckCircle className="h-4 w-4 text-status-success" />
-                  <span>{feature}</span>
-                </div>
-              ))}
-            </div>
-
-            {subscriptionExpiresAt && (
-              <div className="pt-4 border-t" style={{ borderColor: '#232629' }}>
-                <p className="text-sm text-text-tertiary">
-                  {subscriptionStatus === 'active' ? 'Renews on' : 'Expires on'}: {formatDate(subscriptionExpiresAt)}
-                </p>
-              </div>
-            )}
-          </div>
-
-          {subscriptionTier === 'free' && (
-            <div className="flex gap-3">
-              <Button 
-                className="flex-1 bg-primary-500 hover:bg-primary-600"
-                onClick={async () => {
-                  const { data: { user } } = await supabase.auth.getUser()
-                  if (user) {
-                    window.location.href = getCheckoutUrl('premium', 'monthly', user.id)
-                  }
-                }}
-              >
-                Upgrade to Legacy
-              </Button>
-              <Button 
-                className="flex-1 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700"
-                onClick={async () => {
-                  const { data: { user } } = await supabase.auth.getUser()
-                  if (user) {
-                    window.location.href = getCheckoutUrl('pro', 'monthly', user.id)
-                  }
-                }}
-              >
-                Upgrade to Pro
-              </Button>
-            </div>
-          )}
-
-          {subscriptionTier === 'premium' && (
-            <div className="flex gap-3">
-              <Button 
-                className="flex-1 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700"
-                onClick={async () => {
-                  const { data: { user } } = await supabase.auth.getUser()
-                  if (user) {
-                    window.location.href = getCheckoutUrl('pro', 'monthly', user.id)
-                  }
-                }}
-              >
-                Upgrade to Pro
-              </Button>
-              <Button variant="outline" className="flex-1">
-                Cancel Subscription
-              </Button>
-            </div>
-          )}
-
-          {subscriptionTier === 'pro' && (
-            <Button variant="outline" className="w-full">
-              Cancel Subscription
-            </Button>
-          )}
-        </CardContent>
-      </Card>
     </div>
   )
 }

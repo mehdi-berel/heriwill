@@ -146,7 +146,7 @@ export default function SignOffPage() {
         const settings = globalTrigger.global_trigger_settings as Record<string, unknown> || {}
         setTriggerSettings({
           inactivityDays: settings.inactivityDays as number,
-          trustedContactHeirId: settings.trustedContactHeirId as string,
+          trustedContactHeirId: globalTrigger.trusted_contact_heir_id as string,
           notificationFrequency: settings.notificationFrequency as number,
           verificationThreshold: settings.verificationThreshold as number,
           scheduledDate: globalTrigger.global_scheduled_date as string

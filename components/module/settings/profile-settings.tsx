@@ -189,7 +189,6 @@ export function ProfileSettings() {
             <Button
               onClick={onSave}
               disabled={isSaving}
-              className="bg-primary-500 hover:bg-primary-600"
             >
               {isSaving ? (
                 'Saving...'

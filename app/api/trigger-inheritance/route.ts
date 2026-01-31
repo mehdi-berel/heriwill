@@ -1,6 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerSupabaseClient } from '@/lib/supabase'
+import { createClient } from '@supabase/supabase-js'
 import { logger } from '@/lib/utils/logger'
+import { Database } from '@/lib/database.types'
+
+// Service role client for admin operations (bypasses RLS)
+function createServiceRoleClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+  
+  return createClient<Database>(supabaseUrl, supabaseServiceKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  })
+}
 
 // Type definitions for database operations
 type UserData = {
@@ -39,7 +53,8 @@ export async function POST(request: NextRequest) {
 
     logger.info(`Manual trigger initiated for user ${userId}`)
 
-    const supabase = await createServerSupabaseClient()
+    // Use service role client to bypass RLS for inheritance operations
+    const supabase = createServiceRoleClient()
 
     // 1. Get user data (from auth or users table)
     let userData: UserData | null = null
