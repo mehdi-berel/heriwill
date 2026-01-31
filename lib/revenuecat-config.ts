@@ -25,7 +25,8 @@ export const REVENUECAT_OFFERING = {
  * RevenueCat Paywall Configuration
  */
 export const REVENUECAT_PAYWALL = {
-  URL: 'https://pay.rev.cat/fjyfycitnereerpd/',
+  PREMIUM_BASE_URL: 'https://pay.rev.cat/fjyfycitnereerpd',
+  PRO_BASE_URL: 'https://pay.rev.cat/kpsocvhsrpuwhvpw',
 } as const
 
 /**
@@ -97,4 +98,21 @@ export function isMonthlyPackage(identifier: string): boolean {
 export function isYearlyPackage(identifier: string): boolean {
   const lowerIdentifier = identifier.toLowerCase()
   return PACKAGE_PATTERNS.YEARLY.some(pattern => lowerIdentifier.includes(pattern))
+}
+
+/**
+ * Get the checkout URL for a specific tier and billing period with user ID
+ * @param tier - The subscription tier ('premium' or 'pro')
+ * @param period - The billing period ('monthly' or 'yearly')
+ * @param userId - The user's ID to include in the checkout URL
+ * @returns The complete checkout URL
+ */
+export function getCheckoutUrl(tier: 'premium' | 'pro', period: 'monthly' | 'yearly', userId: string): string {
+  const baseUrl = tier === 'premium' 
+    ? REVENUECAT_PAYWALL.PREMIUM_BASE_URL 
+    : REVENUECAT_PAYWALL.PRO_BASE_URL
+  
+  const packageId = period === 'monthly' ? '%24rc_monthly' : '%24rc_annual'
+  
+  return `${baseUrl}/${userId}/checkout?package_id=${packageId}`
 }

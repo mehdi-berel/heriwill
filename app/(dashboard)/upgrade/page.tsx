@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Check, Crown, Loader2, Zap, Gift } from "lucide-react"
 import { supabase } from "@/lib/supabase"
-import { REVENUECAT_PAYWALL } from "@/lib/revenuecat-config"
+import { getCheckoutUrl } from "@/lib/revenuecat-config"
 import { User } from "@supabase/supabase-js"
 
 interface UserProfile {
@@ -37,6 +37,7 @@ function UpgradePageContent() {
   const [currentPlan, setCurrentPlan] = useState<'free' | 'premium' | 'pro'>('free')
   const [loading, setLoading] = useState(true)
   const [purchasing, setPurchasing] = useState<string | null>(null)
+  const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'yearly'>('monthly')
 
   useEffect(() => {
     const getUser = async () => {
@@ -69,9 +70,8 @@ function UpgradePageContent() {
     setPurchasing(plan)
     
     try {
-      // Redirect to RevenueCat paywall with user ID as path parameter
-      // Format: https://pay.rev.cat/{token}/{app_user_id}
-      const paywallUrl = `${REVENUECAT_PAYWALL.URL}${encodeURIComponent(user.id)}`
+      // Redirect to RevenueCat paywall with user ID and selected plan
+      const paywallUrl = getCheckoutUrl(plan, billingPeriod, user.id)
       window.location.href = paywallUrl
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to redirect to payment page.'
@@ -170,6 +170,33 @@ function UpgradePageContent() {
               </Badge>
             )}
           </div>
+
+          {/* Billing Period Toggle */}
+          <div className="flex justify-center mt-8">
+            <div className="inline-flex rounded-lg border border-gray-700 bg-gray-800/50 p-1">
+              <button
+                onClick={() => setBillingPeriod('monthly')}
+                className={`px-6 py-2 rounded-md text-sm font-medium transition-all ${
+                  billingPeriod === 'monthly'
+                    ? 'bg-primary-500 text-white shadow-lg'
+                    : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                Monthly
+              </button>
+              <button
+                onClick={() => setBillingPeriod('yearly')}
+                className={`px-6 py-2 rounded-md text-sm font-medium transition-all ${
+                  billingPeriod === 'yearly'
+                    ? 'bg-primary-500 text-white shadow-lg'
+                    : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                Yearly
+                <span className="ml-1 text-xs text-green-400">Save 17%</span>
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* Pricing Cards */}
@@ -236,9 +263,20 @@ function UpgradePageContent() {
 
             <h3 className="text-xl md:text-2xl font-bold mb-2 text-white">Legacy</h3>
             <div className="flex items-baseline mb-3">
-              <span className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">€10</span>
-              <span className="text-primary-400 ml-2 text-lg font-medium">/month</span>
+              <span className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
+                {billingPeriod === 'monthly' ? '€10' : '€100'}
+              </span>
+              <span className="text-primary-400 ml-2 text-lg font-medium">
+                /{billingPeriod === 'monthly' ? 'month' : 'year'}
+              </span>
             </div>
+            {billingPeriod === 'yearly' && (
+              <div className="mb-2">
+                <Badge className="bg-green-500/20 text-green-400 border border-green-500/30 text-xs">
+                  Save €20/year
+                </Badge>
+              </div>
+            )}
             <div className="mb-4"></div>
             <p className="text-gray-400 text-sm mb-6 leading-relaxed">
               Complete solution for families and their digital assets
@@ -306,9 +344,20 @@ function UpgradePageContent() {
 
             <h3 className="text-xl md:text-2xl font-bold mb-2 text-white">Pro</h3>
             <div className="flex items-baseline mb-3">
-              <span className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">€20</span>
-              <span className="text-amber-400 ml-2 text-lg font-medium">/month</span>
+              <span className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
+                {billingPeriod === 'monthly' ? '€20' : '€200'}
+              </span>
+              <span className="text-amber-400 ml-2 text-lg font-medium">
+                /{billingPeriod === 'monthly' ? 'month' : 'year'}
+              </span>
             </div>
+            {billingPeriod === 'yearly' && (
+              <div className="mb-2">
+                <Badge className="bg-green-500/20 text-green-400 border border-green-500/30 text-xs">
+                  Save €40/year
+                </Badge>
+              </div>
+            )}
             <div className="mb-4"></div>
             <p className="text-gray-400 text-sm mb-6 leading-relaxed">
               Advanced features for comprehensive estate planning

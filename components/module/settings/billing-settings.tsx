@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { CreditCard, Download, AlertTriangle, CheckCircle, Crown, Zap, Loader2, ExternalLink } from "lucide-react"
 import { useRevenueCat } from "@/contexts/RevenueCatContext"
 import { getOfferings, purchasePackage, getCustomerInfo, getSubscriptionTier } from "@/lib/revenuecat"
-import { isProPackage, isMonthlyPackage, isYearlyPackage, REVENUECAT_PAYWALL } from "@/lib/revenuecat-config"
+import { isProPackage, isMonthlyPackage, isYearlyPackage, getCheckoutUrl } from "@/lib/revenuecat-config"
 import { SyncSubscriptionButton } from "./sync-subscription-button"
 import { supabase } from "@/lib/supabase"
 
@@ -466,7 +466,7 @@ export function BillingSettings({
                 onClick={async () => {
                   const { data: { user } } = await supabase.auth.getUser()
                   if (user) {
-                    window.location.href = `${REVENUECAT_PAYWALL.URL}${encodeURIComponent(user.id)}`
+                    window.location.href = getCheckoutUrl('premium', 'monthly', user.id)
                   }
                 }}
               >
@@ -477,7 +477,7 @@ export function BillingSettings({
                 onClick={async () => {
                   const { data: { user } } = await supabase.auth.getUser()
                   if (user) {
-                    window.location.href = `${REVENUECAT_PAYWALL.URL}${encodeURIComponent(user.id)}`
+                    window.location.href = getCheckoutUrl('pro', 'monthly', user.id)
                   }
                 }}
               >
@@ -493,7 +493,7 @@ export function BillingSettings({
                 onClick={async () => {
                   const { data: { user } } = await supabase.auth.getUser()
                   if (user) {
-                    window.location.href = `${REVENUECAT_PAYWALL.URL}${encodeURIComponent(user.id)}`
+                    window.location.href = getCheckoutUrl('pro', 'monthly', user.id)
                   }
                 }}
               >
