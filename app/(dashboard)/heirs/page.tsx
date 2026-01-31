@@ -5,12 +5,20 @@ import { useRouter } from "next/navigation"
 import { DashboardLayout } from "@/components/module/dashboard/dashboard-layout"
 import { HeirForm } from "@/components/module/heirs/heir-form"
 import { HeirList } from "@/components/module/heirs/heir-list"
+import { HeirInvitation } from "@/components/module/heirs/heir-invitation"
+import { HeirInvitationCard } from "@/components/module/heirs/heir-invitation-card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
-import { Search } from "lucide-react"
+import { Search, Users, Mail, Heart } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { User } from "@supabase/supabase-js"
+import { 
+  createHeirInvitation, 
+  getPendingInvitations, 
+  acceptHeirInvitation, 
+  rejectHeirInvitation 
+} from "@/app/actions/heirInvitations"
 
 interface UserProfile {
   id: string
@@ -50,7 +58,6 @@ interface HeirFormData {
   phone?: string
   relationship?: string
   heir_type?: 'family' | 'friend' | 'professional' | 'organization'
-  access_level: 'full' | 'partial' | 'view'
   notification_delay_days?: number
   is_active?: boolean
   notify_on_activation?: boolean
@@ -63,11 +70,14 @@ export default function HeirsPage() {
   const [loading, setLoading] = useState(true)
   const [heirs, setHeirs] = useState<Heir[]>([])
   const [searchTerm, setSearchTerm] = useState('')
-  const [selectedStatus, setSelectedStatus] = useState<'pending' | 'accepted' | 'active' | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [editingHeir, setEditingHeir] = useState<Heir | null>(null)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [heirToDelete, setHeirToDelete] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState<'heirs' | 'pending' | 'successors'>('heirs')
+  const [receivedInvitations, setReceivedInvitations] = useState<Heir[]>([])
+  const [showInvitationModal, setShowInvitationModal] = useState(false)
+  const [newlyCreatedHeir, setNewlyCreatedHeir] = useState<Heir | null>(null)
   const router = useRouter()
 
   const loadHeirs = useCallback(async (userId: string) => {
@@ -86,6 +96,15 @@ export default function HeirsPage() {
       setHeirs(data || [])
     } catch (error) {
       console.error('Error loading heirs:', error)
+    }
+  }, [])
+
+  const loadReceivedInvitations = useCallback(async () => {
+    try {
+      const invitations = await getPendingInvitations()
+      setReceivedInvitations(invitations as Heir[])
+    } catch (error) {
+      console.error('Error loading invitations:', error)
     }
   }, [])
 
@@ -111,8 +130,9 @@ export default function HeirsPage() {
       
       setProfile(profileData)
       
-      // Load heirs data
+      // Load heirs data and invitations
       await loadHeirs(user.id)
+      await loadReceivedInvitations()
       
       setLoading(false)
     }
@@ -129,41 +149,26 @@ export default function HeirsPage() {
     })
 
     return () => subscription.unsubscribe()
-  }, [router, loadHeirs])
+  }, [router, loadHeirs, loadReceivedInvitations])
 
   const handleAddHeir = async (formData: HeirFormData) => {
     if (!user) return
 
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase.from('heirs') as any)
-        .insert({
-          user_id: user.id,
-          full_name_encrypted: formData.full_name,
-          email_encrypted: formData.email,
-          phone_encrypted: formData.phone || null,
-          relationship: formData.relationship || null,
-          heir_type: formData.heir_type || 'family',
-          access_level: formData.access_level,
-          invitation_status: 'pending',
-          invitation_code: generateInvitationCode(),
-          invited_at: new Date().toISOString(),
-          invitation_expires_at: formData.invitation_expires_at || null,
-          notify_on_activation: true,
-          notification_delay_days: 0,
-          is_active: true
-        })
-        .select()
-        .single()
+      const result = await createHeirInvitation({
+        full_name: formData.full_name,
+        email: formData.email,
+        phone: formData.phone,
+        relationship: formData.relationship,
+        heir_type: formData.heir_type,
+        code_validity_days: 7
+      })
 
-      if (error) {
-        console.error('Error adding heir:', error)
-        return
-      }
-
-      if (data) {
-        setHeirs([data, ...heirs])
+      if (result.heir) {
+        setHeirs([result.heir, ...heirs])
+        setNewlyCreatedHeir(result.heir)
         setShowForm(false)
+        setShowInvitationModal(true)
       }
     } catch (error) {
       console.error('Error adding heir:', error)
@@ -182,7 +187,6 @@ export default function HeirsPage() {
           phone_encrypted: formData.phone || null,
           relationship: formData.relationship || null,
           heir_type: formData.heir_type || 'family',
-          access_level: formData.access_level,
           notification_delay_days: formData.notification_delay_days || 0,
           is_active: formData.is_active !== undefined ? formData.is_active : true
         })
@@ -242,8 +246,23 @@ export default function HeirsPage() {
     setShowForm(true)
   }
 
-  const generateInvitationCode = () => {
-    return Math.random().toString(36).substring(2, 10).toUpperCase()
+  const handleAcceptInvitation = async (invitationCode: string) => {
+    try {
+      await acceptHeirInvitation(invitationCode)
+      await loadReceivedInvitations()
+      await loadHeirs(user?.id || '')
+    } catch (error) {
+      console.error('Error accepting invitation:', error)
+    }
+  }
+
+  const handleDeclineInvitation = async (invitationCode: string) => {
+    try {
+      await rejectHeirInvitation(invitationCode)
+      await loadReceivedInvitations()
+    } catch (error) {
+      console.error('Error declining invitation:', error)
+    }
   }
 
   const handleSignOut = async () => {
@@ -280,30 +299,34 @@ export default function HeirsPage() {
             </Button>
           </div>
           
+          {/* 3-Tab System */}
           <div className="flex justify-center gap-2 mb-4">
             <Button
-              variant={selectedStatus === 'accepted' ? 'default' : 'outline'}
+              variant={activeTab === 'heirs' ? 'default' : 'outline'}
               size="sm"
-              onClick={() => setSelectedStatus(selectedStatus === 'accepted' ? null : 'accepted')}
-              className="rounded-lg"
+              onClick={() => setActiveTab('heirs')}
+              className="rounded-lg flex items-center gap-2"
             >
-              Accepted ({heirs.filter(h => h.has_accepted === true).length})
+              <Users className="h-4 w-4" />
+              Heirs ({heirs.filter(h => h.has_accepted === true).length})
             </Button>
             <Button
-              variant={selectedStatus === 'pending' ? 'default' : 'outline'}
+              variant={activeTab === 'pending' ? 'default' : 'outline'}
               size="sm"
-              onClick={() => setSelectedStatus(selectedStatus === 'pending' ? null : 'pending')}
-              className="rounded-lg"
+              onClick={() => setActiveTab('pending')}
+              className="rounded-lg flex items-center gap-2"
             >
-              Pending ({heirs.filter(h => h.invitation_status === 'pending').length})
+              <Mail className="h-4 w-4" />
+              Pending ({heirs.filter(h => h.invitation_status === 'pending' && !h.has_accepted).length + receivedInvitations.length})
             </Button>
             <Button
-              variant={selectedStatus === 'active' ? 'default' : 'outline'}
+              variant={activeTab === 'successors' ? 'default' : 'outline'}
               size="sm"
-              onClick={() => setSelectedStatus(selectedStatus === 'active' ? null : 'active')}
-              className="rounded-lg"
+              onClick={() => setActiveTab('successors')}
+              className="rounded-lg flex items-center gap-2"
             >
-              Successors ({heirs.filter(h => h.is_active === true).length})
+              <Heart className="h-4 w-4" />
+              Successors ({receivedInvitations.filter(h => h.has_accepted).length})
             </Button>
           </div>
           
@@ -320,16 +343,106 @@ export default function HeirsPage() {
           </div>
         </div>
 
-        {/* Heirs List */}
-        <HeirList
-          heirs={heirs}
-          onView={handleHeirSelect}
-          onEdit={handleHeirEdit}
-          onDelete={handleDeleteHeir}
-          searchTerm={searchTerm}
-          onSearchChange={setSearchTerm}
-          selectedStatus={selectedStatus}
-        />
+        {/* Content Area */}
+        {activeTab === 'heirs' && (
+          <HeirList
+            heirs={heirs.filter(h => h.has_accepted === true)}
+            onView={handleHeirSelect}
+            onEdit={handleHeirEdit}
+            onDelete={handleDeleteHeir}
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
+            selectedStatus={null}
+          />
+        )}
+
+        {activeTab === 'pending' && (
+          <div className="space-y-4">
+            {/* Invited heirs (not yet accepted) */}
+            <div className="space-y-3">
+              <h3 className="text-sm font-medium text-muted-foreground">People you invited</h3>
+              {heirs.filter(h => h.invitation_status === 'pending' && !h.has_accepted).length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground text-sm">
+                  <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p>No pending invitations sent</p>
+                </div>
+              ) : (
+                <HeirList
+                  heirs={heirs.filter(h => h.invitation_status === 'pending' && !h.has_accepted)}
+                  onView={handleHeirSelect}
+                  onEdit={handleHeirEdit}
+                  onDelete={handleDeleteHeir}
+                  searchTerm={searchTerm}
+                  onSearchChange={setSearchTerm}
+                  selectedStatus={null}
+                />
+              )}
+            </div>
+
+            {/* Received invitations */}
+            <div className="space-y-3 mt-6">
+              <h3 className="text-sm font-medium text-muted-foreground">Invitations you received</h3>
+              {receivedInvitations.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground text-sm">
+                  <Mail className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p>No invitations received</p>
+                </div>
+              ) : (
+                receivedInvitations.map((invitation) => (
+                  <HeirInvitationCard
+                    key={invitation.id}
+                    successor={{
+                      id: invitation.id,
+                      full_name: invitation.full_name_encrypted || 'Unknown',
+                      email: invitation.email_encrypted || undefined,
+                      phone: invitation.phone_encrypted || undefined,
+                      relationship: invitation.relationship || undefined,
+                      heir_type: invitation.heir_type || 'family',
+                      invitation_status: invitation.invitation_status || 'pending',
+                      invited_at: invitation.invited_at || ''
+                    }}
+                    ownerName={user?.email || 'Owner'}
+                    isAccepted={invitation.has_accepted || false}
+                    onAccept={() => handleAcceptInvitation(invitation.invitation_code || '')}
+                    onDecline={() => handleDeclineInvitation(invitation.invitation_code || '')}
+                  />
+                ))
+              )}
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'successors' && (
+          <div className="space-y-4">
+            {receivedInvitations.filter(h => h.has_accepted).length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                <Heart className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>You are not a successor for anyone yet</p>
+                <p className="text-sm mt-2">Accept invitations in the Pending tab to become a successor</p>
+              </div>
+            ) : (
+              receivedInvitations.filter(h => h.has_accepted).map((successor) => (
+                <HeirInvitationCard
+                  key={successor.id}
+                  successor={{
+                    id: successor.id,
+                    full_name: successor.full_name_encrypted || 'Unknown',
+                    email: successor.email_encrypted || undefined,
+                    phone: successor.phone_encrypted || undefined,
+                    relationship: successor.relationship || undefined,
+                    heir_type: successor.heir_type || 'family',
+                    invitation_status: successor.invitation_status || 'accepted',
+                    invited_at: successor.invited_at || ''
+                  }}
+                  ownerName={user?.email || 'Owner'}
+                  isAccepted={true}
+                  onAccept={() => {}}
+                  onDecline={() => {}}
+                />
+              ))
+            )}
+          </div>
+        )}
 
         {/* Heir Form Modal */}
         <Dialog open={showForm} onOpenChange={(open) => {
@@ -347,7 +460,6 @@ export default function HeirsPage() {
                 phone: editingHeir.phone_encrypted || '',
                 relationship: editingHeir.relationship || '',
                 heir_type: editingHeir.heir_type || 'family',
-                access_level: editingHeir.access_level,
                 invitation_expires_at: editingHeir.invitation_expires_at || undefined
               } : undefined}
               onSubmit={editingHeir ? handleUpdateHeir : handleAddHeir}
@@ -357,6 +469,25 @@ export default function HeirsPage() {
               }}
               isEditing={!!editingHeir}
             />
+          </DialogContent>
+        </Dialog>
+
+        {/* Invitation Modal */}
+        <Dialog open={showInvitationModal} onOpenChange={setShowInvitationModal}>
+          <DialogContent className="max-w-2xl">
+            <DialogTitle className="sr-only">Heir Invitation Created</DialogTitle>
+            {newlyCreatedHeir && (
+              <HeirInvitation
+                heirName={newlyCreatedHeir.full_name_encrypted || ''}
+                heirEmail={newlyCreatedHeir.email_encrypted || ''}
+                invitationCode={newlyCreatedHeir.invitation_code || ''}
+                invitationLink={`https://app.heriwill.com/auth/invite?code=${newlyCreatedHeir.invitation_code}&type=heir`}
+                onClose={() => {
+                  setShowInvitationModal(false)
+                  setNewlyCreatedHeir(null)
+                }}
+              />
+            )}
           </DialogContent>
         </Dialog>
 

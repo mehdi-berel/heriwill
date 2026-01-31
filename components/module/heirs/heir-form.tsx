@@ -7,7 +7,9 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { 
   User, 
-  Heart
+  Heart,
+  Mail,
+  Phone
 } from "lucide-react"
 
 interface HeirFormData {
@@ -16,7 +18,6 @@ interface HeirFormData {
   phone: string
   relationship: string
   heir_type: 'family' | 'friend' | 'professional' | 'organization'
-  access_level: 'full' | 'partial' | 'view'
   invitation_expires_at?: string
 }
 
@@ -34,7 +35,6 @@ export function HeirForm({ onSubmit, onCancel, initialData, isEditing = false }:
     phone: initialData?.phone || '',
     relationship: initialData?.relationship || '',
     heir_type: initialData?.heir_type || 'family',
-    access_level: initialData?.access_level || 'view',
     invitation_expires_at: initialData?.invitation_expires_at || ''
   })
 
@@ -52,16 +52,16 @@ export function HeirForm({ onSubmit, onCancel, initialData, isEditing = false }:
         </CardTitle>
         <CardDescription className="text-sm">
           {isEditing 
-            ? 'Update heir information and access permissions.'
+            ? 'Update heir information and contact details.'
             : 'Invite someone to become an heir for your digital legacy.'
           }
         </CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
-          {/* Relationship & Type */}
+          {/* Basic Information */}
           <div className="space-y-3 sm:space-y-4">
-            <h3 className="text-base sm:text-lg font-medium">Relationship Details</h3>
+            <h3 className="text-base sm:text-lg font-medium">Basic Information</h3>
             <div className="grid grid-cols-1 gap-3 sm:gap-4">
               <div>
                 <Label htmlFor="full_name" className="text-sm sm:text-base">Full Name *</Label>
@@ -74,28 +74,16 @@ export function HeirForm({ onSubmit, onCancel, initialData, isEditing = false }:
                   required
                 />
               </div>
-            </div>
-          </div>
-
-          {/* Access Level */}
-          <div className="space-y-3 sm:space-y-4">
-            <h3 className="text-base sm:text-lg font-medium">Access Permissions</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              {[
-                { value: 'full', label: 'Full Access' },
-                { value: 'partial', label: 'Partial Access' },
-                { value: 'view', label: 'View Only' }
-              ].map((type) => (
-                <Button
-                  key={type.value}
-                  type="button"
-                  variant={formData.access_level === type.value ? 'default' : 'outline'}
-                  onClick={() => setFormData({ ...formData, access_level: type.value as HeirFormData['access_level'] })}
-                  className="rounded-lg"
-                >
-                  {type.label}
-                </Button>
-              ))}
+              <div>
+                <Label htmlFor="relationship" className="text-sm sm:text-base">Relationship</Label>
+                <Input
+                  id="relationship"
+                  value={formData.relationship}
+                  onChange={(e) => setFormData({ ...formData, relationship: e.target.value })}
+                  placeholder="e.g., Spouse, Child, Friend"
+                  className="text-sm sm:text-base h-10 sm:h-11 mt-1.5"
+                />
+              </div>
             </div>
           </div>
 
@@ -122,6 +110,42 @@ export function HeirForm({ onSubmit, onCancel, initialData, isEditing = false }:
                   {type.label}
                 </Button>
               ))}
+            </div>
+          </div>
+
+          {/* Contact Information */}
+          <div className="space-y-3 sm:space-y-4">
+            <h3 className="text-base sm:text-lg font-medium">Contact Information</h3>
+            <div className="grid grid-cols-1 gap-3 sm:gap-4">
+              <div>
+                <Label htmlFor="email" className="text-sm sm:text-base flex items-center gap-2">
+                  <Mail className="h-4 w-4" />
+                  Email Address *
+                </Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  placeholder="heir@example.com"
+                  className="text-sm sm:text-base h-10 sm:h-11 mt-1.5"
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="phone" className="text-sm sm:text-base flex items-center gap-2">
+                  <Phone className="h-4 w-4" />
+                  Phone Number
+                </Label>
+                <Input
+                  id="phone"
+                  type="tel"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  placeholder="+1 (555) 000-0000"
+                  className="text-sm sm:text-base h-10 sm:h-11 mt-1.5"
+                />
+              </div>
             </div>
           </div>
 
