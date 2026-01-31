@@ -32,8 +32,6 @@ import {
 
   Lock,
 
-  Gift,
-
   Power,
 
   Package,

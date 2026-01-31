@@ -27,7 +27,7 @@ export function InactivitySection({ inactivityDays }: InactivitySectionProps) {
               </span>
             </div>
             <p className="text-sm text-text-secondary mb-6 leading-relaxed">
-              Your inheritance plan will trigger if you don't log in for the specified period.
+              Your inheritance plan will trigger if you don&apos;t log in for the specified period.
             </p>
             <div className="bg-gradient-to-br from-orange-100/80 to-amber-100/80 dark:from-orange-900/30 dark:to-amber-900/30 rounded-xl p-5 border border-orange-200/50 dark:border-orange-800/50">
               <p className="text-xs font-semibold text-orange-900 dark:text-orange-200 mb-2 uppercase tracking-wider">

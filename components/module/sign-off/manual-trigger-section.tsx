@@ -63,7 +63,7 @@ export function ManualTriggerSection({ userId }: ManualTriggerSectionProps) {
                 </span>
               </div>
               <p className="text-sm text-text-secondary mb-6 leading-relaxed">
-                You have configured manual triggering. When you're ready to activate your inheritance plan, click the button below. This action will notify all your heirs and begin the inheritance process.
+                You have configured manual triggering. When you&apos;re ready to activate your inheritance plan, click the button below. This action will notify all your heirs and begin the inheritance process.
               </p>
               <button
                 onClick={() => setShowModal(true)}

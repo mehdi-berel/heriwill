@@ -254,7 +254,6 @@ export default function NotaryPage() {
               }
               setSelectedNotary(null)
             }}
-            onClose={() => setSelectedNotary(null)}
           />
         ) : (
           <NotarySelector

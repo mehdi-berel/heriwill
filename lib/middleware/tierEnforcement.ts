@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
-import { getSubscriptionTier } from '@/lib/revenuecat'
 
 /**
  * Subscription Tier Enforcement Middleware
@@ -71,8 +70,7 @@ export async function getUserTier(userId: string): Promise<'free' | 'premium' | 
       return 'free'
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const tier = (data as any).subscription_tier as string
+    const tier = (data as Record<string, unknown>).subscription_tier as string
     return (tier === 'premium' || tier === 'pro') ? tier : 'free'
   } catch (error) {
     console.error('Error getting user tier:', error)
@@ -160,9 +158,8 @@ export async function checkStorageLimit(
   const limits = TIER_LIMITS[tier]
 
   // Get current storage usage from vault_items
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase
-    .from('vault_items') as any)
+  const { data, error } = await supabase
+    .from('vault_items')
     .select('file_size')
     .eq('user_id', userId)
 
@@ -176,9 +173,8 @@ export async function checkStorageLimit(
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const currentUsage = (data || []).reduce((sum: number, item: any) => {
-    return sum + (item.file_size || 0)
+  const currentUsage = (data || []).reduce((sum: number, item: Record<string, unknown>) => {
+    return sum + ((item.file_size as number) || 0)
   }, 0)
 
   const allowed = (currentUsage + additionalBytes) <= limits.storage

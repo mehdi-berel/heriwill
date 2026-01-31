@@ -29,15 +29,14 @@ export async function generateHeirInvitationLink(
     expiresAt.setDate(expiresAt.getDate() + expiresInDays)
 
     // Update heir with invitation code and expiration
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (supabase
-      .from('heirs') as any)
+    const { error } = await supabase
+      .from('heirs')
       .update({
         invitation_code: code,
         invitation_status: 'pending',
         invitation_expires_at: expiresAt.toISOString(),
         invited_at: new Date().toISOString()
-      })
+      } as never)
       .eq('id', heirId)
 
     if (error) {
@@ -106,26 +105,28 @@ export async function validateInvitationCode(
 ): Promise<{ valid: boolean; expired: boolean; message?: string }> {
   try {
     if (type === 'heir') {
-      const { data: heir, error } = await (supabase
+      const { data: heir, error } = await supabase
         .from('heirs')
         .select('invitation_status, invitation_expires_at')
         .eq('invitation_code', code)
-        .single() as any)
+        .single()
 
       if (error || !heir) {
         return { valid: false, expired: false, message: 'Invitation not found' }
       }
 
-      if (heir.invitation_status === 'accepted') {
+      const heirData = heir as Record<string, unknown>
+
+      if (heirData.invitation_status === 'accepted') {
         return { valid: false, expired: false, message: 'Invitation already accepted' }
       }
 
-      if (heir.invitation_status === 'rejected') {
+      if (heirData.invitation_status === 'rejected') {
         return { valid: false, expired: false, message: 'Invitation was rejected' }
       }
 
-      const expired = heir.invitation_expires_at
-        ? new Date(heir.invitation_expires_at) < new Date()
+      const expired = heirData.invitation_expires_at
+        ? new Date(heirData.invitation_expires_at as string) < new Date()
         : false
 
       if (expired) {
@@ -155,18 +156,20 @@ export async function resendHeirInvitation(
 ): Promise<{ url: string; code: string } | null> {
   try {
     // Check current invitation status
-    const { data: heir, error: fetchError } = await (supabase
+    const { data: heir, error: fetchError } = await supabase
       .from('heirs')
       .select('invitation_status')
       .eq('id', heirId)
-      .single() as any)
+      .single()
 
     if (fetchError || !heir) {
       logger.error('Heir not found for resend', fetchError)
       return null
     }
 
-    if (heir.invitation_status === 'accepted') {
+    const heirData = heir as Record<string, unknown>
+
+    if (heirData.invitation_status === 'accepted') {
       logger.warn('Cannot resend invitation - already accepted', { heirId })
       return null
     }

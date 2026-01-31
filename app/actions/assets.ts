@@ -1,5 +1,5 @@
 import { supabase } from '../../lib/supabase'
-import type { Database } from '../../lib/database.types'
+import type { Database } from '../../types/database'
 
 type DigitalAssetRow = Database['public']['Tables']['digital_assets']['Row']
 

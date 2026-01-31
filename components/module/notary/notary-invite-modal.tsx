@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -20,13 +20,6 @@ export function NotaryInviteModal({ isOpen, onClose, userId }: NotaryInviteModal
   const [invitationLink, setInvitationLink] = useState('')
   const [error, setError] = useState('')
 
-  // Auto-generate link when modal opens
-  useEffect(() => {
-    if (isOpen && !invitationLink && !loading) {
-      generateLink()
-    }
-  }, [isOpen])
-
   const generateInvitationCode = (): string => {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789'
     let code = ''
@@ -36,7 +29,7 @@ export function NotaryInviteModal({ isOpen, onClose, userId }: NotaryInviteModal
     return code
   }
 
-  const generateLink = async () => {
+  const generateLink = useCallback(async () => {
     setLoading(true)
     setError('')
     try {
@@ -55,7 +48,14 @@ export function NotaryInviteModal({ isOpen, onClose, userId }: NotaryInviteModal
     } finally {
       setLoading(false)
     }
-  }
+  }, [userId])
+
+  // Auto-generate link when modal opens
+  useEffect(() => {
+    if (isOpen && !invitationLink && !loading) {
+      generateLink()
+    }
+  }, [isOpen, invitationLink, loading, generateLink])
 
   const handleCopyLink = async () => {
     try {

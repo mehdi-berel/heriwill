@@ -118,7 +118,7 @@ export function StorageUsageIndicator({ userId }: StorageUsageIndicatorProps) {
                 <div className="mt-3 p-2 bg-orange-100 dark:bg-orange-900/30 rounded-md border border-orange-200 dark:border-orange-800">
                   <p className="text-xs text-orange-800 dark:text-orange-200 flex items-start gap-2">
                     <TrendingUp className="h-3 w-3 mt-0.5 flex-shrink-0" />
-                    <span>You're running low on storage. Consider upgrading soon.</span>
+                    <span>You&apos;re running low on storage. Consider upgrading soon.</span>
                   </p>
                 </div>
               )}

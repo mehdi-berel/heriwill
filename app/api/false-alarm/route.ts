@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { createServerSupabaseClient } from '@/lib/supabase'
 import { logger } from '@/lib/utils/logger'
 import { sendFalseAlarmEmail } from '@/lib/services/emailService'
 
@@ -17,13 +17,14 @@ export async function POST(request: NextRequest) {
 
     logger.info(`False alarm declared for user ${userId}`)
 
+    const supabase = await createServerSupabaseClient()
+
     // 1. Verify user has inheritance triggered
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: userData, error: userError } = await (supabase
+    const { data: userData, error: userError } = await supabase
       .from('users')
       .select('inheritance_triggered, inheritance_triggered_at, full_name, email')
       .eq('id', userId)
-      .single() as any)
+      .single() as { data: { inheritance_triggered: boolean; inheritance_triggered_at: string | null; full_name: string | null; email: string } | null; error: unknown }
 
     if (userError || !userData) {
       logger.error('User not found', userError)
@@ -38,14 +39,14 @@ export async function POST(request: NextRequest) {
     }
 
     // 2. Update user status - restore to normal
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error: updateUserError } = await (supabase
+    const updateResult = await supabase
       .from('users')
       .update({
         inheritance_triggered: false,
         inheritance_triggered_at: null,
-      })
-      .eq('id', userId) as any)
+      } as never)
+      .eq('id', userId)
+    const updateUserError = updateResult.error
 
     if (updateUserError) {
       logger.error('Error updating user status', updateUserError)
@@ -53,11 +54,10 @@ export async function POST(request: NextRequest) {
     }
 
     // 3. Get all user's vaults
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: vaults, error: vaultsError } = await (supabase
+    const { data: vaults, error: vaultsError } = await supabase
       .from('vaults')
       .select('id, name')
-      .eq('user_id', userId) as any)
+      .eq('user_id', userId)
 
     if (vaultsError) {
       logger.error('Error fetching vaults', vaultsError)
@@ -68,8 +68,7 @@ export async function POST(request: NextRequest) {
     logger.info(`${vaults?.length || 0} vaults remain accessible to owner`)
 
     // 5. Cancel/update inheritance trigger records
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error: triggerUpdateError } = await (supabase
+    const triggerResult = await supabase
       .from('inheritance_triggers')
       .update({ 
         status: 'cancelled',
@@ -77,20 +76,21 @@ export async function POST(request: NextRequest) {
           cancelled_reason: 'false_alarm',
           cancelled_at: new Date().toISOString()
         }
-      })
+      } as never)
       .eq('user_id', userId)
-      .eq('status', 'triggered') as any)
+      .eq('status', 'triggered')
+    const triggerUpdateError = triggerResult.error
 
     if (triggerUpdateError) {
       logger.error('Error cancelling triggers', triggerUpdateError)
     }
 
     // 6. Get all heirs to notify them
-    const { data: heirs, error: heirsError } = await (supabase
+    const { data: heirs, error: heirsError } = await supabase
       .from('heirs')
       .select('id, email_encrypted, full_name_encrypted')
       .eq('user_id', userId)
-      .eq('is_active', true))
+      .eq('is_active', true)
 
     if (heirsError) {
       logger.error('Error fetching heirs', heirsError)

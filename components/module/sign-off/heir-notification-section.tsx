@@ -31,7 +31,7 @@ export function HeirNotificationSection({
               </span>
             </div>
             <p className="text-sm text-text-secondary mb-6 leading-relaxed">
-              Your heirs will be periodically asked to confirm your status. If enough heirs confirm you're deceased, the inheritance plan will trigger.
+              Your heirs will be periodically asked to confirm your status. If enough heirs confirm you&apos;re deceased, the inheritance plan will trigger.
             </p>
             <div className="bg-gradient-to-br from-green-100/80 to-emerald-100/80 dark:from-green-900/30 dark:to-emerald-900/30 rounded-xl p-5 border border-green-200/50 dark:border-green-800/50 space-y-4">
               <div>
