@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { DashboardLayout } from "@/components/module/dashboard/dashboard-layout"
-import { LegalDocumentDetail } from "@/components/module/legal/legal-document-detail"
+import { PDFEditor } from "@/components/module/legal/pdf-editor"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft } from "lucide-react"
 import { supabase } from "@/lib/supabase"
@@ -17,23 +17,19 @@ interface UserProfile {
 
 interface LegalDocument {
   id: string
-  title: string
+  name: string
   document_type: 'will' | 'trust' | 'power_of_attorney' | 'healthcare_directive' | 'life_insurance' | 'deed' | 'other'
   description: string
-  is_required: boolean
-  is_uploaded: boolean
-  file_url?: string
+  template_file_url?: string
   file_size?: number
-  upload_date?: string
-  expiry_date?: string
-  notarized: boolean
-  notarized_date?: string
-  status: 'pending' | 'uploaded' | 'reviewed' | 'approved' | 'expired'
-  priority: 'low' | 'medium' | 'high' | 'critical'
-  instructions?: string
+  is_active: boolean
   created_at: string
   updated_at: string
-  tags: string[]
+  user_id: string
+  metadata?: {
+    content?: string
+    [key: string]: unknown
+  }
 }
 
 export default function LegalDocumentDetailPage() {
@@ -47,39 +43,27 @@ export default function LegalDocumentDetailPage() {
   const [loading, setLoading] = useState(true)
 
   const loadDocument = useCallback(async (id: string) => {
-    // In a real app, this would fetch from Supabase
-    // Simulating fetch with mock data for now since we're using mock data in the main page
     try {
-      // Mock data matching the structure
-      const mockDocument: LegalDocument = {
-        id: id,
-        title: 'Last Will and Testament',
-        document_type: 'will',
-        description: 'Primary will document outlining asset distribution and guardianship.',
-        is_required: true,
-        is_uploaded: false,
-        notarized: false,
-        status: 'pending',
-        priority: 'critical',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        tags: ['estate', 'assets', 'beneficiaries'],
-        instructions: 'Must be signed in the presence of two disinterested witnesses.'
-      }
+      setLoading(true)
       
-      // If we had a real backend connected for documents:
-      /*
+      // Fetch legal document from legal table
       const { data, error } = await supabase
-        .from('legal_documents')
+        .from('legal')
         .select('*')
         .eq('id', id)
         .single()
       
-      if (error) throw error
+      if (error) {
+        console.error('Error loading document:', error)
+        throw error
+      }
+
+      if (!data) {
+        throw new Error('Document not found')
+      }
+
+      // Set document data directly
       setDocument(data)
-      */
-     
-      setDocument(mockDocument)
       setLoading(false)
     } catch (error) {
       console.error('Error loading document:', error)
@@ -121,23 +105,36 @@ export default function LegalDocumentDetailPage() {
     return () => subscription.unsubscribe()
   }, [router, documentId, loadDocument])
 
-  const handleDelete = async () => {
-    if (confirm('Are you sure you want to delete this document?')) {
-      // API call to delete
-      router.push("/Legal")
+
+  const handleSaveContent = async (data: { content: string }) => {
+    try {
+      // Get current metadata and merge with new content
+      const currentMetadata = document?.metadata || {}
+      const updatedMetadata = {
+        ...currentMetadata,
+        content: data.content
+      }
+
+      const { error } = await supabase
+        .from('legal')
+        .update({
+          metadata: updatedMetadata as Record<string, unknown>,
+          updated_at: new Date().toISOString()
+        } as never)
+        .eq('id', documentId)
+
+      if (error) {
+        console.error('Error saving content:', error)
+        alert('Failed to save document')
+        return
+      }
+
+      alert('Document saved successfully!')
+      await loadDocument(documentId)
+    } catch (error) {
+      console.error('Error saving document:', error)
+      alert('Failed to save document')
     }
-  }
-
-  const handleUpload = async (file: File) => {
-    // API call to upload
-    console.log("Uploading file:", file)
-    // Refresh document
-    await loadDocument(documentId)
-  }
-
-  const handleDownload = () => {
-    // API call to download
-    console.log("Downloading document")
   }
 
   if (loading) {
@@ -172,12 +169,10 @@ export default function LegalDocumentDetailPage() {
           </Button>
         </div>
 
-        <LegalDocumentDetail
-          document={document}
-          onDelete={handleDelete}
-          onUpload={handleUpload}
-          onDownload={handleDownload}
-          onEdit={() => console.log("Edit clicked")}
+        <PDFEditor
+          documentType={document.document_type}
+          documentData={document}
+          onSave={handleSaveContent}
         />
       </div>
     </DashboardLayout>

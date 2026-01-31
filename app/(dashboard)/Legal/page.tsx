@@ -1,13 +1,13 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
-import { useRouter } from "next/navigation"
+import { useState, useEffect, useCallback, Suspense } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { ProTierGuard } from "@/components/module/auth/pro-tier-guard"
 import { DashboardLayout } from "@/components/module/dashboard/dashboard-layout"
 import { LegalDocumentForm } from "@/components/module/legal/legal-document-form"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Search, FileText, Shield, Gavel, User as UserIcon, Scale, FileCheck, Edit, Trash2, Lock, Upload, Download, CheckCircle } from "lucide-react"
+import { Search, FileText, Shield, Gavel, User as UserIcon, Scale, FileCheck, Edit, Trash2, Lock, Upload, Download, CheckCircle, ArrowLeft } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { User } from "@supabase/supabase-js"
 
@@ -15,15 +15,6 @@ interface UserProfile {
   id: string
   full_name?: string
   subscription_tier?: string
-}
-
-interface DocumentFormData {
-  title: string
-  document_type: 'will' | 'trust' | 'power_of_attorney' | 'healthcare_directive' | 'life_insurance' | 'deed' | 'other'
-  description: string
-  is_required: boolean
-  instructions?: string
-  tags: string[]
 }
 
 interface LegalDocument {
@@ -53,7 +44,7 @@ interface LegalDocument {
   tags: string[]
 }
 
-export default function LegalPage() {
+function LegalPageContent() {
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
@@ -63,71 +54,97 @@ export default function LegalPage() {
   const [showForm, setShowForm] = useState(false)
   const [editingDocument, setEditingDocument] = useState<LegalDocument | null>(null)
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const returnTo = searchParams.get('returnTo') || '/vaults'
 
   const loadDocuments = useCallback(async () => {
     try {
-      // Mock data for now - in real app, fetch from database
-      const mockDocuments: LegalDocument[] = [
-        {
-          id: '1',
-          title: 'Last Will and Testament',
-          document_type: 'will',
-          description: 'Primary will document outlining asset distribution',
-          is_required: true,
-          is_uploaded: false,
-          notarized: false,
-          status: 'pending',
-          priority: 'critical',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          tags: ['estate', 'assets', 'beneficiaries']
-        },
-        {
-          id: '2',
-          title: 'Durable Power of Attorney',
-          document_type: 'power_of_attorney',
-          description: 'Legal authority for financial decisions',
-          is_required: true,
-          is_uploaded: true,
-          file_url: '/documents/poa.pdf',
-          file_size: 245000,
-          notarized: true,
-          notarized_date: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-          status: 'approved',
-          priority: 'high',
-          created_at: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
-          updated_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-          tags: ['financial', 'authority', 'legal']
-        }
-      ]
-      setDocuments(mockDocuments)
+      if (!user) return
+
+      // Fetch user's legal documents from legal table
+      const { data: legalDocs, error } = await supabase
+        .from('legal')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+
+      if (error) {
+        console.error('Error loading legal documents:', error)
+        return
+      }
+
+      // Map legal documents to LegalDocument format
+      const mappedDocuments: LegalDocument[] = (legalDocs || []).map((doc: Record<string, unknown>) => ({
+        id: doc.id as string,
+        title: (doc.name as string) || 'Untitled',
+        document_type: (doc.document_type as LegalDocument['document_type']) || 'other',
+        description: (doc.description as string) || '',
+        is_required: false,
+        is_uploaded: !!doc.template_file_url,
+        file_url: doc.template_file_url as string | undefined,
+        file_size: doc.file_size as number | undefined,
+        notarized: false,
+        status: doc.template_file_url ? 'uploaded' as const : 'pending' as const,
+        priority: 'medium' as const,
+        created_at: doc.created_at as string,
+        updated_at: doc.updated_at as string,
+        tags: [doc.document_type as string, 'legal']
+      }))
+
+      setDocuments(mappedDocuments)
     } catch (error) {
       console.error('Error loading documents:', error)
     }
-  }, [])
+  }, [user])
 
-  const handleSaveDocument = async (formData: DocumentFormData, file?: File) => {
+  const handleSaveDocument = async (documentType: string) => {
     try {
-      // In a real app, this would save to Supabase
-      const newDocument: LegalDocument = {
-        id: Date.now().toString(),
-        title: formData.title,
-        document_type: formData.document_type,
-        description: formData.description,
-        is_required: formData.is_required,
-        is_uploaded: !!file,
-        file_url: file ? URL.createObjectURL(file) : undefined,
-        file_size: file?.size,
-        notarized: false,
-        status: 'pending',
-        priority: formData.is_required ? 'high' : 'medium',
-        instructions: formData.instructions,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        tags: formData.tags
+      if (!user) return
+
+      // Template names for each document type
+      const templateNames: Record<string, string> = {
+        'will': 'Last Will and Testament',
+        'trust': 'Living Trust',
+        'power_of_attorney': 'Power of Attorney',
+        'healthcare_directive': 'Healthcare Directive',
+        'life_insurance': 'Life Insurance Policy',
+        'deed': 'Property Deed',
+        'other': 'Legal Document'
       }
+
+      const templateDescriptions: Record<string, string> = {
+        'will': 'Your final wishes for asset distribution',
+        'trust': 'Living or testamentary trust agreement',
+        'power_of_attorney': 'Legal authority to act on your behalf',
+        'healthcare_directive': 'Medical decisions and living will',
+        'life_insurance': 'Insurance policy documents',
+        'deed': 'Real estate ownership documents',
+        'other': 'Other important legal documents'
+      }
+
+      // Create a legal document entry for this user
+      const { data: legalDoc, error: legalError } = await supabase
+        .from('legal')
+        .insert({
+          user_id: user.id,
+          name: templateNames[documentType] || 'Legal Document',
+          document_type: documentType,
+          description: templateDescriptions[documentType] || '',
+          is_active: true
+        } as never)
+        .select()
+        .single()
+
+      if (legalError) {
+        console.error('Error creating legal document:', legalError)
+        alert('Failed to create legal document')
+        return
+      }
+
+      console.log('Created legal document:', legalDoc)
       
-      setDocuments([newDocument, ...documents])
+      // Reload documents
+      await loadDocuments()
       setShowForm(false)
       setEditingDocument(null)
     } catch (error) {
@@ -261,6 +278,16 @@ export default function LegalPage() {
       <div className="p-6">
         {/* Header */}
         <div className="mb-6">
+          {/* Back Button */}
+          <Button 
+            variant="ghost" 
+            onClick={() => router.push(returnTo)}
+            className="mb-4"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Vault
+          </Button>
+          
           <div className="flex justify-between items-center mb-4">
             <h1 className="text-3xl font-bold">Legal Documents</h1>
             <Button 
@@ -342,7 +369,7 @@ export default function LegalPage() {
                 <div
                   key={document.id}
                   className="flex items-center p-4 bg-background-card border border-gray-700 rounded-xl cursor-pointer hover:border-primary/50 transition-all group"
-                  onClick={() => console.log('View document:', document)}
+                  onClick={() => router.push(`/Legal/${document.id}`)}
                 >
                   {/* Icon Container */}
                   <div 
@@ -461,5 +488,13 @@ export default function LegalPage() {
       </div>
     </DashboardLayout>
     </ProTierGuard>
+  )
+}
+
+export default function LegalPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Loading...</div>}>
+      <LegalPageContent />
+    </Suspense>
   )
 }

@@ -118,6 +118,21 @@ CREATE TABLE public.inheritance_triggers (
   CONSTRAINT inheritance_triggers_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id),
   CONSTRAINT inheritance_triggers_verified_by_fkey FOREIGN KEY (verified_by) REFERENCES public.users(id)
 );
+CREATE TABLE public.legal (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  name text NOT NULL,
+  document_type text NOT NULL CHECK (document_type = ANY (ARRAY['will'::text, 'trust'::text, 'power_of_attorney'::text, 'healthcare_directive'::text, 'life_insurance'::text, 'deed'::text, 'other'::text])),
+  description text,
+  template_file_url text,
+  template_file_path text,
+  file_size bigint,
+  is_active boolean DEFAULT true,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  user_id uuid,
+  CONSTRAINT legal_pkey PRIMARY KEY (id),
+  CONSTRAINT legal_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
+);
 CREATE TABLE public.notaries (
   id uuid NOT NULL DEFAULT uuid_generate_v4(),
   user_id uuid NOT NULL,
@@ -280,7 +295,7 @@ CREATE TABLE public.vaults (
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone NOT NULL DEFAULT now(),
   last_accessed timestamp with time zone,
-  category text NOT NULL DEFAULT 'share_after_death'::text CHECK (category = ANY (ARRAY['delete_after_death'::text, 'share_after_death'::text, 'sign_off_after_death'::text])),
+  category text NOT NULL DEFAULT 'share_after_death'::text CHECK (category = ANY (ARRAY['share'::text, 'delete'::text, 'pro'::text])),
   CONSTRAINT vaults_pkey PRIMARY KEY (id),
   CONSTRAINT vaults_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
 );

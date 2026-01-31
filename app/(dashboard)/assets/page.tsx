@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
-import { useRouter } from "next/navigation"
+import { useState, useEffect, useCallback, Suspense } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { ProTierGuard } from "@/components/module/auth/pro-tier-guard"
 import { DashboardLayout } from "@/components/module/dashboard/dashboard-layout"
 import { AssetForm } from "@/components/module/assets/asset-form"
@@ -9,7 +9,7 @@ import { AssetList } from "@/components/module/assets/asset-list"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
-import { Search, Plus } from "lucide-react"
+import { Search, Plus, ArrowLeft } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { User } from "@supabase/supabase-js"
 
@@ -58,7 +58,7 @@ interface Heir {
   relationship?: string
 }
 
-export default function AssetsPage() {
+function AssetsPageContent() {
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
@@ -72,6 +72,8 @@ export default function AssetsPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [assetToDelete, setAssetToDelete] = useState<string | null>(null)
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const returnTo = searchParams.get('returnTo') || '/vaults'
 
   const loadAssets = useCallback(async (userId: string) => {
     try {
@@ -306,6 +308,16 @@ export default function AssetsPage() {
         onSignOut={handleSignOut}
       >
         <div className="p-6 space-y-6">
+        {/* Back Button */}
+        <Button 
+          variant="ghost" 
+          onClick={() => router.push(returnTo)}
+          className="mb-4"
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back to Vault
+        </Button>
+        
         {/* Header with Title and Add Button */}
         <div className="flex justify-between items-center">
           <h1 className="text-3xl font-bold text-text-primary">Assets</h1>
@@ -422,5 +434,13 @@ export default function AssetsPage() {
       </div>
     </DashboardLayout>
     </ProTierGuard>
+  )
+}
+
+export default function AssetsPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Loading...</div>}>
+      <AssetsPageContent />
+    </Suspense>
   )
 }

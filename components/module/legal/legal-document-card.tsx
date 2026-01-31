@@ -46,6 +46,8 @@ interface LegalDocument {
   created_at: string
   updated_at: string
   tags: string[]
+  template_id?: string
+  vault_item_id?: string
 }
 
 interface LegalDocumentCardProps {

@@ -26,55 +26,56 @@ export function BillingSettings({
   const [purchaseLoading, setPurchaseLoading] = useState<string | null>(null)
   const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'yearly'>('monthly')
 
-  const getPlanDetails = () => {
-    switch (subscriptionTier) {
-      case 'premium':
-        return {
-          name: 'Legacy Plan',
-          price: '€10/month',
-          icon: Zap,
-          color: 'text-primary-400',
-          bgColor: 'bg-primary-500/10',
-          features: [
-            'Unlimited vaults',
-            'Unlimited heirs',
-            'Store up to 10GB',
-            'Advanced security',
-            'Priority support'
-          ]
-        }
-      case 'pro':
-        return {
-          name: 'Pro Plan',
-          price: '€20/month',
-          icon: Crown,
-          color: 'text-amber-400',
-          bgColor: 'bg-amber-500/10',
-          features: [
-            'Everything in Legacy',
-            'Store up to 100GB',
-            'Asset management',
-            'Legal document storage',
-            'Notary services'
-          ]
-        }
-      default:
-        return {
-          name: 'Classic Plan',
-          price: 'Free',
-          icon: CheckCircle,
-          color: 'text-gray-400',
-          bgColor: 'bg-gray-500/10',
-          features: [
-            '1 vault',
-            '1 heir',
-            'Store up to 1GB',
-            'Basic security',
-            'Email support'
-          ]
-        }
-    }
-  }
+  // Commented out unused function to fix lint warning
+  // const getPlanDetails = () => {
+  //   switch (subscriptionTier) {
+  //     case 'premium':
+  //       return {
+  //         name: 'Legacy Plan',
+  //         price: '€10/month',
+  //         icon: Zap,
+  //         color: 'text-primary-400',
+  //         bgColor: 'bg-primary-500/10',
+  //         features: [
+  //           'Unlimited vaults',
+  //           'Unlimited heirs',
+  //           'Store up to 10GB',
+  //           'Advanced security',
+  //           'Priority support'
+  //         ]
+  //       }
+  //     case 'pro':
+  //       return {
+  //         name: 'Pro Plan',
+  //         price: '€20/month',
+  //         icon: Crown,
+  //         color: 'text-amber-400',
+  //         bgColor: 'bg-amber-500/10',
+  //         features: [
+  //           'Everything in Legacy',
+  //           'Store up to 100GB',
+  //           'Asset management',
+  //           'Legal document storage',
+  //           'Notary services'
+  //         ]
+  //       }
+  //     default:
+  //       return {
+  //         name: 'Classic Plan',
+  //         price: 'Free',
+  //         icon: CheckCircle,
+  //         color: 'text-gray-400',
+  //         bgColor: 'bg-gray-500/10',
+  //         features: [
+  //           '1 vault',
+  //           '1 heir',
+  //           'Store up to 1GB',
+  //           'Basic security',
+  //           'Email support'
+  //         ]
+  //       }
+  //   }
+  // }
 
   useEffect(() => {
     const loadRevenueCatData = async () => {

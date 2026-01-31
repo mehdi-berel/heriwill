@@ -62,11 +62,11 @@ export function VaultAllocationCard({
 
   const getCategoryColor = (category: string) => {
     switch (category) {
-      case 'share_after_death':
+      case 'share':
         return 'bg-primary-600/10 text-primary-400 border-primary-600/30'
-      case 'delete_after_death':
+      case 'delete':
         return 'bg-status-error/10 text-status-error border-status-error/30'
-      case 'sign_off_after_death':
+      case 'pro':
         return 'bg-status-warning/10 text-status-warning border-status-warning/30'
       default:
         return 'bg-background-elevated text-text-muted'

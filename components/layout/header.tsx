@@ -1,14 +1,22 @@
 "use client"
 
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { FeedbackButton } from "@/components/module/feedback/feedback-button"
 import { useRevenueCat } from "@/contexts/RevenueCatContext"
-import { Crown, Zap, CheckCircle } from "lucide-react"
+import { supabase } from "@/lib/supabase"
+import { Crown, Zap, CheckCircle, LogOut } from "lucide-react"
 
 export function Header() {
   const { entitlements, loading } = useRevenueCat()
+  const router = useRouter()
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut()
+    router.push("/login")
+  }
   
   // Determine subscription tier from entitlements
   const getTier = () => {
@@ -78,6 +86,17 @@ export function Header() {
 
           {/* Feedback Button */}
           <FeedbackButton />
+
+          {/* Sign Out - Mobile only */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleSignOut}
+            className="md:hidden text-text-secondary hover:text-status-error transition-colors p-2"
+            title="Sign Out"
+          >
+            <LogOut className="h-4 w-4" />
+          </Button>
 
           {/* Help Link - Desktop only */}
           <Button

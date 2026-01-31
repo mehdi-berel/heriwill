@@ -16,7 +16,7 @@ import { logger } from '@/lib/utils/logger'
 interface VaultAction {
   vault_id: string
   vault_name: string
-  category: 'share_after_death' | 'delete_after_death' | 'sign_off_after_death'
+  category: 'share' | 'delete' | 'pro'
   heir_ids: string[]
 }
 
@@ -158,15 +158,15 @@ async function executeVaultAction(userId: string, action: VaultAction): Promise<
   logger.info('Executing vault action', { vaultName: action.vault_name, category: action.category, userId })
 
   switch (action.category) {
-    case 'share_after_death':
+    case 'share':
       await shareVaultWithHeirs(action.vault_id, action.heir_ids)
       break
 
-    case 'delete_after_death':
+    case 'delete':
       await deleteVault(action.vault_id)
       break
 
-    case 'sign_off_after_death':
+    case 'pro':
       await notifyNotaryForSignOff(userId, action.vault_id)
       break
 

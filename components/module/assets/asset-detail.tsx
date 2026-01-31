@@ -6,21 +6,12 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { 
-  ArrowLeft, 
-  Edit, 
   Trash2, 
   MapPin, 
   DollarSign, 
   Users, 
-  FileText, 
+  FileText,
   Calendar,
-  Home,
-  Car,
-  Building,
-  TrendingUp,
-  Shield,
-  Briefcase,
-  Package,
   Download,
   Upload,
   Plus
@@ -53,26 +44,24 @@ interface AssetDetailProps {
 
 export function AssetDetail({ 
   asset, 
-  onBack, 
-  onEdit, 
-  onDelete, 
   onDownloadDocument, 
   onDeleteDocument 
 }: AssetDetailProps) {
   const [activeTab, setActiveTab] = useState('overview')
 
-  const getAssetIcon = (type: string) => {
-    switch (type) {
-      case 'real_estate': return <Home className="h-6 w-6" />
-      case 'vehicle': return <Car className="h-6 w-6" />
-      case 'bank_account': return <Building className="h-6 w-6" />
-      case 'investment': return <TrendingUp className="h-6 w-6" />
-      case 'insurance': return <Shield className="h-6 w-6" />
-      case 'business': return <Briefcase className="h-6 w-6" />
-      case 'personal_property': return <Package className="h-6 w-6" />
-      default: return <FileText className="h-6 w-6" />
-    }
-  }
+  // Commented out unused function
+  // const getAssetIcon = (type: string) => {
+  //   switch (type) {
+  //     case 'real_estate': return <Home className="h-6 w-6" />
+  //     case 'vehicle': return <Car className="h-6 w-6" />
+  //     case 'bank_account': return <Building className="h-6 w-6" />
+  //     case 'investment': return <TrendingUp className="h-6 w-6" />
+  //     case 'insurance': return <Shield className="h-6 w-6" />
+  //     case 'business': return <Briefcase className="h-6 w-6" />
+  //     case 'personal_property': return <Package className="h-6 w-6" />
+  //     default: return <FileText className="h-6 w-6" />
+  //   }
+  // }
 
   const getAssetTypeLabel = (type: string) => {
     switch (type) {
@@ -117,35 +106,6 @@ export function AssetDetail({
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <Button variant="ghost" onClick={onBack}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
-          </Button>
-          <div className="flex items-center space-x-3">
-            <div className="p-3 bg-primary/10 rounded-lg">
-              {getAssetIcon(asset.type)}
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold">{asset.name}</h1>
-              <p className="text-muted-foreground">{getAssetTypeLabel(asset.type)}</p>
-            </div>
-          </div>
-        </div>
-        <div className="flex items-center space-x-2">
-          <Button variant="outline" onClick={onEdit}>
-            <Edit className="h-4 w-4 mr-2" />
-            Edit
-          </Button>
-          <Button variant="destructive" onClick={onDelete}>
-            <Trash2 className="h-4 w-4 mr-2" />
-            Delete
-          </Button>
-        </div>
-      </div>
-
       {/* Content */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-4">

@@ -163,7 +163,7 @@ export function HelpCenter() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8 px-4 py-8">
+    <div className="max-w-5xl mx-auto space-y-4 px-4 py-4">
       {/* Header */}
       <div className="text-center pb-4">
         <h1 className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-primary-400 to-primary-600 bg-clip-text text-transparent">
@@ -177,7 +177,7 @@ export function HelpCenter() {
           variant={selectedCategory === null ? "default" : "outline"}
           onClick={() => setSelectedCategory(null)}
           className={cn(
-            "h-auto py-5 px-3 flex flex-col items-center gap-2.5 transition-all duration-200",
+            "h-auto py-3 px-3 flex flex-col items-center gap-2.5 transition-all duration-200",
             selectedCategory === null 
               ? "shadow-lg shadow-primary-500/20" 
               : "hover:border-primary-500/50 hover:bg-gray-800/50"
@@ -195,7 +195,7 @@ export function HelpCenter() {
               variant={isSelected ? "default" : "outline"}
               onClick={() => setSelectedCategory(category.name)}
               className={cn(
-                "h-auto py-5 px-3 flex flex-col items-center gap-2.5 transition-all duration-200",
+                "h-auto py-3 px-3 flex flex-col items-center gap-2.5 transition-all duration-200",
                 isSelected 
                   ? "shadow-lg shadow-primary-500/20" 
                   : "hover:border-primary-500/50 hover:bg-gray-800/50"

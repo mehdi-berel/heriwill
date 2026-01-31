@@ -24,8 +24,6 @@ import {
 
   Users,
 
-  FileText,
-
   Scale,
 
   LogOut,
@@ -33,8 +31,6 @@ import {
   Lock,
 
   Power,
-
-  Package,
 
   Sparkles,
 
@@ -95,34 +91,6 @@ const navigation = [
     icon: Power,
 
     description: "Death detection",
-
-  },
-
-  {
-
-    name: "Assets",
-
-    href: "/assets",
-
-    icon: Package,
-
-    description: "Digital items",
-
-    isPro: true,
-
-  },
-
-  {
-
-    name: "Legal",
-
-    href: "/Legal",
-
-    icon: FileText,
-
-    description: "Documents",
-
-    isPro: true,
 
   },
 

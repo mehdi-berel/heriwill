@@ -45,12 +45,12 @@ export function HeirForm({ onSubmit, onCancel, initialData, isEditing = false }:
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center space-x-2">
+      <CardHeader className="space-y-2">
+        <CardTitle className="flex items-center space-x-2 text-lg sm:text-xl">
           <User className="h-5 w-5" />
           <span>{isEditing ? 'Edit Heir' : 'Add New Heir'}</span>
         </CardTitle>
-        <CardDescription>
+        <CardDescription className="text-sm">
           {isEditing 
             ? 'Update heir information and access permissions.'
             : 'Invite someone to become an heir for your digital legacy.'
@@ -58,52 +58,44 @@ export function HeirForm({ onSubmit, onCancel, initialData, isEditing = false }:
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Basic Information */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium">Basic Information</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+          {/* Relationship & Type */}
+          <div className="space-y-3 sm:space-y-4">
+            <h3 className="text-base sm:text-lg font-medium">Relationship Details</h3>
+            <div className="grid grid-cols-1 gap-3 sm:gap-4">
               <div>
-                <Label htmlFor="full_name">Full Name *</Label>
+                <Label htmlFor="full_name" className="text-sm sm:text-base">Full Name *</Label>
                 <Input
                   id="full_name"
                   value={formData.full_name}
                   onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
                   placeholder="Enter full legal name"
+                  className="text-sm sm:text-base h-10 sm:h-11 mt-1.5"
                   required
                 />
               </div>
-              <div>
-                <Label htmlFor="email">Email Address *</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  placeholder="heir@example.com"
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="phone">Phone Number</Label>
-                <Input
-                  id="phone"
-                  type="tel"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  placeholder="+1 (555) 123-4567"
-                />
-              </div>
-              <div>
-                <Label htmlFor="relationship">Relationship *</Label>
-                <Input
-                  id="relationship"
-                  value={formData.relationship}
-                  onChange={(e) => setFormData({ ...formData, relationship: e.target.value })}
-                  placeholder="e.g., Spouse, Child, Sibling, Friend"
-                  required
-                />
-              </div>
+            </div>
+          </div>
+
+          {/* Access Level */}
+          <div className="space-y-3 sm:space-y-4">
+            <h3 className="text-base sm:text-lg font-medium">Access Permissions</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {[
+                { value: 'full', label: 'Full Access' },
+                { value: 'partial', label: 'Partial Access' },
+                { value: 'view', label: 'View Only' }
+              ].map((type) => (
+                <Button
+                  key={type.value}
+                  type="button"
+                  variant={formData.access_level === type.value ? 'default' : 'outline'}
+                  onClick={() => setFormData({ ...formData, access_level: type.value as HeirFormData['access_level'] })}
+                  className="rounded-lg"
+                >
+                  {type.label}
+                </Button>
+              ))}
             </div>
           </div>
 
@@ -134,12 +126,12 @@ export function HeirForm({ onSubmit, onCancel, initialData, isEditing = false }:
           </div>
 
           {/* Form Actions */}
-          <div className="flex gap-2">
-            <Button type="submit">
-              {isEditing ? 'Update Heir' : 'Send Invitation'}
-            </Button>
-            <Button type="button" variant="outline" onClick={onCancel}>
+          <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3 sm:space-x-0">
+            <Button type="button" variant="outline" onClick={onCancel} className="w-full sm:w-auto h-11">
               Cancel
+            </Button>
+            <Button type="submit" className="w-full sm:w-auto h-11">
+              {isEditing ? 'Update Heir' : 'Send Invitation'}
             </Button>
           </div>
         </form>

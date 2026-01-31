@@ -37,6 +37,8 @@ interface LegalDocument {
   created_at: string
   updated_at: string
   tags: string[]
+  template_id?: string
+  template_name?: string
 }
 
 interface LegalDocumentDetailProps {

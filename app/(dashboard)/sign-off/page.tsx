@@ -177,19 +177,19 @@ export default function SignOffPage() {
       userName={profile?.full_name || user?.email} 
       onSignOut={handleSignOut}
     >
-      <div className="p-6 space-y-6">
+      <div className="p-4 md:p-6 space-y-4 md:space-y-6 max-w-4xl mx-auto">
         {/* Activation Toggle Card */}
         <Card className={isActivated ? "bg-green-50 dark:bg-green-950/20 border-green-500/50" : "bg-gray-50 dark:bg-gray-900/30 border-gray-300 dark:border-gray-700"}>
-          <CardContent className="p-5">
-            <div className="flex items-center justify-between">
-              <div className="flex-1">
-                <div className="flex items-center gap-3 mb-2">
-                  <Power className={`h-6 w-6 ${isActivated ? 'text-green-600 dark:text-green-400' : 'text-gray-400'}`} />
-                  <Label className="text-lg font-semibold">
+          <CardContent className="p-4 md:p-5">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 md:gap-3 mb-2">
+                  <Power className={`h-5 w-5 md:h-6 md:w-6 flex-shrink-0 ${isActivated ? 'text-green-600 dark:text-green-400' : 'text-gray-400'}`} />
+                  <Label className="text-base md:text-lg font-semibold">
                     {isActivated ? 'Sign-Off Plan Active' : 'Sign-Off Plan Inactive'}
                   </Label>
                 </div>
-                <p className="text-sm text-text-secondary">
+                <p className="text-xs md:text-sm text-text-secondary">
                   {isActivated 
                     ? `Your inheritance plan will trigger using ${DETECTION_METHODS.find(m => m.id === activeMethod)?.title || 'the configured method'}` 
                     : 'Enable your sign-off plan to activate the inheritance trigger'}
@@ -231,7 +231,7 @@ export default function SignOffPage() {
                   }
                 }}
                 disabled={saving || (!isActivated && !activeMethod)}
-                className="ml-4"
+                className="flex-shrink-0"
               />
             </div>
           </CardContent>
@@ -251,7 +251,7 @@ export default function SignOffPage() {
 
         {/* Detection Methods */}
         <div>
-          <h2 className="text-xl font-semibold text-text-primary mb-4">Detection Methods</h2>
+          <h2 className="text-lg md:text-xl font-semibold text-text-primary mb-3 md:mb-4">Detection Methods</h2>
           <SignOffMethodSelector
             methods={DETECTION_METHODS}
             selectedMethod={activeMethod}
@@ -263,7 +263,7 @@ export default function SignOffPage() {
           
           {/* Active Method Section - Shows configuration details */}
           {isActivated && activeMethod && (
-            <div className="mt-6">
+            <div className="mt-4 md:mt-6">
               {activeMethod === 'manual_trigger' && user && (
                 <ManualTriggerSection userId={user.id} />
               )}

@@ -7,6 +7,7 @@ import { AssetDetail } from "@/components/module/assets/asset-detail"
 import { AssetForm } from "@/components/module/assets/asset-form"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
+import { ArrowLeft, Edit, Trash2 } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { physicalAssetActions } from "@/app/actions/physical-assets"
 import { User } from "@supabase/supabase-js"
@@ -63,6 +64,19 @@ export default function AssetDetailPage() {
   const [loading, setLoading] = useState(true)
   const [showEditModal, setShowEditModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
+
+  const getAssetTypeLabel = (type: string) => {
+    switch (type) {
+      case 'real_estate': return 'Real Estate'
+      case 'vehicle': return 'Vehicle'
+      case 'bank_account': return 'Bank Account'
+      case 'investment': return 'Investment'
+      case 'insurance': return 'Insurance Policy'
+      case 'personal_property': return 'Personal Property'
+      case 'business': return 'Business Interest'
+      default: return 'Other Asset'
+    }
+  }
 
   const loadAsset = useCallback(async (id: string) => {
     try {
@@ -275,7 +289,34 @@ export default function AssetDetailPage() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="p-6">
+        {/* Header with Back Button and Title */}
+        <div className="flex items-center justify-between mb-6">
+          {/* Back Button - Left */}
+          <Button variant="ghost" onClick={() => router.push("/assets")}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Assets
+          </Button>
+          
+          {/* Title - Center */}
+          <div className="text-center flex-1">
+            <h1 className="text-2xl font-bold">{asset.name}</h1>
+            <p className="text-muted-foreground">{getAssetTypeLabel(asset.type)}</p>
+          </div>
+          
+          {/* Action Buttons - Right */}
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={handleEdit}>
+              <Edit className="h-4 w-4 mr-2" />
+              Edit
+            </Button>
+            <Button variant="outline" onClick={handleDelete}>
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete
+            </Button>
+          </div>
+        </div>
+
         {/* Asset Detail Component */}
         <AssetDetail
           asset={asset}
