@@ -9,13 +9,16 @@ import {
   Lock, 
   Download,
   FileText,
-  Image,
+  Image as ImageIcon,
   Video,
   Archive,
   Key,
-  Shield,
   Search,
-  Plus
+  Plus,
+  StickyNote,
+  Bitcoin,
+  Scale,
+  Package
 } from "lucide-react"
 import { ItemForm } from "./item-form"
 import { ItemDetails } from "./item-details"
@@ -106,27 +109,31 @@ export function VaultDetail({
 
   const getItemIcon = (type: string) => {
     switch (type) {
-      case 'password': return <Key className="h-4 w-4" />
-      case 'document': return <FileText className="h-4 w-4" />
-      case 'video': return <Video className="h-4 w-4" />
-      case 'image': return <Image className="h-4 w-4" aria-label="Image" />
-      case 'note': return <FileText className="h-4 w-4" />
-      case 'crypto': return <Shield className="h-4 w-4" />
-      case 'bank': return <FileText className="h-4 w-4" />
-      default: return <Archive className="h-4 w-4" />
+      case 'password': return <Key className="h-5 w-5" />
+      case 'note': return <StickyNote className="h-5 w-5" />
+      case 'crypto': return <Bitcoin className="h-5 w-5" />
+      case 'document': return <FileText className="h-5 w-5" />
+      case 'image': return <ImageIcon className="h-5 w-5" />
+      case 'video': return <Video className="h-5 w-5" />
+      case 'legal': return <Scale className="h-5 w-5" />
+      case 'assets': return <Package className="h-5 w-5" />
+      case 'bank': return <FileText className="h-5 w-5" />
+      default: return <Archive className="h-5 w-5" />
     }
   }
 
   const getItemColor = (type: string) => {
     switch (type) {
-      case 'password': return 'bg-yellow-100 text-yellow-800'
-      case 'document': return 'bg-blue-100 text-blue-800'
-      case 'video': return 'bg-purple-100 text-purple-800'
-      case 'image': return 'bg-green-100 text-green-800'
-      case 'note': return 'bg-gray-100 text-gray-800'
-      case 'crypto': return 'bg-orange-100 text-orange-800'
-      case 'bank': return 'bg-red-100 text-red-800'
-      default: return 'bg-gray-100 text-gray-800'
+      case 'password': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
+      case 'note': return 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400'
+      case 'crypto': return 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400'
+      case 'document': return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400'
+      case 'image': return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+      case 'video': return 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400'
+      case 'legal': return 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400'
+      case 'assets': return 'bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-400'
+      case 'bank': return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+      default: return 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400'
     }
   }
 
@@ -219,7 +226,7 @@ export function VaultDetail({
               className="flex items-center p-4 bg-background-card border rounded-xl hover:border-primary/50 transition-all group cursor-pointer"
               style={{ borderColor: '#232629' }}
             >
-              {/* Icon Container */}
+              {/* Icon Container - Shows item type icon */}
               <div className={`w-10 h-10 rounded-lg flex items-center justify-center mr-3 flex-shrink-0 ${getItemColor(item.type)}`}>
                 {getItemIcon(item.type)}
               </div>

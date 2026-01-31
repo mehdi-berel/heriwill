@@ -42,11 +42,7 @@ import {
 
   LockKeyhole,
 
-  Settings,
-
-  Menu,
-
-  X
+  Settings
 
 } from "lucide-react"
 
@@ -164,8 +160,6 @@ export function Sidebar({ onSignOut }: SidebarProps) {
 
   const [isHovered, setIsHovered] = useState(false)
 
-  const [isMobileOpen, setIsMobileOpen] = useState(false)
-
   const [isProUser, setIsProUser] = useState(false)
 
 
@@ -248,69 +242,13 @@ export function Sidebar({ onSignOut }: SidebarProps) {
 
   return (
 
-    <>
-
-      {/* Mobile Menu Toggle Button */}
-
-      <button
-
-        onClick={() => setIsMobileOpen(!isMobileOpen)}
-
-        className="md:hidden fixed top-3 left-3 z-50 p-2 rounded-lg bg-background-secondary/90 backdrop-blur-sm border border-border-default shadow-lg hover:bg-background-hover transition-all duration-200"
-
-        aria-label="Toggle menu"
-
-      >
-
-        {isMobileOpen ? (
-
-          <X className="h-5 w-5 text-text-primary" />
-
-        ) : (
-
-          <Menu className="h-5 w-5 text-text-primary" />
-
-        )}
-
-      </button>
-
-
-
-      {/* Mobile Overlay */}
-
-      {isMobileOpen && (
-
-        <div
-
-          className="md:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-40 transition-opacity duration-300"
-
-          onClick={() => setIsMobileOpen(false)}
-
-        />
-
-      )}
-
-
-
-      {/* Sidebar */}
-
       <div 
 
         className={cn(
 
           "flex h-full flex-col bg-black/30 backdrop-blur-xl border-r transition-all duration-300 relative",
 
-          "md:relative",
-
-          // Desktop behavior
-
-          "hidden md:flex",
-
-          isHovered ? "md:w-64" : "md:w-20",
-
-          // Mobile behavior
-
-          isMobileOpen && "fixed inset-y-0 left-0 z-40 flex w-72 shadow-2xl"
+          isHovered ? "w-64" : "w-20"
 
         )}
 
@@ -336,7 +274,7 @@ export function Sidebar({ onSignOut }: SidebarProps) {
 
           "flex items-center gap-2.5 transition-all duration-300",
 
-          !isHovered && !isMobileOpen && "md:justify-center md:w-full"
+          !isHovered && "justify-center w-full"
 
         )}>
 
@@ -358,7 +296,7 @@ export function Sidebar({ onSignOut }: SidebarProps) {
 
           </div>
 
-          {(isHovered || isMobileOpen) && (
+          {isHovered && (
 
             <div className="flex items-baseline gap-1 overflow-hidden">
 
@@ -673,8 +611,6 @@ export function Sidebar({ onSignOut }: SidebarProps) {
       </div>
 
     </div>
-
-    </>
 
   )
 

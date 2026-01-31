@@ -10,7 +10,6 @@ import {
   AlertCircle,
   CheckCircle2,
   ArrowRight,
-  Sparkles,
   Power
 } from "lucide-react"
 
@@ -79,60 +78,102 @@ export function DashboardOverview({ stats, userName }: DashboardOverviewProps) {
             Here&apos;s your digital legacy overview
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Sparkles className="h-8 w-8 text-primary-400" />
-        </div>
       </div>
 
       {/* Stats Grid */}
-      <div className="grid gap-3 md:grid-cols-3">
+      <div className="grid grid-cols-3 gap-2 md:gap-3">
         {/* Vaults */}
         <Card className="border" style={{ borderColor: '#232629' }}>
-          <CardContent className="p-3">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-9 h-9 rounded-lg bg-purple-500/10 flex items-center justify-center flex-shrink-0">
-                <Lock className="h-4 w-4 text-purple-500" />
+          <CardContent className="p-2 md:p-3">
+            {/* Mobile: Vertical centered layout */}
+            <div className="flex flex-col items-center text-center gap-1 md:hidden">
+              <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center flex-shrink-0">
+                <Lock className="h-3.5 w-3.5 text-purple-500" />
               </div>
-              <div className="text-xl font-bold text-text-primary">
+              <div className="text-lg font-bold text-text-primary">
                 {stats.totalAssets}
               </div>
+              <div className="text-[10px] text-text-tertiary leading-tight">
+                Active Vaults
+              </div>
             </div>
-            <div className="text-xs text-text-tertiary">
-              Active Vaults
+            {/* Desktop: Horizontal layout */}
+            <div className="hidden md:block">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-9 h-9 rounded-lg bg-purple-500/10 flex items-center justify-center flex-shrink-0">
+                  <Lock className="h-4 w-4 text-purple-500" />
+                </div>
+                <div className="text-xl font-bold text-text-primary">
+                  {stats.totalAssets}
+                </div>
+              </div>
+              <div className="text-xs text-text-tertiary">
+                Active Vaults
+              </div>
             </div>
           </CardContent>
         </Card>
 
         {/* Items */}
         <Card className="border" style={{ borderColor: '#232629' }}>
-          <CardContent className="p-3">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-9 h-9 rounded-lg bg-blue-500/10 flex items-center justify-center flex-shrink-0">
-                <FolderOpen className="h-4 w-4 text-blue-500" />
+          <CardContent className="p-2 md:p-3">
+            {/* Mobile: Vertical centered layout */}
+            <div className="flex flex-col items-center text-center gap-1 md:hidden">
+              <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center flex-shrink-0">
+                <FolderOpen className="h-3.5 w-3.5 text-blue-500" />
               </div>
-              <div className="text-xl font-bold text-text-primary">
+              <div className="text-lg font-bold text-text-primary">
                 {stats.totalAssets * 3}
               </div>
+              <div className="text-[10px] text-text-tertiary leading-tight">
+                Stored Items
+              </div>
             </div>
-            <div className="text-xs text-text-tertiary">
-              Stored Items
+            {/* Desktop: Horizontal layout */}
+            <div className="hidden md:block">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-9 h-9 rounded-lg bg-blue-500/10 flex items-center justify-center flex-shrink-0">
+                  <FolderOpen className="h-4 w-4 text-blue-500" />
+                </div>
+                <div className="text-xl font-bold text-text-primary">
+                  {stats.totalAssets * 3}
+                </div>
+              </div>
+              <div className="text-xs text-text-tertiary">
+                Stored Items
+              </div>
             </div>
           </CardContent>
         </Card>
 
         {/* Heirs */}
         <Card className="border" style={{ borderColor: '#232629' }}>
-          <CardContent className="p-3">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-9 h-9 rounded-lg bg-green-500/10 flex items-center justify-center flex-shrink-0">
-                <Users className="h-4 w-4 text-green-500" />
+          <CardContent className="p-2 md:p-3">
+            {/* Mobile: Vertical centered layout */}
+            <div className="flex flex-col items-center text-center gap-1 md:hidden">
+              <div className="w-8 h-8 rounded-lg bg-green-500/10 flex items-center justify-center flex-shrink-0">
+                <Users className="h-3.5 w-3.5 text-green-500" />
               </div>
-              <div className="text-xl font-bold text-text-primary">
+              <div className="text-lg font-bold text-text-primary">
                 {stats.totalBeneficiaries}
               </div>
+              <div className="text-[10px] text-text-tertiary leading-tight">
+                Designated Heirs
+              </div>
             </div>
-            <div className="text-xs text-text-tertiary">
-              Designated Heirs
+            {/* Desktop: Horizontal layout */}
+            <div className="hidden md:block">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-9 h-9 rounded-lg bg-green-500/10 flex items-center justify-center flex-shrink-0">
+                  <Users className="h-4 w-4 text-green-500" />
+                </div>
+                <div className="text-xl font-bold text-text-primary">
+                  {stats.totalBeneficiaries}
+                </div>
+              </div>
+              <div className="text-xs text-text-tertiary">
+                Designated Heirs
+              </div>
             </div>
           </CardContent>
         </Card>

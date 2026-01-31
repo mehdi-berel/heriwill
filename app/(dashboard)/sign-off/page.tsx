@@ -5,6 +5,11 @@ import { useRouter } from "next/navigation"
 import { DashboardLayout } from "@/components/module/dashboard/dashboard-layout"
 import { SignOffMethodSelector } from "@/components/module/sign-off/sign-off-method-selector"
 import { SignOffSettingsModal } from "@/components/module/sign-off/sign-off-settings-modal"
+import { ManualTriggerSection } from "@/components/module/sign-off/manual-trigger-section"
+import { InactivitySection } from "@/components/module/sign-off/inactivity-section"
+import { TrustedContactSection } from "@/components/module/sign-off/trusted-contact-section"
+import { HeirNotificationSection } from "@/components/module/sign-off/heir-notification-section"
+import { ScheduledDateSection } from "@/components/module/sign-off/scheduled-date-section"
 import { Card, CardContent } from "@/components/ui/card"
 import { Clock, Users, Bell, Calendar, Hand, AlertCircle, Power } from "lucide-react"
 import { Switch } from "@/components/ui/switch"
@@ -77,6 +82,13 @@ export default function SignOffPage() {
   const [isActivated, setIsActivated] = useState(false)
   const [saving, setSaving] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [triggerSettings, setTriggerSettings] = useState<{
+    inactivityDays?: number
+    trustedContactHeirId?: string
+    notificationFrequency?: number
+    verificationThreshold?: number
+    scheduledDate?: string
+  }>({})
   const router = useRouter()
 
   useEffect(() => {
@@ -129,6 +141,16 @@ export default function SignOffPage() {
         setSelectedMethod(method)
         setActiveMethod(method)
         setIsActivated(true)
+        
+        // Store settings for section components
+        const settings = globalTrigger.global_trigger_settings as Record<string, unknown> || {}
+        setTriggerSettings({
+          inactivityDays: settings.inactivityDays as number,
+          trustedContactHeirId: settings.trustedContactHeirId as string,
+          notificationFrequency: settings.notificationFrequency as number,
+          verificationThreshold: settings.verificationThreshold as number,
+          scheduledDate: globalTrigger.global_scheduled_date as string
+        })
       } else {
         setIsActivated(false)
       }
@@ -238,6 +260,30 @@ export default function SignOffPage() {
               setIsModalOpen(true)
             }}
           />
+          
+          {/* Active Method Section - Shows configuration details */}
+          {isActivated && activeMethod && (
+            <div className="mt-6">
+              {activeMethod === 'manual_trigger' && user && (
+                <ManualTriggerSection userId={user.id} />
+              )}
+              {activeMethod === 'inactivity' && (
+                <InactivitySection inactivityDays={triggerSettings.inactivityDays || 30} />
+              )}
+              {activeMethod === 'trusted_contact' && (
+                <TrustedContactSection trustedContactHeirId={triggerSettings.trustedContactHeirId || ''} />
+              )}
+              {activeMethod === 'heir_notification' && (
+                <HeirNotificationSection 
+                  notificationFrequency={triggerSettings.notificationFrequency || 7}
+                  verificationThreshold={triggerSettings.verificationThreshold || 2}
+                />
+              )}
+              {activeMethod === 'scheduled_date' && (
+                <ScheduledDateSection scheduledDate={triggerSettings.scheduledDate || ''} />
+              )}
+            </div>
+          )}
         </div>
 
         {/* Settings Modal */}

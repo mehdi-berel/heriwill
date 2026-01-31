@@ -134,20 +134,31 @@ export default function VaultDetailPage() {
         created_at: string
         updated_at: string
         tags?: string[]
+        metadata?: Record<string, unknown>
       }
       
-      const mappedItems: VaultItem[] = items.map((item: VaultItemRaw) => ({
-        id: item.id,
-        title: item.title_encrypted || 'Untitled',
-        type: item.item_type as VaultItemType,
-        metadata: {
-          fileSizeBytes: item.file_size || 0
-        },
-        isEncrypted: true,
-        tags: item.tags || [],
-        createdAt: item.created_at,
-        updatedAt: item.updated_at
-      }))
+      // Valid item types
+      const validTypes: VaultItemType[] = ['password', 'document', 'video', 'image', 'note', 'crypto', 'bank', 'other', 'legal', 'assets']
+      
+      const mappedItems: VaultItem[] = items.map((item: VaultItemRaw) => {
+        // Ensure item_type is valid, default to 'other' if not
+        const itemType = validTypes.includes(item.item_type as VaultItemType) 
+          ? (item.item_type as VaultItemType)
+          : 'other'
+        
+        return {
+          id: item.id,
+          title: item.title_encrypted || 'Untitled',
+          type: itemType,
+          metadata: (item.metadata as VaultItemMetadata) || {
+            fileSizeBytes: item.file_size || 0
+          },
+          isEncrypted: true,
+          tags: item.tags || [],
+          createdAt: item.created_at,
+          updatedAt: item.updated_at
+        }
+      })
       
       setVaultItems(mappedItems)
     } catch (error) {
