@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { DashboardLayout } from "@/components/module/dashboard/dashboard-layout"
 import { SignOffMethodSelector } from "@/components/module/sign-off/sign-off-method-selector"
 import { SignOffSettingsModal } from "@/components/module/sign-off/sign-off-settings-modal"
 import { ManualTriggerSection } from "@/components/module/sign-off/manual-trigger-section"
@@ -14,18 +13,11 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Clock, Users, Bell, Calendar, Hand, AlertCircle, Power } from "lucide-react"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
+import { toast } from "sonner"
 import { supabase } from "@/lib/supabase"
 import { getGlobalTrigger, deleteGlobalTrigger } from "@/lib/services/globalTriggerService"
 import { User } from "@supabase/supabase-js"
 import { LucideIcon } from "lucide-react"
-
-interface UserProfile {
-  id: string
-  full_name?: string
-  email?: string
-  subscription_tier?: string
-  global_trigger_method?: string
-}
 
 interface SignOffMethod {
   id: string
@@ -75,8 +67,6 @@ const DETECTION_METHODS: SignOffMethod[] = [
 
 export default function SignOffPage() {
   const [user, setUser] = useState<User | null>(null)
-  const [profile, setProfile] = useState<UserProfile | null>(null)
-  const [loading, setLoading] = useState(true)
   const [selectedMethod, setSelectedMethod] = useState<string | null>(null)
   const [activeMethod, setActiveMethod] = useState<string | null>(null)
   const [isActivated, setIsActivated] = useState(false)
@@ -100,19 +90,8 @@ export default function SignOffPage() {
       }
       setUser(user)
       
-      // Load user profile
-      const { data: profileData } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', user.id)
-        .single()
-      
-      setProfile(profileData)
-      
       // Load sign-off settings
       await loadSignOffSettings(user.id)
-      
-      setLoading(false)
     }
 
     getUser()
@@ -159,25 +138,8 @@ export default function SignOffPage() {
     }
   }
 
-  const handleSignOut = async () => {
-    await supabase.auth.signOut()
-    router.push("/login")
-  }
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-lg">Loading...</div>
-      </div>
-    )
-  }
-
   return (
-    <DashboardLayout 
-      userName={profile?.full_name || user?.email} 
-      onSignOut={handleSignOut}
-    >
-      <div className="p-4 md:p-6 space-y-4 md:space-y-6 max-w-4xl mx-auto">
+    <div className="p-4 md:p-6 space-y-4 md:space-y-6 max-w-4xl mx-auto">
         {/* Activation Toggle Card */}
         <Card className={isActivated ? "bg-green-50 dark:bg-green-950/20 border-green-500/50" : "bg-gray-50 dark:bg-gray-900/30 border-gray-300 dark:border-gray-700"}>
           <CardContent className="p-4 md:p-5">
@@ -215,7 +177,7 @@ export default function SignOffPage() {
                   } else {
                     // Activate - need to have a configured method
                     if (!activeMethod) {
-                      alert('Please select and configure a detection method first')
+                      toast.error('Please select and configure a detection method first')
                       return
                     }
                     // Reactivate the existing method
@@ -303,7 +265,6 @@ export default function SignOffPage() {
             await loadSignOffSettings(user.id)
           }}
         />
-      </div>
-    </DashboardLayout>
+    </div>
   )
 }

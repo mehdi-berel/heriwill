@@ -2,7 +2,6 @@
 
 import { useState, useEffect, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { DashboardLayout } from "@/components/module/dashboard/dashboard-layout"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
@@ -11,15 +10,7 @@ import { Check, Crown, Loader2, Zap, Gift } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { getCheckoutUrl } from "@/lib/revenuecat-config"
 import { User } from "@supabase/supabase-js"
-
-interface UserProfile {
-  id: string
-  full_name?: string
-  email?: string
-  subscription_tier?: string
-  subscription_status?: string
-  subscription_expires_at?: string
-}
+import { toast } from "sonner"
 
 // Remove local Package interface if importing from library, or keep if library not available
 // interface Package {
@@ -33,7 +24,6 @@ function UpgradePageContent() {
   searchParams.get('plan') as 'premium' | 'pro' | null
 
   const [user, setUser] = useState<User | null>(null)
-  const [profile, setProfile] = useState<UserProfile | null>(null)
   const [currentPlan, setCurrentPlan] = useState<'free' | 'premium' | 'pro'>('free')
   const [loading, setLoading] = useState(true)
   const [purchasing, setPurchasing] = useState<string | null>(null)
@@ -55,7 +45,6 @@ function UpgradePageContent() {
         .eq('id', user.id)
         .single()
       
-      setProfile(profileData as unknown as UserProfile)
       const tier = (profileData as unknown as Record<string, unknown>)?.subscription_tier
       setCurrentPlan((tier as 'free' | 'premium' | 'pro') || 'free')
       setLoading(false)
@@ -76,20 +65,14 @@ function UpgradePageContent() {
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to redirect to payment page.'
       console.error('Redirect error:', error)
-      alert(errorMessage)
+      toast.error(errorMessage)
       setPurchasing(null)
     }
   }
 
-  const handleSignOut = async () => {
-    await supabase.auth.signOut()
-    router.push("/login")
-  }
-
   if (loading) {
     return (
-      <DashboardLayout userName="Loading..." onSignOut={handleSignOut}>
-        <div className="p-6 max-w-7xl mx-auto">
+      <div className="p-6 max-w-7xl mx-auto">
           <Skeleton className="h-10 w-32 mb-8" />
           <div className="text-center mb-8">
             <Skeleton className="h-12 w-96 mx-auto mb-4" />
@@ -114,7 +97,6 @@ function UpgradePageContent() {
             ))}
           </div>
         </div>
-      </DashboardLayout>
     )
   }
 
@@ -144,11 +126,7 @@ function UpgradePageContent() {
   ]
 
   return (
-    <DashboardLayout 
-      userName={profile?.full_name || user?.email} 
-      onSignOut={handleSignOut}
-    >
-      <div className="p-6 max-w-7xl mx-auto relative">
+    <div className="p-6 max-w-7xl mx-auto relative">
         {/* Background blur effects */}
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute top-40 left-0 w-72 h-72 bg-primary-900/10 rounded-full filter blur-3xl"></div>
@@ -403,8 +381,7 @@ function UpgradePageContent() {
             </Button>
           </Card>
         </div>
-      </div>
-    </DashboardLayout>
+    </div>
   )
 }
 

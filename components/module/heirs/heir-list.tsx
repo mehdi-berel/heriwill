@@ -1,12 +1,15 @@
 "use client"
 
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { 
   Users, 
   Mail, 
   Edit, 
   Trash2, 
-  CheckCircle 
+  CheckCircle,
+  Copy,
+  Check
 } from "lucide-react"
 
 interface Heir {
@@ -56,6 +59,22 @@ export function HeirList({
   searchTerm = '',
   selectedStatus = null
 }: HeirListProps) {
+  const [copiedId, setCopiedId] = useState<string | null>(null)
+
+  const copyInvitationLink = async (heir: Heir, e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (!heir.invitation_code) return
+    
+    const invitationLink = `https://app.heriwill.com/auth/invite?code=${heir.invitation_code}&type=heir`
+    
+    try {
+      await navigator.clipboard.writeText(invitationLink)
+      setCopiedId(heir.id)
+      setTimeout(() => setCopiedId(null), 2000)
+    } catch (err) {
+      console.error('Failed to copy:', err)
+    }
+  }
 
   const filteredHeirs = heirs.filter(heir => {
     const matchesSearch = heir.full_name_encrypted?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -134,6 +153,21 @@ export function HeirList({
 
               {/* Actions */}
               <div className="flex items-center gap-2 ml-2">
+                {heir.invitation_status === 'pending' && heir.invitation_code && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-9 w-9 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={(e) => copyInvitationLink(heir, e)}
+                    title="Copy invitation link"
+                  >
+                    {copiedId === heir.id ? (
+                      <Check className="h-4 w-4 text-success" />
+                    ) : (
+                      <Copy className="h-4 w-4" />
+                    )}
+                  </Button>
+                )}
                 <Button
                   size="sm"
                   variant="ghost"

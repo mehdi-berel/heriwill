@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { RevenueCatProvider } from "@/contexts/RevenueCatContext";
+import { Toaster } from "sonner";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -26,6 +27,7 @@ export default function RootLayout({
         <RevenueCatProvider>
           {children}
         </RevenueCatProvider>
+        <Toaster position="top-right" richColors />
       </body>
     </html>
   );

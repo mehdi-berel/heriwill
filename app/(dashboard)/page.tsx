@@ -2,11 +2,9 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
-import { DashboardLayout } from "@/components/module/dashboard/dashboard-layout"
 import { DashboardOverview } from "@/components/module/dashboard/dashboard-overview"
 import { DashboardSkeleton } from "@/components/ui/skeleton"
 import { supabase } from "@/lib/supabase"
-import { User } from "@supabase/supabase-js"
 
 interface UserProfile {
   id: string
@@ -28,7 +26,6 @@ interface DashboardStats {
 }
 
 export default function HomePage() {
-  const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [stats, setStats] = useState<DashboardStats>({
     totalAssets: 0,
@@ -139,7 +136,6 @@ export default function HomePage() {
         router.push("/login")
         return
       }
-      setUser(user)
       
       // Load user data
       await Promise.all([
@@ -156,7 +152,6 @@ export default function HomePage() {
       if (!session?.user) {
         router.push("/login")
       } else {
-        setUser(session.user)
         loadProfile(session.user.id)
         loadStats(session.user.id)
       }
@@ -165,28 +160,14 @@ export default function HomePage() {
     return () => subscription.unsubscribe()
   }, [router, loadProfile, loadStats, calculateSecurityScore])
 
-  const handleSignOut = async () => {
-    await supabase.auth.signOut()
-    router.push("/login")
-  }
-
   if (loading) {
-    return (
-      <DashboardLayout userName="Loading..." onSignOut={handleSignOut}>
-        <DashboardSkeleton />
-      </DashboardLayout>
-    )
+    return <DashboardSkeleton />
   }
 
   return (
-    <DashboardLayout 
-      userName={profile?.full_name || user?.email || 'User'}
-      onSignOut={handleSignOut}
-    >
-      <DashboardOverview 
-        userName={profile?.full_name || 'User'}
-        stats={stats}
-      />
-    </DashboardLayout>
+    <DashboardOverview 
+      userName={profile?.full_name || 'User'}
+      stats={stats}
+    />
   )
 }

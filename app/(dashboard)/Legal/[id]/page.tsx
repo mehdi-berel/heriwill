@@ -2,18 +2,11 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { useRouter, useParams } from "next/navigation"
-import { DashboardLayout } from "@/components/module/dashboard/dashboard-layout"
 import { PDFEditor } from "@/components/module/legal/pdf-editor"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft } from "lucide-react"
 import { supabase } from "@/lib/supabase"
-import { User } from "@supabase/supabase-js"
-
-interface UserProfile {
-  full_name?: string
-  email?: string
-  subscription_tier?: string
-}
+import { toast } from "sonner"
 
 interface LegalDocument {
   id: string
@@ -37,15 +30,10 @@ export default function LegalDocumentDetailPage() {
   const params = useParams()
   const documentId = params.id as string
 
-  const [user, setUser] = useState<User | null>(null)
-  const [profile, setProfile] = useState<UserProfile | null>(null)
   const [document, setDocument] = useState<LegalDocument | null>(null)
-  const [loading, setLoading] = useState(true)
 
   const loadDocument = useCallback(async (id: string) => {
     try {
-      setLoading(true)
-      
       // Fetch legal document from legal table
       const { data, error } = await supabase
         .from('legal')
@@ -64,10 +52,8 @@ export default function LegalDocumentDetailPage() {
 
       // Set document data directly
       setDocument(data)
-      setLoading(false)
     } catch (error) {
       console.error('Error loading document:', error)
-      setLoading(false)
       router.push("/Legal")
     }
   }, [router])
@@ -79,15 +65,6 @@ export default function LegalDocumentDetailPage() {
         router.push("/login")
         return
       }
-      setUser(user)
-      
-      const { data: profileData } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', user.id)
-        .single()
-      
-      setProfile(profileData)
       
       await loadDocument(documentId)
     }
@@ -97,8 +74,6 @@ export default function LegalDocumentDetailPage() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!session?.user) {
         router.push("/login")
-      } else {
-        setUser(session.user)
       }
     })
 
@@ -125,49 +100,27 @@ export default function LegalDocumentDetailPage() {
 
       if (error) {
         console.error('Error saving content:', error)
-        alert('Failed to save document')
+        toast.error('Failed to save document')
         return
       }
 
-      alert('Document saved successfully!')
+      toast.success('Document saved successfully!')
       await loadDocument(documentId)
     } catch (error) {
       console.error('Error saving document:', error)
-      alert('Failed to save document')
+      toast.error('Failed to save document')
     }
   }
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-lg">Loading...</div>
-      </div>
-    )
-  }
-
-  if (!document) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-lg">Document not found</div>
-      </div>
-    )
-  }
+  if (!document) return null
 
   return (
-    <DashboardLayout 
-      userName={profile?.full_name || user?.email} 
-      onSignOut={async () => {
-        await supabase.auth.signOut()
-        router.push("/login")
-      }}
-    >
-      <div className="p-6 max-w-5xl mx-auto">
-        <div className="mb-6">
-          <Button variant="ghost" onClick={() => router.push("/Legal")}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Legal Documents
-          </Button>
-        </div>
+    <div className="p-6 max-w-5xl mx-auto">
+      <div className="mb-6">
+        <Button variant="ghost" onClick={() => router.push("/Legal")}>
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back to Legal Documents
+        </Button>
 
         <PDFEditor
           documentType={document.document_type}
@@ -175,6 +128,6 @@ export default function LegalDocumentDetailPage() {
           onSave={handleSaveContent}
         />
       </div>
-    </DashboardLayout>
+    </div>
   )
 }

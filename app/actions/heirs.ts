@@ -97,8 +97,8 @@ export const heirActions = {
     const heir = await heirActions.getHeirById(heirId) as any
     if (!heir) throw new Error('Heir not found')
 
-    // In a real app, this would send an email
-    console.log('Resending invitation to heir:', heir.email_encrypted)
+    // TODO: Implement email sending service
+    // await sendInvitationEmail(heir.email_encrypted, heir.invitation_code)
     
     // Update invitation status
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

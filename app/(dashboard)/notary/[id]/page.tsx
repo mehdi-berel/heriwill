@@ -2,18 +2,12 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { useRouter, useParams } from "next/navigation"
-import { DashboardLayout } from "@/components/module/dashboard/dashboard-layout"
 import { NotaryDetail } from "@/components/module/notary/notary-detail"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { User } from "@supabase/supabase-js"
-
-interface UserProfile {
-  full_name?: string
-  email?: string
-  subscription_tier?: string
-}
+import { toast } from "sonner"
 
 interface Notary {
   id: string
@@ -40,9 +34,7 @@ export default function NotaryDetailPage() {
   const notaryId = params.id as string
 
   const [user, setUser] = useState<User | null>(null)
-  const [profile, setProfile] = useState<UserProfile | null>(null)
   const [notary, setNotary] = useState<Notary | null>(null)
-  const [loading, setLoading] = useState(true)
 
   const loadNotary = useCallback(async (id: string) => {
     try {
@@ -59,10 +51,8 @@ export default function NotaryDetailPage() {
       }
 
       setNotary(data)
-      setLoading(false)
     } catch (error) {
       console.error('Error loading notary:', error)
-      setLoading(false)
       router.push("/notary")
     }
   }, [router])
@@ -75,15 +65,6 @@ export default function NotaryDetailPage() {
         return
       }
       setUser(user)
-      
-      // Load user profile
-      const { data: profileData } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', user.id)
-        .single()
-      
-      setProfile(profileData)
       
       // Load notary
       await loadNotary(notaryId)
@@ -107,17 +88,12 @@ export default function NotaryDetailPage() {
 
     if (confirm('Are you sure you want to delete this notary?')) {
       try {
-        const { error } = await supabase
-          .from('notaries')
-          .delete()
-          .eq('id', notary.id)
-
-        if (error) throw error
-
+        await supabase.from('notaries').delete().eq('id', notaryId)
+        toast.success('Notary deleted successfully')
         router.push("/notary")
       } catch (error) {
         console.error('Error deleting notary:', error)
-        alert('Failed to delete notary')
+        toast.error('Failed to delete notary')
       }
     }
   }
@@ -146,31 +122,10 @@ export default function NotaryDetailPage() {
     }
   }
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-lg">Loading...</div>
-      </div>
-    )
-  }
-
-  if (!notary) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-lg">Notary not found</div>
-      </div>
-    )
-  }
+  if (!notary) return null
 
   return (
-    <DashboardLayout 
-      userName={profile?.full_name || user?.email} 
-      onSignOut={async () => {
-        await supabase.auth.signOut()
-        router.push("/login")
-      }}
-    >
-      <div className="p-6 max-w-5xl mx-auto">
+    <div className="p-6 max-w-5xl mx-auto">
         <div className="mb-6">
           <Button variant="ghost" onClick={() => router.push("/notary")}>
             <ArrowLeft className="h-4 w-4 mr-2" />
@@ -184,10 +139,9 @@ export default function NotaryDetailPage() {
           onSetPrimary={handleSetPrimary}
           onEdit={() => {
             // TODO: Implement edit functionality or navigation to edit page
-            console.log("Edit clicked")
+            router.push(`/notary/${notaryId}/edit`)
           }}
         />
-      </div>
-    </DashboardLayout>
+    </div>
   )
 }

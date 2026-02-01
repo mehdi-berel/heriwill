@@ -273,16 +273,16 @@ function InvitePageContent() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background-primary via-background-secondary to-background-tertiary">
-        <Loader2 className="h-8 w-8 animate-spin text-primary-400" />
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#09090B' }}>
+        <Loader2 className="h-8 w-8 animate-spin" style={{ color: '#C084FC' }} />
       </div>
     )
   }
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background-primary via-background-secondary to-background-tertiary p-4">
-        <Card className="w-full max-w-md border-gray-700">
+      <div className="min-h-screen flex items-center justify-center p-4" style={{ backgroundColor: '#09090B' }}>
+        <Card className="w-full max-w-md border" style={{ borderColor: '#232629', backgroundColor: '#0C0C0E' }}>
           <CardHeader>
             <div className="flex items-center gap-2 text-status-error">
               <AlertCircle className="h-6 w-6" />
@@ -316,8 +316,8 @@ function InvitePageContent() {
     : `${inviteData.inviterName} has invited you to be their notary`
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background-primary via-background-secondary to-background-tertiary p-4">
-      <Card className="w-full max-w-md border-gray-700">
+    <div className="min-h-screen flex items-center justify-center p-4" style={{ backgroundColor: '#09090B' }}>
+      <Card className="w-full max-w-md border" style={{ borderColor: '#232629', backgroundColor: '#0C0C0E' }}>
         <CardHeader>
           <div className="flex items-center gap-2">
             <InviteIcon className="h-6 w-6 text-primary-400" />
@@ -419,7 +419,8 @@ function InvitePageContent() {
             <Button
               onClick={handleAcceptInvite}
               disabled={processing || inviteData.expired}
-              className="flex-1 bg-primary-500 hover:bg-primary-600"
+              className="flex-1"
+              style={{ backgroundColor: '#8B5CF6' }}
             >
               {processing ? (
                 <>
@@ -443,8 +444,8 @@ function InvitePageContent() {
 export default function InvitePage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-gradient-dark">
-        <Loader2 className="h-8 w-8 animate-spin text-primary-400" />
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#09090B' }}>
+        <Loader2 className="h-8 w-8 animate-spin" style={{ color: '#C084FC' }} />
       </div>
     }>
       <InvitePageContent />

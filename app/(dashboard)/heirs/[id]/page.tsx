@@ -2,19 +2,10 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { useRouter, useParams } from "next/navigation"
-import { DashboardLayout } from "@/components/module/dashboard/dashboard-layout"
 import { HeirDetail } from "@/components/module/heirs/heir-detail"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft, Edit, Trash2 } from "lucide-react"
 import { supabase } from "@/lib/supabase"
-import { User } from "@supabase/supabase-js"
-
-interface UserProfile {
-  id: string
-  full_name?: string
-  email?: string
-  subscription_tier?: string
-}
 
 interface Heir {
   id: string
@@ -53,9 +44,6 @@ interface HeirActivity {
 }
 
 export default function HeirDetailPage() {
-  const [user, setUser] = useState<User | null>(null)
-  const [profile, setProfile] = useState<UserProfile | null>(null)
-  const [loading, setLoading] = useState(true)
   const [heir, setHeir] = useState<Heir | null>(null)
   const [activities, setActivities] = useState<HeirActivity[]>([])
   const router = useRouter()
@@ -122,24 +110,12 @@ export default function HeirDetailPage() {
         router.push("/login")
         return
       }
-      setUser(user)
-      
-      // Load user profile
-      const { data: profileData } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .eq('user_id', user.id)
-        .single()
-      
-      setProfile(profileData)
       
       // Load heir data
       await Promise.all([
         loadHeir(heirId),
         loadHeirActivities(heirId)
       ])
-      
-      setLoading(false)
     }
 
     getUser()
@@ -148,7 +124,6 @@ export default function HeirDetailPage() {
       if (!session?.user) {
         router.push("/login")
       } else {
-        setUser(session.user)
         if (heirId) {
           loadHeir(heirId)
           loadHeirActivities(heirId)
@@ -210,41 +185,10 @@ export default function HeirDetailPage() {
     }
   }
 
-  const handleSignOut = async () => {
-    await supabase.auth.signOut()
-    router.push("/login")
-  }
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-lg">Loading...</div>
-      </div>
-    )
-  }
-
-  if (!heir) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold mb-4">Heir not found</h2>
-          <p className="text-muted-foreground mb-4">
-            The heir you&apos;re looking for doesn&apos;t exist or you don&apos;t have permission to view it.
-          </p>
-          <Button onClick={() => router.push("/heirs")}>
-            Back to Heirs
-          </Button>
-        </div>
-      </div>
-    )
-  }
+  if (!heir) return null
 
   return (
-    <DashboardLayout 
-      userName={profile?.full_name || user?.email} 
-      onSignOut={handleSignOut}
-    >
-      <div className="p-6">
+    <div className="p-6">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center space-x-4">
@@ -283,7 +227,6 @@ export default function HeirDetailPage() {
           onRevokeAccess={handleRevokeAccess}
           onRefreshActivity={handleRefreshActivity}
         />
-      </div>
-    </DashboardLayout>
+    </div>
   )
 }

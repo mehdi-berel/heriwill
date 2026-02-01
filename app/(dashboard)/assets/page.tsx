@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { ProTierGuard } from "@/components/module/auth/pro-tier-guard"
-import { DashboardLayout } from "@/components/module/dashboard/dashboard-layout"
 import { AssetForm } from "@/components/module/assets/asset-form"
 import { AssetList } from "@/components/module/assets/asset-list"
 import { Button } from "@/components/ui/button"
@@ -12,13 +11,6 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { Search, Plus, ArrowLeft } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { User } from "@supabase/supabase-js"
-
-interface UserProfile {
-  id: string
-  full_name?: string
-  email?: string
-  subscription_tier?: string
-}
 
 interface AssetFormData {
   name: string
@@ -60,8 +52,6 @@ interface Heir {
 
 function AssetsPageContent() {
   const [user, setUser] = useState<User | null>(null)
-  const [profile, setProfile] = useState<UserProfile | null>(null)
-  const [loading, setLoading] = useState(true)
   const [assets, setAssets] = useState<Asset[]>([])
   const [vaults, setVaults] = useState<Vault[]>([])
   const [heirs, setHeirs] = useState<Heir[]>([])
@@ -142,23 +132,12 @@ function AssetsPageContent() {
       }
       setUser(user)
       
-      // Load user profile
-      const { data: profileData } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', user.id)
-        .single()
-      
-      setProfile(profileData)
-      
       // Load assets, vaults, and heirs data
       await Promise.all([
         loadAssets(user.id),
         loadVaults(user.id),
         loadHeirs(user.id)
       ])
-      
-      setLoading(false)
     }
 
     getUser()
@@ -281,19 +260,6 @@ function AssetsPageContent() {
     setShowDeleteModal(true)
   }
 
-  const handleSignOut = async () => {
-    await supabase.auth.signOut()
-    router.push("/login")
-  }
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-lg">Loading...</div>
-      </div>
-    )
-  }
-
   const filteredAssets = assets.filter(asset => {
     const matchesSearch = asset.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          asset.description?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -303,11 +269,7 @@ function AssetsPageContent() {
 
   return (
     <ProTierGuard pageName="Assets">
-      <DashboardLayout 
-        userName={profile?.full_name || user?.email} 
-        onSignOut={handleSignOut}
-      >
-        <div className="p-6 space-y-6">
+      <div className="p-6 space-y-6">
         {/* Back Button */}
         <Button 
           variant="ghost" 
@@ -432,7 +394,6 @@ function AssetsPageContent() {
           </DialogContent>
         </Dialog>
       </div>
-    </DashboardLayout>
     </ProTierGuard>
   )
 }

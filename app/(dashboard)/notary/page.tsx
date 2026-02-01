@@ -3,18 +3,11 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { ProTierGuard } from "@/components/module/auth/pro-tier-guard"
-import { DashboardLayout } from "@/components/module/dashboard/dashboard-layout"
 import { NotarySelector } from "@/components/module/notary/notary-selector"
 import { NotaryDetail } from "@/components/module/notary/notary-detail"
 import { Button } from "@/components/ui/button"
 import { supabase } from "@/lib/supabase"
 import { User } from "@supabase/supabase-js"
-
-interface UserProfile {
-  full_name?: string
-  email?: string
-  subscription_tier?: string
-}
 
 interface NotaryData {
   name: string
@@ -52,8 +45,6 @@ interface Notary {
 
 export default function NotaryPage() {
   const [user, setUser] = useState<User | null>(null)
-  const [profile, setProfile] = useState<UserProfile | null>(null)
-  const [loading, setLoading] = useState(true)
   const [notaries, setNotaries] = useState<Notary[]>([])
   const [selectedFilter] = useState<'all' | 'primary' | 'secondary' | null>(null)
   const [selectedNotary, setSelectedNotary] = useState<Notary | null>(null)
@@ -68,19 +59,8 @@ export default function NotaryPage() {
       }
       setUser(user)
       
-      // Load user profile
-      const { data: profileData } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', user.id)
-        .single()
-      
-      setProfile(profileData)
-      
       // Load notaries
       await loadNotaries(user.id)
-      
-      setLoading(false)
     }
 
     getUser()
@@ -114,11 +94,6 @@ export default function NotaryPage() {
     } catch (error) {
       console.error('Error loading notaries:', error)
     }
-  }
-
-  const handleSignOut = async () => {
-    await supabase.auth.signOut()
-    router.push("/login")
   }
 
   const handleAddNotary = async (notaryData: NotaryData) => {
@@ -202,20 +177,8 @@ export default function NotaryPage() {
     }
   }
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-lg">Loading...</div>
-      </div>
-    )
-  }
-
   return (
     <ProTierGuard pageName="Notary Services">
-      <DashboardLayout 
-        userName={profile?.full_name || user?.email} 
-        onSignOut={handleSignOut}
-      >
       <div className="p-6">
         {/* Header */}
         <div className="mb-6">
@@ -267,7 +230,6 @@ export default function NotaryPage() {
           />
         )}
       </div>
-    </DashboardLayout>
     </ProTierGuard>
   )
 }

@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { supabase } from "@/lib/supabase"
 import { Mail, AlertCircle, CheckCircle, ArrowLeft } from "lucide-react"
+import { sanitizeEmail } from "@/lib/utils/sanitize"
 
 // Force dynamic rendering to avoid prerendering issues with Supabase
 export const dynamic = 'force-dynamic'
@@ -19,6 +20,9 @@ export default function ForgotPasswordPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState(false)
+  const [attemptCount, setAttemptCount] = useState(0)
+  const [isRateLimited, setIsRateLimited] = useState(false)
+  const [retryAfter, setRetryAfter] = useState(0)
   const router = useRouter()
 
   const handleResetPassword = async (e: React.FormEvent) => {
@@ -27,29 +31,61 @@ export default function ForgotPasswordPage() {
     setError("")
     setSuccess(false)
 
+    // Check rate limit (3 attempts per 15 minutes for password reset)
+    if (isRateLimited) {
+      const now = Date.now()
+      if (now < retryAfter) {
+        const secondsLeft = Math.ceil((retryAfter - now) / 1000)
+        setError(`Too many password reset attempts. Please try again in ${secondsLeft} seconds.`)
+        setLoading(false)
+        return
+      } else {
+        // Reset rate limit
+        setIsRateLimited(false)
+        setAttemptCount(0)
+      }
+    }
+
+    // Sanitize email input
+    const sanitizedEmail = sanitizeEmail(email)
+
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      const { error } = await supabase.auth.resetPasswordForEmail(sanitizedEmail, {
         redirectTo: 'https://app.heriwill.com/reset-password',
       })
 
       if (error) throw error
 
+      // Reset attempt count on success
+      setAttemptCount(0)
+      setIsRateLimited(false)
       setSuccess(true)
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : "Failed to send reset email. Please try again."
-      setError(errorMessage)
+      // Increment attempt count on failure
+      const newAttemptCount = attemptCount + 1
+      setAttemptCount(newAttemptCount)
+
+      // Apply rate limit after 3 failed attempts (stricter for password reset)
+      if (newAttemptCount >= 3) {
+        setIsRateLimited(true)
+        setRetryAfter(Date.now() + 15 * 60 * 1000) // 15 minutes
+        setError("Too many password reset attempts. Please try again in 15 minutes.")
+      } else {
+        const errorMessage = error instanceof Error ? error.message : "Failed to send reset email. Please try again."
+        setError(`${errorMessage} (Attempt ${newAttemptCount}/3)`)
+      }
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-dark px-4 py-8">
-      <Card className="w-full max-w-md shadow-2xl border-border-default/50">
+    <div className="min-h-screen flex items-center justify-center px-4 py-8" style={{ backgroundColor: '#09090B' }}>
+      <Card className="w-full max-w-md shadow-2xl border" style={{ borderColor: '#232629', backgroundColor: '#0C0C0E' }}>
         <CardHeader className="text-center space-y-6 pt-8 pb-6">
           {/* Logo Section */}
           <div className="flex flex-col items-center space-y-4">
-            <div className="relative w-28 h-28 rounded-full bg-gradient-purple/10 flex items-center justify-center shadow-lg shadow-primary-600/20">
+            <div className="relative w-28 h-28 rounded-full flex items-center justify-center shadow-lg border" style={{ backgroundColor: '#8B5CF620', borderColor: '#8B5CF640', boxShadow: '0 20px 25px -5px rgba(139, 92, 246, 0.2)' }}>
               <div className="relative w-20 h-20">
                 <Image
                   src="/heriwill-transparent.png"
@@ -61,8 +97,8 @@ export default function ForgotPasswordPage() {
               </div>
             </div>
             <div className="space-y-2">
-              <CardTitle className="text-3xl font-bold">Reset Password</CardTitle>
-              <CardDescription className="text-base text-text-secondary">
+              <CardTitle className="text-3xl font-bold" style={{ color: '#FAFAFA' }}>Reset Password</CardTitle>
+              <CardDescription className="text-base" style={{ color: '#A1A1AA' }}>
                 {success 
                   ? "Check your email for reset instructions"
                   : "Enter your email to receive a password reset link"}
@@ -125,7 +161,8 @@ export default function ForgotPasswordPage() {
                     placeholder="Enter your email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="pl-12 h-12 bg-background-secondary border-border-default focus:border-primary-500 transition-colors"
+                    className="pl-12 h-12 transition-colors"
+                    style={{ backgroundColor: '#141417', borderColor: '#232629' }}
                     required
                     disabled={loading}
                   />
@@ -135,7 +172,8 @@ export default function ForgotPasswordPage() {
               {/* Submit Button */}
               <Button 
                 type="submit" 
-                className="w-full h-12 text-base font-semibold shadow-lg shadow-primary-600/30 hover:shadow-primary-600/40 transition-all" 
+                className="w-full h-12 text-base font-semibold transition-all" 
+                style={{ backgroundColor: '#8B5CF6', boxShadow: '0 10px 15px -3px rgba(139, 92, 246, 0.3)' }}
                 disabled={loading || !email.trim()}
               >
                 {loading ? "Sending..." : "Send Reset Link"}
@@ -155,12 +193,13 @@ export default function ForgotPasswordPage() {
           )}
           
           {/* Sign Up Link */}
-          <div className="mt-6 pt-6 border-t border-border-default text-center">
-            <p className="text-sm text-text-secondary">
+          <div className="mt-6 pt-6 border-t text-center" style={{ borderColor: '#232629' }}>
+            <p className="text-sm" style={{ color: '#A1A1AA' }}>
               Don&apos;t have an account?{" "}
               <Link 
                 href="/signup" 
-                className="text-primary-400 hover:text-primary-300 font-semibold transition-colors"
+                className="font-semibold transition-colors"
+                style={{ color: '#C084FC' }}
               >
                 Create account
               </Link>

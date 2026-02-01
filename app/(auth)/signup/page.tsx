@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { supabase } from "@/lib/supabase"
 import { Mail, Lock, User, Eye, EyeOff, AlertCircle, CheckCircle } from "lucide-react"
+import { sanitizeEmail, sanitizeInput } from "@/lib/utils/sanitize"
 
 export default function SignupPage() {
   const [email, setEmail] = useState("")
@@ -19,6 +20,9 @@ export default function SignupPage() {
   const [error, setError] = useState("")
   const [message, setMessage] = useState("")
   const [isPasswordVisible, setIsPasswordVisible] = useState(false)
+  const [attemptCount, setAttemptCount] = useState(0)
+  const [isRateLimited, setIsRateLimited] = useState(false)
+  const [retryAfter, setRetryAfter] = useState(0)
   const router = useRouter()
 
   const handleSignup = async (e: React.FormEvent) => {
@@ -27,13 +31,32 @@ export default function SignupPage() {
     setError("")
     setMessage("")
 
+    // Check rate limit (5 attempts per 15 minutes)
+    if (isRateLimited) {
+      const now = Date.now()
+      if (now < retryAfter) {
+        const secondsLeft = Math.ceil((retryAfter - now) / 1000)
+        setError(`Too many signup attempts. Please try again in ${secondsLeft} seconds.`)
+        setLoading(false)
+        return
+      } else {
+        // Reset rate limit
+        setIsRateLimited(false)
+        setAttemptCount(0)
+      }
+    }
+
+    // Sanitize inputs
+    const sanitizedEmail = sanitizeEmail(email)
+    const sanitizedFullName = sanitizeInput(fullName)
+
     try {
       const { data, error } = await supabase.auth.signUp({
-        email,
+        email: sanitizedEmail,
         password,
         options: {
           data: {
-            full_name: fullName,
+            full_name: sanitizedFullName,
           },
           emailRedirectTo: 'https://app.heriwill.com',
         },
@@ -41,6 +64,9 @@ export default function SignupPage() {
 
       if (error) throw error
 
+      // Reset attempt count on successful signup
+      setAttemptCount(0)
+      setIsRateLimited(false)
       setMessage("Account created successfully! Please check your email to verify your account.")
       
       // If email confirmation is disabled, redirect to dashboard
@@ -53,8 +79,19 @@ export default function SignupPage() {
         router.push("/")
       }
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : "Signup failed. Please try again."
-      setError(errorMessage)
+      // Increment attempt count on failed signup
+      const newAttemptCount = attemptCount + 1
+      setAttemptCount(newAttemptCount)
+
+      // Apply rate limit after 5 failed attempts
+      if (newAttemptCount >= 5) {
+        setIsRateLimited(true)
+        setRetryAfter(Date.now() + 15 * 60 * 1000) // 15 minutes
+        setError("Too many failed signup attempts. Please try again in 15 minutes.")
+      } else {
+        const errorMessage = error instanceof Error ? error.message : "Signup failed. Please try again."
+        setError(`${errorMessage} (Attempt ${newAttemptCount}/5)`)
+      }
     } finally {
       setLoading(false)
     }
@@ -75,12 +112,12 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-dark px-4 py-8">
-      <Card className="w-full max-w-md shadow-2xl border-border-default/50">
+    <div className="min-h-screen flex items-center justify-center px-4 py-8" style={{ backgroundColor: '#09090B' }}>
+      <Card className="w-full max-w-md shadow-2xl border" style={{ borderColor: '#232629', backgroundColor: '#0C0C0E' }}>
         <CardHeader className="text-center space-y-6 pt-8 pb-6">
           {/* Logo Section */}
           <div className="flex flex-col items-center space-y-4">
-            <div className="relative w-28 h-28 rounded-full bg-gradient-purple/10 flex items-center justify-center shadow-lg shadow-primary-600/20">
+            <div className="relative w-28 h-28 rounded-full flex items-center justify-center shadow-lg border" style={{ backgroundColor: '#8B5CF620', borderColor: '#8B5CF640', boxShadow: '0 20px 25px -5px rgba(139, 92, 246, 0.2)' }}>
               <div className="relative w-20 h-20">
                 <Image
                   src="/heriwill-transparent.png"
@@ -92,8 +129,8 @@ export default function SignupPage() {
               </div>
             </div>
             <div className="space-y-2">
-              <CardTitle className="text-3xl font-bold">Create Your Account</CardTitle>
-              <CardDescription className="text-base text-text-secondary">
+              <CardTitle className="text-3xl font-bold" style={{ color: '#FAFAFA' }}>Create Your Account</CardTitle>
+              <CardDescription className="text-base" style={{ color: '#A1A1AA' }}>
                 Start planning your digital legacy today
               </CardDescription>
             </div>
@@ -128,7 +165,8 @@ export default function SignupPage() {
                   placeholder="Enter your full name"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  className="pl-12 h-12 bg-background-secondary border-border-default focus:border-primary-500 transition-colors"
+                  className="pl-12 h-12 transition-colors"
+                  style={{ backgroundColor: '#141417', borderColor: '#232629' }}
                   required
                   disabled={loading}
                 />
@@ -146,7 +184,8 @@ export default function SignupPage() {
                   placeholder="Enter your email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="pl-12 h-12 bg-background-secondary border-border-default focus:border-primary-500 transition-colors"
+                  className="pl-12 h-12 transition-colors"
+                  style={{ backgroundColor: '#141417', borderColor: '#232629' }}
                   required
                   disabled={loading}
                 />
@@ -164,7 +203,8 @@ export default function SignupPage() {
                   placeholder="Create a password (min 6 characters)"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="pl-12 pr-12 h-12 bg-background-secondary border-border-default focus:border-primary-500 transition-colors"
+                  className="pl-12 pr-12 h-12 transition-colors"
+                  style={{ backgroundColor: '#141417', borderColor: '#232629' }}
                   required
                   minLength={6}
                   disabled={loading}
@@ -187,7 +227,8 @@ export default function SignupPage() {
             {/* Submit Button */}
             <Button 
               type="submit" 
-              className="w-full h-12 text-base font-semibold shadow-lg shadow-primary-600/30 hover:shadow-primary-600/40 transition-all" 
+              className="w-full h-12 text-base font-semibold transition-all" 
+              style={{ backgroundColor: '#8B5CF6', boxShadow: '0 10px 15px -3px rgba(139, 92, 246, 0.3)' }}
               disabled={loading || !email.trim() || !password || !fullName.trim()}
             >
               {loading ? "Creating account..." : "Create Account"}
@@ -197,10 +238,10 @@ export default function SignupPage() {
           {/* Divider */}
           <div className="relative my-6">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-border-default"></div>
+              <div className="w-full border-t" style={{ borderColor: '#232629' }}></div>
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="px-4 bg-background-primary text-text-tertiary">Or continue with</span>
+              <span className="px-4" style={{ backgroundColor: '#0C0C0E', color: '#71717A' }}>Or continue with</span>
             </div>
           </div>
 
@@ -209,7 +250,8 @@ export default function SignupPage() {
             type="button"
             variant="outline"
             onClick={handleGoogleSignup}
-            className="w-full h-12 text-base font-medium border-border-default hover:bg-background-secondary transition-all"
+            className="w-full h-12 text-base font-medium transition-all"
+            style={{ borderColor: '#232629' }}
             disabled={loading}
           >
             <svg className="h-5 w-5 mr-3" viewBox="0 0 24 24">
@@ -222,12 +264,13 @@ export default function SignupPage() {
           </Button>
           
           {/* Sign In Link */}
-          <div className="mt-6 pt-6 border-t border-border-default text-center">
-            <p className="text-sm text-text-secondary">
+          <div className="mt-6 pt-6 border-t text-center" style={{ borderColor: '#232629' }}>
+            <p className="text-sm" style={{ color: '#A1A1AA' }}>
               Already have an account?{" "}
               <Link 
                 href="/login" 
-                className="text-primary-400 hover:text-primary-300 font-semibold transition-colors"
+                className="font-semibold transition-colors"
+                style={{ color: '#C084FC' }}
               >
                 Sign in
               </Link>

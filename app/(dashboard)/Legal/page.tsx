@@ -3,19 +3,13 @@
 import { useState, useEffect, useCallback, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { ProTierGuard } from "@/components/module/auth/pro-tier-guard"
-import { DashboardLayout } from "@/components/module/dashboard/dashboard-layout"
 import { LegalDocumentForm } from "@/components/module/legal/legal-document-form"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Search, FileText, Shield, Gavel, User as UserIcon, Scale, FileCheck, Edit, Trash2, Lock, Upload, Download, CheckCircle, ArrowLeft } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { User } from "@supabase/supabase-js"
-
-interface UserProfile {
-  id: string
-  full_name?: string
-  subscription_tier?: string
-}
+import { toast } from "sonner"
 
 interface LegalDocument {
   id: string
@@ -46,8 +40,6 @@ interface LegalDocument {
 
 function LegalPageContent() {
   const [user, setUser] = useState<User | null>(null)
-  const [profile, setProfile] = useState<UserProfile | null>(null)
-  const [loading, setLoading] = useState(true)
   const [documents, setDocuments] = useState<LegalDocument[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedType, setSelectedType] = useState<'will' | 'trust' | 'power_of_attorney' | 'healthcare_directive' | 'life_insurance' | 'deed' | 'other' | null>(null)
@@ -137,9 +129,11 @@ function LegalPageContent() {
 
       if (legalError) {
         console.error('Error creating legal document:', legalError)
-        alert('Failed to create legal document')
+        toast.error('Failed to create legal document')
         return
       }
+
+      toast.success('Legal document created successfully')
 
       console.log('Created legal document:', legalDoc)
       
@@ -162,19 +156,8 @@ function LegalPageContent() {
       }
       setUser(user)
       
-      // Load user profile
-      const { data: profileData } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .eq('user_id', user.id)
-        .single()
-      
-      setProfile(profileData)
-      
       // Load legal data
       await loadDocuments()
-      
-      setLoading(false)
     }
 
     getUser()
@@ -256,25 +239,8 @@ function LegalPageContent() {
     return matchesSearch && matchesType
   })
 
-  const handleSignOut = async () => {
-    await supabase.auth.signOut()
-    router.push("/login")
-  }
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-lg">Loading...</div>
-      </div>
-    )
-  }
-
   return (
     <ProTierGuard pageName="Legal Documents">
-      <DashboardLayout 
-        userName={profile?.full_name || user?.email} 
-        onSignOut={handleSignOut}
-      >
       <div className="p-6">
         {/* Header */}
         <div className="mb-6">
@@ -486,7 +452,6 @@ function LegalPageContent() {
           initialData={editingDocument || undefined}
         />
       </div>
-    </DashboardLayout>
     </ProTierGuard>
   )
 }

@@ -67,11 +67,11 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-dark px-4 py-8">
-      <Card className="w-full max-w-md shadow-2xl border-border-default/50">
+    <div className="min-h-screen flex items-center justify-center px-4 py-8" style={{ backgroundColor: '#09090B' }}>
+      <Card className="w-full max-w-md shadow-2xl border" style={{ borderColor: '#232629', backgroundColor: '#0C0C0E' }}>
         <CardHeader className="text-center space-y-6 pt-8 pb-6">
           <div className="flex flex-col items-center space-y-4">
-            <div className="relative w-28 h-28 rounded-full bg-gradient-purple/10 flex items-center justify-center shadow-lg shadow-primary-600/20">
+            <div className="relative w-28 h-28 rounded-full flex items-center justify-center shadow-lg border" style={{ backgroundColor: '#8B5CF620', borderColor: '#8B5CF640', boxShadow: '0 20px 25px -5px rgba(139, 92, 246, 0.2)' }}>
               <div className="relative w-20 h-20">
                 <Image
                   src="/heriwill-transparent.png"
@@ -83,8 +83,8 @@ export default function ResetPasswordPage() {
               </div>
             </div>
             <div className="space-y-2">
-              <CardTitle className="text-3xl font-bold">Set New Password</CardTitle>
-              <CardDescription className="text-base text-text-secondary">
+              <CardTitle className="text-3xl font-bold" style={{ color: '#FAFAFA' }}>Set New Password</CardTitle>
+              <CardDescription className="text-base" style={{ color: '#A1A1AA' }}>
                 {success 
                   ? "Password updated successfully!"
                   : "Enter your new password below"}
@@ -130,7 +130,8 @@ export default function ResetPasswordPage() {
                     placeholder="Enter new password (min 6 characters)"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="pl-12 pr-12 h-12 bg-background-secondary border-border-default focus:border-primary-500 transition-colors"
+                    className="pl-12 pr-12 h-12 transition-colors"
+                    style={{ backgroundColor: '#141417', borderColor: '#232629' }}
                     required
                     minLength={6}
                     disabled={loading}
@@ -160,7 +161,8 @@ export default function ResetPasswordPage() {
                     placeholder="Confirm new password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="pl-12 pr-12 h-12 bg-background-secondary border-border-default focus:border-primary-500 transition-colors"
+                    className="pl-12 pr-12 h-12 transition-colors"
+                    style={{ backgroundColor: '#141417', borderColor: '#232629' }}
                     required
                     minLength={6}
                     disabled={loading}
@@ -182,7 +184,8 @@ export default function ResetPasswordPage() {
               
               <Button 
                 type="submit" 
-                className="w-full h-12 text-base font-semibold shadow-lg shadow-primary-600/30 hover:shadow-primary-600/40 transition-all" 
+                className="w-full h-12 text-base font-semibold transition-all" 
+                style={{ backgroundColor: '#8B5CF6', boxShadow: '0 10px 15px -3px rgba(139, 92, 246, 0.3)' }}
                 disabled={loading || !password || !confirmPassword}
               >
                 {loading ? "Updating..." : "Reset Password"}
@@ -190,12 +193,13 @@ export default function ResetPasswordPage() {
             </form>
           )}
           
-          <div className="mt-6 pt-6 border-t border-border-default text-center">
-            <p className="text-sm text-text-secondary">
+          <div className="mt-6 pt-6 border-t text-center" style={{ borderColor: '#232629' }}>
+            <p className="text-sm" style={{ color: '#A1A1AA' }}>
               Remember your password?{" "}
               <Link 
                 href="/login" 
-                className="text-primary-400 hover:text-primary-300 font-semibold transition-colors"
+                className="font-semibold transition-colors"
+                style={{ color: '#C084FC' }}
               >
                 Sign in
               </Link>

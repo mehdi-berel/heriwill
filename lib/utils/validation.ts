@@ -81,22 +81,22 @@ export function validatePassword(password: string): ValidationResult {
     return { isValid: false, error: 'Password is required' }
   }
 
-  if (password.length < 6) {
-    return { isValid: false, error: 'Password must be at least 6 characters' }
+  if (password.length < 8) {
+    return { isValid: false, error: 'Password must be at least 8 characters' }
   }
 
   if (password.length > 128) {
     return { isValid: false, error: 'Password is too long (max 128 characters)' }
   }
 
-  // Check for at least one letter and one number (recommended)
+  // Require at least one letter and one number
   const hasLetter = /[a-zA-Z]/.test(password)
   const hasNumber = /\d/.test(password)
   
   if (!hasLetter || !hasNumber) {
     return { 
-      isValid: true, // Still valid but warn user
-      error: 'For better security, use both letters and numbers' 
+      isValid: false,
+      error: 'Password must contain both letters and numbers' 
     }
   }
 

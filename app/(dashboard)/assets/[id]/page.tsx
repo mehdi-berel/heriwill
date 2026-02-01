@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { useRouter, useParams } from "next/navigation"
-import { DashboardLayout } from "@/components/module/dashboard/dashboard-layout"
 import { AssetDetail } from "@/components/module/assets/asset-detail"
 import { AssetForm } from "@/components/module/assets/asset-form"
 import { Button } from "@/components/ui/button"
@@ -10,7 +9,7 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { ArrowLeft, Edit, Trash2 } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { physicalAssetActions } from "@/app/actions/physical-assets"
-import { User } from "@supabase/supabase-js"
+import { toast } from "sonner"
 
 interface AssetFormData {
   name: string
@@ -57,11 +56,9 @@ export default function AssetDetailPage() {
   const params = useParams()
   const assetId = params.id as string
 
-  useState<User | null>(null)
   const [asset, setAsset] = useState<Asset | null>(null)
   const [vaults, setVaults] = useState<Vault[]>([])
   const [heirs, setHeirs] = useState<Heir[]>([])
-  const [loading, setLoading] = useState(true)
   const [showEditModal, setShowEditModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
 
@@ -82,10 +79,8 @@ export default function AssetDetailPage() {
     try {
       const data = await physicalAssetActions.getAssetById(id)
       setAsset(data)
-      setLoading(false)
     } catch (error) {
       console.error('Error loading asset:', error)
-      setLoading(false)
       router.push("/assets")
     }
   }, [router])
@@ -169,9 +164,10 @@ export default function AssetDetailPage() {
       const updatedAsset = await physicalAssetActions.updateAsset(asset.id, assetData)
       setAsset(updatedAsset)
       setShowEditModal(false)
+      toast.success('Asset updated successfully')
     } catch (error) {
       console.error('Error updating asset:', error)
-      alert('Failed to update asset. Please try again.')
+      toast.error('Failed to update asset. Please try again.')
     }
   }
 
@@ -180,10 +176,11 @@ export default function AssetDetailPage() {
 
     try {
       await physicalAssetActions.deleteAsset(asset.id)
+      toast.success('Asset deleted successfully')
       router.push("/assets")
     } catch (error) {
       console.error('Error deleting asset:', error)
-      alert('Failed to delete asset. Please try again.')
+      toast.error('Failed to delete asset. Please try again.')
     }
   }
 
@@ -212,9 +209,10 @@ export default function AssetDetailPage() {
 
       // Reload asset to get updated documents
       await loadAsset(asset.id)
+      toast.success('Documents uploaded successfully')
     } catch (error) {
       console.error('Error uploading documents:', error)
-      alert('Failed to upload documents. Please try again.')
+      toast.error('Failed to upload documents. Please try again.')
     }
   }
 
@@ -261,34 +259,17 @@ export default function AssetDetailPage() {
 
       // Reload asset
       await loadAsset(asset.id)
+      toast.success('Document deleted successfully')
     } catch (error) {
       console.error('Error deleting document:', error)
-      alert('Failed to delete document. Please try again.')
+      toast.error('Failed to delete document. Please try again.')
     }
   }
 
-  if (loading) {
-    return (
-      <DashboardLayout>
-        <div className="flex items-center justify-center h-screen">
-          <div className="text-muted-foreground">Loading asset...</div>
-        </div>
-      </DashboardLayout>
-    )
-  }
-
-  if (!asset) {
-    return (
-      <DashboardLayout>
-        <div className="flex items-center justify-center h-screen">
-          <div className="text-muted-foreground">Asset not found</div>
-        </div>
-      </DashboardLayout>
-    )
-  }
+  if (!asset) return null
 
   return (
-    <DashboardLayout>
+    <div className="p-6">
       <div className="p-6">
         {/* Header with Back Button and Title */}
         <div className="flex items-center justify-between mb-6">
@@ -377,6 +358,6 @@ export default function AssetDetailPage() {
           </DialogContent>
         </Dialog>
       </div>
-    </DashboardLayout>
+    </div>
   )
 }

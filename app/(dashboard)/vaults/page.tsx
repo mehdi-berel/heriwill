@@ -2,7 +2,6 @@
 
 import { useState, useCallback, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { DashboardLayout } from "@/components/module/dashboard/dashboard-layout"
 import { VaultForm } from "@/components/module/vaults/vault-form"
 import { VaultList } from "@/components/module/vaults/vault-list"
 import { VaultListSkeleton } from "@/components/ui/skeleton"
@@ -12,14 +11,7 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { Search } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { User } from "@supabase/supabase-js"
-
-interface UserProfile {
-  user_id: string
-  full_name?: string
-  email?: string
-  avatar_url?: string
-  subscription_tier?: string
-}
+import { sanitizeInput } from "@/lib/utils/sanitize"
 
 interface VaultFormData {
   name: string
@@ -54,7 +46,6 @@ interface Vault {
 
 export default function VaultsPage() {
   const [user, setUser] = useState<User | null>(null)
-  const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [vaults, setVaults] = useState<Vault[]>([])
   const [selectedVault, setSelectedVault] = useState<Vault | null>(null)
@@ -145,19 +136,6 @@ export default function VaultsPage() {
         if (!isMounted) return
         setUser(user)
 
-        // Load user profile
-        const { data: profileData, error: profileError } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', user.id)
-          .single()
-        
-        if (profileError) {
-          console.error('Profile error:', profileError)
-        } else if (isMounted) {
-          setProfile(profileData as unknown as UserProfile)
-        }
-
         // Load vaults
         if (isMounted) {
           await loadVaults(user.id)
@@ -181,13 +159,17 @@ export default function VaultsPage() {
   const handleAddVault = async (formData: VaultFormData) => {
     if (!user) return
 
+    // Sanitize user inputs
+    const sanitizedName = sanitizeInput(formData.name)
+    const sanitizedDescription = formData.description ? sanitizeInput(formData.description) : null
+
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data, error } = await (supabase.from('vaults') as any)
         .insert({
           user_id: user.id,
-          name: formData.name,
-          description: formData.description || null,
+          name: sanitizedName,
+          description: sanitizedDescription,
           category: formData.category || 'share',
           is_encrypted: formData.is_encrypted || false,
           is_favorite: false, // Default to false
@@ -239,12 +221,16 @@ export default function VaultsPage() {
   const handleUpdateVault = async (formData: VaultFormData) => {
     if (!editingVault) return
 
+    // Sanitize user inputs
+    const sanitizedName = sanitizeInput(formData.name)
+    const sanitizedDescription = formData.description ? sanitizeInput(formData.description) : null
+
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data, error } = await (supabase.from('vaults') as any)
         .update({
-          name: formData.name,
-          description: formData.description || null,
+          name: sanitizedName,
+          description: sanitizedDescription,
           category: formData.category,
           is_encrypted: formData.is_encrypted,
           // Only update fields present in form
@@ -311,59 +297,23 @@ export default function VaultsPage() {
     setShowForm(true)
   }
 
-  // Unused functions - kept for future implementation
-  // const handleUploadFiles = async (files: File[]) => {
-  //   if (!selectedVault) return
-  //   console.log('Uploading files to vault:', selectedVault.id, files)
-  //   const newItems: VaultItem[] = files.map((file, index) => ({
-  //     id: `new-${index}`,
-  //     name: file.name,
-  //     type: 'other' as const,
-  //     size: file.size,
-  //     created_at: new Date().toISOString(),
-  //     updated_at: new Date().toISOString(),
-  //     is_encrypted: selectedVault.is_encrypted,
-  //     tags: []
-  //   }))
-  //   setVaultItems([...vaultItems, ...newItems])
-  // }
-
-  // const handleDownloadItem = async (itemId: string) => {
-  //   console.log('Downloading item:', itemId)
-  // }
-
-  // const handleDeleteItem = async (itemId: string) => {
-  //   setVaultItems(vaultItems.filter(item => item.id !== itemId))
-  // }
-
-  const handleSignOut = async () => {
-    await supabase.auth.signOut()
-    router.push("/login")
-  }
-
   if (loading) {
     return (
-      <DashboardLayout userName="Loading..." onSignOut={handleSignOut}>
-        <div className="p-6">
-          <div className="mb-6">
-            <div className="flex justify-between items-center mb-4">
-              <div className="h-9 w-32 bg-background-elevated/50 rounded animate-pulse" />
-              <div className="h-12 w-12 bg-background-elevated/50 rounded-full animate-pulse" />
-            </div>
-            <div className="h-11 bg-background-elevated/50 rounded-xl animate-pulse mb-4" />
+      <div className="p-6">
+        <div className="mb-6">
+          <div className="flex justify-between items-center mb-4">
+            <div className="h-9 w-32 bg-background-elevated/50 rounded animate-pulse" />
+            <div className="h-12 w-12 bg-background-elevated/50 rounded-full animate-pulse" />
           </div>
-          <VaultListSkeleton />
+          <div className="h-11 bg-background-elevated/50 rounded-xl animate-pulse mb-4" />
         </div>
-      </DashboardLayout>
+        <VaultListSkeleton />
+      </div>
     )
   }
 
   return (
-    <DashboardLayout 
-      userName={profile?.full_name || user?.email} 
-      onSignOut={handleSignOut}
-    >
-      <div className="p-6">
+    <div className="p-6">
         {/* Header */}
         <div className="mb-6">
           <div className="flex justify-between items-center mb-4">
@@ -478,7 +428,6 @@ export default function VaultsPage() {
           onSearchChange={setSearchTerm}
           selectedCategory={selectedCategory}
         />
-      </div>
-    </DashboardLayout>
+    </div>
   )
 }

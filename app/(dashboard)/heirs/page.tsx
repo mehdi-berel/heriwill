@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
-import { DashboardLayout } from "@/components/module/dashboard/dashboard-layout"
 import { HeirForm } from "@/components/module/heirs/heir-form"
 import { HeirList } from "@/components/module/heirs/heir-list"
 import { HeirInvitation } from "@/components/module/heirs/heir-invitation"
@@ -19,13 +18,6 @@ import {
   acceptHeirInvitation, 
   rejectHeirInvitation 
 } from "@/app/actions/heirInvitations"
-
-interface UserProfile {
-  id: string
-  full_name?: string
-  email?: string
-  subscription_tier?: string
-}
 
 interface Heir {
   id: string
@@ -66,8 +58,6 @@ interface HeirFormData {
 
 export default function HeirsPage() {
   const [user, setUser] = useState<User | null>(null)
-  const [profile, setProfile] = useState<UserProfile | null>(null)
-  const [loading, setLoading] = useState(true)
   const [heirs, setHeirs] = useState<Heir[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [showForm, setShowForm] = useState(false)
@@ -117,24 +107,9 @@ export default function HeirsPage() {
       }
       setUser(user)
       
-      // Load user profile
-      const { data: profileData, error: profileError } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', user.id)
-        .single()
-      
-      if (profileError) {
-        console.error('Error loading profile:', profileError)
-      }
-      
-      setProfile(profileData)
-      
       // Load heirs data and invitations
       await loadHeirs(user.id)
       await loadReceivedInvitations()
-      
-      setLoading(false)
     }
 
     getUser()
@@ -265,25 +240,8 @@ export default function HeirsPage() {
     }
   }
 
-  const handleSignOut = async () => {
-    await supabase.auth.signOut()
-    router.push("/login")
-  }
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-lg">Loading...</div>
-      </div>
-    )
-  }
-
   return (
-    <DashboardLayout 
-      userName={profile?.full_name || user?.email} 
-      onSignOut={handleSignOut}
-    >
-      <div className="p-6">
+    <div className="p-6">
         {/* Header */}
         <div className="mb-6">
           <div className="flex justify-between items-center mb-4">
@@ -519,7 +477,6 @@ export default function HeirsPage() {
             </div>
           </DialogContent>
         </Dialog>
-      </div>
-    </DashboardLayout>
+    </div>
   )
 }

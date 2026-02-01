@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { DashboardLayout } from "@/components/module/dashboard/dashboard-layout"
 import { WillCategories } from "@/components/module/will/will-categories"
 import { TestamentDetails } from "@/components/module/will/testament-details"
 import { BeneficiariesSection } from "@/components/module/will/beneficiaries-section"
@@ -14,14 +13,6 @@ import { Card, CardContent } from "@/components/ui/card"
 import { FileText, AlertCircle, CheckCircle, Heart } from "lucide-react"
 import { supabase } from '@/lib/supabase'
 import { User } from "@supabase/supabase-js"
-
-interface UserProfile {
-  user_id: string
-  full_name?: string
-  email?: string
-  avatar_url?: string
-  subscription_tier?: string
-}
 
 interface WillData {
   user_id: string
@@ -58,8 +49,6 @@ interface WillCategory {
 
 export default function WillPage() {
   const [user, setUser] = useState<User | null>(null)
-  const [profile, setProfile] = useState<UserProfile | null>(null)
-  const [loading, setLoading] = useState(true)
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const [willData, setWillData] = useState<WillData | null>(null)
   const [wishData, setWishData] = useState<WishData | null>(null)
@@ -125,22 +114,11 @@ export default function WillPage() {
       }
       setUser(user)
       
-      // Load user profile
-      const { data: profileData } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', user.id)
-        .single()
-      
-      setProfile(profileData)
-      
       // Load will data and wish data
       await Promise.all([
         loadWillData(user.id),
         loadWishData(user.id)
       ])
-      
-      setLoading(false)
     }
 
     getUser()
@@ -188,11 +166,6 @@ export default function WillPage() {
     }
   }
 
-  const handleSignOut = async () => {
-    await supabase.auth.signOut()
-    router.push("/login")
-  }
-
   const handleSave = async (category: string, data: SaveData) => {
     try {
       if (!user) return
@@ -225,22 +198,10 @@ export default function WillPage() {
     }
   }
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-lg">Loading...</div>
-      </div>
-    )
-  }
-
   const completedCount = categories.filter(c => c.completed).length
 
   return (
-    <DashboardLayout 
-      userName={profile?.full_name || user?.email} 
-      onSignOut={handleSignOut}
-    >
-      <div className="p-6 space-y-6">
+    <div className="p-6 space-y-6">
         {/* Header */}
         <div className="flex items-start justify-between">
           <div>
@@ -345,7 +306,6 @@ export default function WillPage() {
             )}
           </div>
         )}
-      </div>
-    </DashboardLayout>
+    </div>
   )
 }

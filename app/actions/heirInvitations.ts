@@ -1,6 +1,7 @@
 "use server"
 
 import { createServerSupabaseClient } from '@/lib/supabase'
+import { sanitizeInput, sanitizeEmail, sanitizePhone } from '@/lib/utils/sanitize'
 
 /**
  * Generate a unique invitation code
@@ -60,15 +61,21 @@ export async function createHeirInvitation(data: {
   const expirationDate = new Date()
   expirationDate.setTime(expirationDate.getTime() + (codeValidityDays * 24 * 60 * 60 * 1000))
 
+  // Sanitize inputs before storing
+  const sanitizedFullName = sanitizeInput(data.full_name)
+  const sanitizedEmail = sanitizeEmail(data.email)
+  const sanitizedPhone = data.phone ? sanitizePhone(data.phone) : null
+  const sanitizedRelationship = data.relationship ? sanitizeInput(data.relationship) : null
+
   // Create heir with invitation
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: heir, error } = await (supabase.from('heirs') as any)
     .insert({
       user_id: user.id,
-      full_name_encrypted: data.full_name,
-      email_encrypted: data.email,
-      phone_encrypted: data.phone || null,
-      relationship: data.relationship || null,
+      full_name_encrypted: sanitizedFullName,
+      email_encrypted: sanitizedEmail,
+      phone_encrypted: sanitizedPhone,
+      relationship: sanitizedRelationship,
       heir_type: data.heir_type || 'family',
       access_level: 'view',
       invitation_code: invitationCode,
