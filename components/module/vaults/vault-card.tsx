@@ -134,7 +134,7 @@ export function VaultCard({
           <Button
             size="sm"
             variant="ghost"
-            className="h-9 w-9 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+            className="hidden sm:flex h-9 w-9 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
             onClick={(e) => {
               e.stopPropagation()
               onEdit(vault)
@@ -147,7 +147,7 @@ export function VaultCard({
           <Button
             size="sm"
             variant="ghost"
-            className="h-9 w-9 p-0 opacity-0 group-hover:opacity-100 transition-opacity bg-red-500/10 hover:bg-red-500/20"
+            className="hidden sm:flex h-9 w-9 p-0 opacity-0 group-hover:opacity-100 transition-opacity bg-red-500/10 hover:bg-red-500/20"
             onClick={(e) => {
               e.stopPropagation()
               onDelete(vault.id)

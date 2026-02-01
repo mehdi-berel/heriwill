@@ -26,7 +26,7 @@ export function SecuritySettings() {
           
           <div className="flex justify-end pt-4">
             <Button
-              onClick={() => window.location.href = '/forgot-password'}
+              onClick={() => window.location.href = '/reset-password'}
             >
               <Key className="h-4 w-4 mr-2" />
               Reset Password

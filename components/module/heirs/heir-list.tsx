@@ -65,7 +65,8 @@ export function HeirList({
     e.stopPropagation()
     if (!heir.invitation_code) return
     
-    const invitationLink = `https://app.heriwill.com/auth/invite?code=${heir.invitation_code}&type=heir`
+    const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://app.heriwill.com'
+    const invitationLink = `${baseUrl}/invite?code=${heir.invitation_code}&type=heir`
     
     try {
       await navigator.clipboard.writeText(invitationLink)
@@ -157,7 +158,7 @@ export function HeirList({
                   <Button
                     size="sm"
                     variant="ghost"
-                    className="h-9 w-9 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="h-9 w-9 p-0 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
                     onClick={(e) => copyInvitationLink(heir, e)}
                     title="Copy invitation link"
                   >
@@ -171,7 +172,7 @@ export function HeirList({
                 <Button
                   size="sm"
                   variant="ghost"
-                  className="h-9 w-9 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="h-9 w-9 p-0 opacity-0 group-hover:opacity-100 transition-opacity hidden sm:flex"
                   onClick={(e) => {
                     e.stopPropagation()
                     onEdit(heir)
@@ -182,7 +183,7 @@ export function HeirList({
                 <Button
                   size="sm"
                   variant="ghost"
-                  className="h-9 w-9 p-0 opacity-0 group-hover:opacity-100 transition-opacity bg-red-500/10 hover:bg-red-500/20"
+                  className="h-9 w-9 p-0 opacity-0 group-hover:opacity-100 transition-opacity bg-red-500/10 hover:bg-red-500/20 hidden sm:flex"
                   onClick={(e) => {
                     e.stopPropagation()
                     onDelete(heir.id)

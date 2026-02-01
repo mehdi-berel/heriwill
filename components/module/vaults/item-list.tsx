@@ -180,21 +180,21 @@ export function ItemList({
 
   return (
     <div className="space-y-4">
-      {/* Search Bar */}
-      <div className="flex flex-col sm:flex-row gap-3">
+      {/* Search Bar and Add Button */}
+      <div className="flex gap-2 sm:gap-3">
         <div className="flex-1 relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search items..."
             value={onSearchChange ? searchTerm : internalSearchTerm}
             onChange={(e) => handleSearchChange(e.target.value)}
-            className="pl-10"
+            className="pl-10 h-11 sm:h-10"
           />
         </div>
         {showAddButton && onAddItem && (
-          <Button onClick={onAddItem}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Item
+          <Button onClick={onAddItem} className="h-11 sm:h-10 flex-shrink-0">
+            <Plus className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Add Item</span>
           </Button>
         )}
       </div>

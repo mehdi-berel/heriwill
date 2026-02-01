@@ -88,12 +88,12 @@ export function HeirForm({ onSubmit, onCancel, initialData, isEditing = false }:
           </div>
 
           {/* Heir Type */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium flex items-center space-x-2">
-              <Heart className="h-5 w-5" />
-              <span>Heir Type</span>
+          <div className="space-y-3 sm:space-y-4">
+            <h3 className="text-base sm:text-lg font-medium flex items-center gap-2">
+              <Heart className="h-4 w-4 sm:h-5 sm:w-5" />
+              <span>Heir Type *</span>
             </h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
               {[
                 { value: 'family', label: 'Family' },
                 { value: 'friend', label: 'Friend' },
@@ -105,7 +105,7 @@ export function HeirForm({ onSubmit, onCancel, initialData, isEditing = false }:
                   type="button"
                   variant={formData.heir_type === type.value ? 'default' : 'outline'}
                   onClick={() => setFormData({ ...formData, heir_type: type.value as HeirFormData['heir_type'] })}
-                  className="rounded-lg"
+                  className="h-11 sm:h-10 text-sm sm:text-base rounded-lg"
                 >
                   {type.label}
                 </Button>
@@ -150,11 +150,11 @@ export function HeirForm({ onSubmit, onCancel, initialData, isEditing = false }:
           </div>
 
           {/* Form Actions */}
-          <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3 sm:space-x-0">
-            <Button type="button" variant="outline" onClick={onCancel} className="w-full sm:w-auto h-11">
+          <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3 pt-2">
+            <Button type="button" variant="outline" onClick={onCancel} className="w-full sm:w-auto h-12 sm:h-11">
               Cancel
             </Button>
-            <Button type="submit" className="w-full sm:w-auto h-11">
+            <Button type="submit" className="w-full sm:w-auto h-12 sm:h-11">
               {isEditing ? 'Update Heir' : 'Send Invitation'}
             </Button>
           </div>

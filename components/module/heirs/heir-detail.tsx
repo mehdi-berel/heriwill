@@ -60,36 +60,36 @@ export function HeirDetail({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Info Cards */}
-      <div className="grid gap-4 md:grid-cols-3 mb-6">
+      <div className="grid gap-3 sm:gap-4 grid-cols-3 mb-4 sm:mb-6">
         <Card className="border" style={{ borderColor: '#232629' }}>
-          <CardContent className="flex flex-col items-center p-4">
-            <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center mb-3">
+          <CardContent className="flex flex-col items-center p-3 sm:p-4">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-primary/20 flex items-center justify-center mb-2 sm:mb-3">
               <div className="text-primary">{getStatusIcon(heir.invitation_status)}</div>
             </div>
-            <div className="text-3xl font-bold mb-1 capitalize">{heir.invitation_status}</div>
-            <div className="text-sm text-muted-foreground font-medium text-center">Status</div>
+            <div className="text-lg sm:text-3xl font-bold mb-0.5 sm:mb-1 capitalize text-center leading-tight">{heir.invitation_status}</div>
+            <div className="text-xs sm:text-sm text-muted-foreground font-medium text-center">Status</div>
           </CardContent>
         </Card>
 
         <Card className="border" style={{ borderColor: '#232629' }}>
-          <CardContent className="flex flex-col items-center p-4">
-            <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center mb-3">
-              <Users className="h-5 w-5 text-primary" />
+          <CardContent className="flex flex-col items-center p-3 sm:p-4">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-primary/20 flex items-center justify-center mb-2 sm:mb-3">
+              <Users className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
             </div>
-            <div className="text-3xl font-bold mb-1">{heir.relationship || 'N/A'}</div>
-            <div className="text-sm text-muted-foreground font-medium text-center">Relationship</div>
+            <div className="text-lg sm:text-3xl font-bold mb-0.5 sm:mb-1 text-center leading-tight truncate w-full px-1">{heir.relationship || 'N/A'}</div>
+            <div className="text-xs sm:text-sm text-muted-foreground font-medium text-center">Relationship</div>
           </CardContent>
         </Card>
 
         <Card className="border" style={{ borderColor: '#232629' }}>
-          <CardContent className="flex flex-col items-center p-4">
-            <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center mb-3">
-              <Calendar className="h-5 w-5 text-primary" />
+          <CardContent className="flex flex-col items-center p-3 sm:p-4">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-primary/20 flex items-center justify-center mb-2 sm:mb-3">
+              <Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
             </div>
-            <div className="text-3xl font-bold mb-1">{new Date(heir.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
-            <div className="text-sm text-muted-foreground font-medium text-center">Created</div>
+            <div className="text-lg sm:text-3xl font-bold mb-0.5 sm:mb-1 text-center leading-tight">{new Date(heir.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
+            <div className="text-xs sm:text-sm text-muted-foreground font-medium text-center">Created</div>
           </CardContent>
         </Card>
       </div>
@@ -97,27 +97,27 @@ export function HeirDetail({
       {/* Contact Information */}
       <Card>
         <CardHeader>
-          <CardTitle>Contact Information</CardTitle>
+          <CardTitle className="text-base sm:text-lg">Contact Information</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-3 sm:space-y-4">
           <div className="flex items-center space-x-3">
-            <Mail className="h-4 w-4 text-muted-foreground" />
-            <span>{heir.email}</span>
+            <Mail className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+            <span className="text-sm sm:text-base truncate">{heir.email}</span>
           </div>
           {heir.phone && (
             <div className="flex items-center space-x-3">
-              <Phone className="h-4 w-4 text-muted-foreground" />
-              <span>{heir.phone}</span>
+              <Phone className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+              <span className="text-sm sm:text-base">{heir.phone}</span>
             </div>
           )}
           <div className="flex items-center space-x-3">
-            <Users className="h-4 w-4 text-muted-foreground" />
-            <span>{heir.relationship}</span>
+            <Users className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+            <span className="text-sm sm:text-base">{heir.relationship}</span>
           </div>
           {heir.invitation_code && (
             <div className="flex items-center space-x-3">
-              <Shield className="h-4 w-4 text-muted-foreground" />
-              <span className="font-mono text-sm">{heir.invitation_code}</span>
+              <Shield className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+              <span className="font-mono text-xs sm:text-sm break-all">{heir.invitation_code}</span>
             </div>
           )}
         </CardContent>

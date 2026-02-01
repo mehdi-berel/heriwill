@@ -432,14 +432,14 @@ export default function HeirsPage() {
 
         {/* Invitation Modal */}
         <Dialog open={showInvitationModal} onOpenChange={setShowInvitationModal}>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-2xl w-[95vw] sm:w-full max-h-[90vh] overflow-y-auto">
             <DialogTitle className="sr-only">Heir Invitation Created</DialogTitle>
             {newlyCreatedHeir && (
               <HeirInvitation
                 heirName={newlyCreatedHeir.full_name_encrypted || ''}
                 heirEmail={newlyCreatedHeir.email_encrypted || ''}
                 invitationCode={newlyCreatedHeir.invitation_code || ''}
-                invitationLink={`https://app.heriwill.com/auth/invite?code=${newlyCreatedHeir.invitation_code}&type=heir`}
+                invitationLink={`${typeof window !== 'undefined' ? window.location.origin : 'https://app.heriwill.com'}/invite?code=${newlyCreatedHeir.invitation_code}&type=heir`}
                 onClose={() => {
                   setShowInvitationModal(false)
                   setNewlyCreatedHeir(null)

@@ -370,43 +370,51 @@ export default function VaultDetailPage() {
   if (!vault) return null
 
   return (
-  <div className="p-6 max-w-7xl mx-auto">
+  <div className="p-4 sm:p-6 max-w-7xl mx-auto">
     {/* Header */}
-    <div className="flex items-center justify-between mb-6">
-      <div className="flex items-center space-x-4">
-        <Button variant="ghost" onClick={() => router.push("/vaults")}>
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back
-        </Button>
-        <div>
-          <h1 className="text-2xl font-bold">{vault.name}</h1>
-          <p className="text-muted-foreground">{vault.description}</p>
-        </div>
-      </div>
-      <div className="flex items-center gap-2">
-        {vault.category === 'pro' ? (
-          <Button variant="outline" onClick={handleAssignHeirs}>
-            <Scale className="h-4 w-4 mr-2" />
-            Assign Notary
-          </Button>
-        ) : vault.category !== 'delete' && (
-          <Button variant="outline" onClick={handleAssignHeirs}>
-            <Users className="h-4 w-4 mr-2" />
-            Assign Heirs
-          </Button>
-        )}
-        <Button variant="outline" onClick={handleEdit}>
-          <Edit className="h-4 w-4 mr-2" />
-          Edit
-        </Button>
+    <div className="mb-6">
+      {/* Back button, title, and action buttons on same level */}
+      <div className="flex items-center gap-2 sm:gap-4">
         <Button 
           variant="ghost" 
-          onClick={handleDelete}
-          className="bg-red-500 hover:bg-red-600 text-white"
+          onClick={() => router.push("/vaults")}
+          className="h-10 sm:h-9 -ml-2 sm:ml-0 flex-shrink-0"
         >
-          <Trash2 className="h-4 w-4 mr-2" />
-          Delete
+          <ArrowLeft className="h-4 w-4 sm:mr-2" />
+          <span className="hidden sm:inline">Back</span>
         </Button>
+        <div className="flex-1 min-w-0">
+          <h1 className="text-lg sm:text-2xl font-bold leading-tight truncate">{vault.name}</h1>
+          {vault.description && (
+            <p className="text-xs sm:text-base text-muted-foreground line-clamp-1 sm:line-clamp-2">{vault.description}</p>
+          )}
+        </div>
+        {/* Action buttons - always in row */}
+        <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+          {vault.category === 'pro' ? (
+            <Button variant="outline" onClick={handleAssignHeirs} className="h-10 sm:h-9">
+              <Scale className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Assign Notary</span>
+            </Button>
+          ) : vault.category !== 'delete' && (
+            <Button variant="outline" onClick={handleAssignHeirs} className="h-10 sm:h-9">
+              <Users className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Assign Heirs</span>
+            </Button>
+          )}
+          <Button variant="outline" onClick={handleEdit} className="h-10 sm:h-9">
+            <Edit className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Edit</span>
+          </Button>
+          <Button 
+            variant="ghost" 
+            onClick={handleDelete}
+            className="bg-red-500 hover:bg-red-600 text-white h-10 sm:h-9"
+          >
+            <Trash2 className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Delete</span>
+          </Button>
+        </div>
       </div>
     </div>
 
@@ -423,8 +431,8 @@ export default function VaultDetailPage() {
 
     {/* Edit Modal */}
     <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogTitle>Edit Vault</DialogTitle>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto w-[95vw] sm:w-full">
+        <DialogTitle className="text-lg sm:text-xl">Edit Vault</DialogTitle>
         {vault && (
           <VaultForm
             initialData={{
@@ -443,8 +451,8 @@ export default function VaultDetailPage() {
 
     {/* Assign Heirs/Notary Modal */}
     <Dialog open={showAssignModal} onOpenChange={setShowAssignModal}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogTitle>{vault?.category === 'pro' ? 'Assign Notary to Vault' : 'Assign Heirs to Vault'}</DialogTitle>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto w-[95vw] sm:w-full">
+        <DialogTitle className="text-lg sm:text-xl">{vault?.category === 'pro' ? 'Assign Notary to Vault' : 'Assign Heirs to Vault'}</DialogTitle>
         {vault && (
           <VaultAssign
             vaultId={vault.id}
@@ -460,21 +468,22 @@ export default function VaultDetailPage() {
 
     {/* Delete Confirmation Modal */}
     <Dialog open={showDeleteModal} onOpenChange={setShowDeleteModal}>
-      <DialogContent className="max-w-md">
-        <DialogTitle>Delete Vault</DialogTitle>
+      <DialogContent className="max-w-md w-[90vw] sm:w-full">
+        <DialogTitle className="text-lg sm:text-xl">Delete Vault</DialogTitle>
         <div className="space-y-4">
-          <p className="text-muted-foreground">
+          <p className="text-sm sm:text-base text-muted-foreground">
             Are you sure you want to delete this vault? This action cannot be undone and all items will be permanently deleted.
           </p>
-          <div className="flex justify-end gap-3">
+          <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3">
             <Button
               variant="outline"
               onClick={() => setShowDeleteModal(false)}
+              className="h-11 sm:h-10 w-full sm:w-auto"
             >
               Cancel
             </Button>
             <Button
-              className="bg-red-500 hover:bg-red-600 text-white"
+              className="bg-red-500 hover:bg-red-600 text-white h-11 sm:h-10 w-full sm:w-auto"
               onClick={() => {
                 handleDelete()
                 setShowDeleteModal(false)

@@ -52,13 +52,40 @@ export default function HeirDetailPage() {
 
   const loadHeir = useCallback(async (id: string) => {
     try {
-      const { data } = await supabase
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase
         .from('heirs')
         .select('*')
         .eq('id', id)
-        .single()
+        .single() as any)
 
-      setHeir(data)
+      if (error) throw error
+      if (!data) throw new Error('Heir not found')
+
+      // Map database fields to component interface
+      const mappedHeir: Heir = {
+        id: data.id,
+        full_name: data.full_name_encrypted || 'Unknown',
+        email: data.email_encrypted || '',
+        phone: data.phone_encrypted || undefined,
+        relationship: data.relationship || 'Unknown',
+        invitation_status: data.invitation_status || 'pending',
+        invitation_code: data.invitation_code || undefined,
+        access_level: data.access_level || 'view',
+        verification_method: 'email',
+        verification_status: data.invitation_status === 'accepted' ? 'verified' : 'pending',
+        created_at: data.created_at,
+        accepted_at: data.accepted_at || undefined,
+        last_activity: data.updated_at || undefined,
+        invitation_expires_at: data.invitation_expires_at || undefined,
+        notification_preferences: {
+          email: data.notify_on_activation || true,
+          sms: false,
+          in_app: true
+        }
+      }
+
+      setHeir(mappedHeir)
     } catch (error) {
       console.error('Error loading heir:', error)
       router.push("/heirs")
@@ -188,31 +215,53 @@ export default function HeirDetailPage() {
   if (!heir) return null
 
   return (
-    <div className="p-6">
+    <div className="p-4 sm:p-6 max-w-7xl mx-auto">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center space-x-4">
-            <Button variant="ghost" onClick={() => router.push("/heirs")}>
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back
+        <div className="space-y-4 mb-6">
+          {/* Back button and title */}
+          <div className="flex items-center gap-3 sm:gap-4">
+            <Button 
+              variant="ghost" 
+              onClick={() => router.push("/heirs")}
+              className="h-10 sm:h-9 -ml-2 sm:ml-0 flex-shrink-0"
+            >
+              <ArrowLeft className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Back</span>
             </Button>
-            <div>
-              <h1 className="text-2xl font-bold">{heir.full_name}</h1>
-              <p className="text-muted-foreground">{heir.email}</p>
+            <div className="flex-1 min-w-0">
+              <h1 className="text-lg sm:text-2xl font-bold leading-tight truncate">{heir.full_name}</h1>
+              <p className="text-xs sm:text-base text-muted-foreground truncate">{heir.email}</p>
+            </div>
+            {/* Desktop: Action buttons */}
+            <div className="hidden sm:flex sm:items-center sm:gap-2 flex-shrink-0">
+              <Button variant="outline" onClick={handleEdit}>
+                <Edit className="h-4 w-4 mr-2" />
+                Edit
+              </Button>
+              <Button 
+                variant="ghost" 
+                onClick={handleDelete}
+                className="bg-red-500 hover:bg-red-600 text-white"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete
+              </Button>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={handleEdit}>
+          
+          {/* Mobile: Action buttons */}
+          <div className="grid grid-cols-2 gap-2 sm:hidden">
+            <Button variant="outline" onClick={handleEdit} className="h-11">
               <Edit className="h-4 w-4 mr-2" />
-              Edit
+              <span className="text-sm">Edit</span>
             </Button>
             <Button 
               variant="ghost" 
               onClick={handleDelete}
-              className="bg-red-500 hover:bg-red-600 text-white"
+              className="bg-red-500 hover:bg-red-600 text-white h-11"
             >
               <Trash2 className="h-4 w-4 mr-2" />
-              Delete
+              <span className="text-sm">Delete</span>
             </Button>
           </div>
         </div>
