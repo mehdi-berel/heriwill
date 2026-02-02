@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { DashboardOverview } from "@/components/module/dashboard/dashboard-overview"
-import { DashboardSkeleton } from "@/components/ui/skeleton"
 import { supabase } from "@/lib/supabase"
 
 interface UserProfile {
@@ -35,7 +34,6 @@ export default function HomePage() {
     securityScore: 75,
     pendingTasks: 2
   })
-  const [loading, setLoading] = useState(true)
   const router = useRouter()
 
   const loadProfile = useCallback(async (userId: string) => {
@@ -142,8 +140,6 @@ export default function HomePage() {
         loadProfile(user.id),
         loadStats(user.id)
       ])
-      
-      setLoading(false)
     }
 
     getUser()
@@ -159,10 +155,6 @@ export default function HomePage() {
 
     return () => subscription.unsubscribe()
   }, [router, loadProfile, loadStats, calculateSecurityScore])
-
-  if (loading) {
-    return <DashboardSkeleton />
-  }
 
   return (
     <DashboardOverview 

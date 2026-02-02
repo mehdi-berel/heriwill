@@ -14,10 +14,18 @@
 import { supabase } from '../../lib/supabase'
 import type { Database } from '../../lib/database.types'
 
-// @ts-expect-error - inheritance_plans table no longer exists
-type PlanRow = Database['public']['Tables']['inheritance_plans']['Row']
 type TriggerRow = Database['public']['Tables']['inheritance_triggers']['Row']
 type TriggerUpdate = Database['public']['Tables']['inheritance_triggers']['Update']
+
+// Temporary type for deprecated code - inheritance_plans table no longer exists
+type PlanRow = {
+  id: string
+  user_id: string
+  is_active: boolean
+  is_triggered: boolean
+  updated_at: string
+  [key: string]: unknown
+}
 
 interface TriggerData {
   user_id: string

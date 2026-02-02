@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { FeedbackButton } from "@/components/module/feedback/feedback-button"
+import { NotificationsBell } from "@/components/ui/notifications-bell"
 import { useRevenueCat } from "@/contexts/RevenueCatContext"
 import { supabase } from "@/lib/supabase"
 import { Crown, Zap, CheckCircle, LogOut, HelpCircle } from "lucide-react"
@@ -73,6 +74,9 @@ export function Header() {
               </Badge>
             </Link>
           )}
+
+          {/* Notifications Bell */}
+          <NotificationsBell />
 
           {/* Help Button - Mobile icon only */}
           <Button

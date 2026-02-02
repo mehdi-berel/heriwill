@@ -98,34 +98,29 @@ export default function HeirDetailPage() {
 
   const loadHeirActivities = useCallback(async (id: string) => {
     try {
-      // TODO: user_activity table doesn't exist in database schema
-      // Should use audit_logs table instead with resource_type='heir' and resource_id=id
-      // For now, returning empty activities
-      logger.warn('user_activity table not implemented - use audit_logs instead', { heirId: id })
-      setActivities([])
-      return
+      const { data, error } = await supabase
+        .from('audit_logs')
+        .select('*')
+        .eq('resource_type', 'heir')
+        .eq('resource_id', id)
+        .order('created_at', { ascending: false })
+        .limit(20)
       
-      // Correct implementation would be:
-      // const { data, error } = await supabase
-      //   .from('audit_logs')
-      //   .select('*')
-      //   .eq('resource_type', 'heir')
-      //   .eq('resource_id', id)
-      //   .order('created_at', { ascending: false })
-      //   .limit(20)
-      // if (error) {
-      //   console.error('Error fetching activities:', error)
-      //   setActivities([])
-      //   return
-      // }
-      // const activities: HeirActivity[] = (data || []).map((activity: any) => ({
-      //   id: activity.id,
-      //   type: activity.action as HeirActivity['type'],
-      //   description: activity.metadata?.description || activity.action,
-      //   timestamp: activity.created_at,
-      //   metadata: activity.metadata
-      // }))
-      // setActivities(activities)
+      if (error) {
+        logger.error('Error fetching heir activities', error, { heirId: id })
+        setActivities([])
+        return
+      }
+      
+      const activities: HeirActivity[] = (data || []).map((activity: Record<string, unknown>) => ({
+        id: activity.id as string,
+        type: activity.action as HeirActivity['type'],
+        description: (activity.metadata as Record<string, unknown>)?.description as string || activity.action as string,
+        timestamp: activity.created_at as string,
+        metadata: activity.metadata as Record<string, unknown>
+      }))
+      
+      setActivities(activities)
     } catch (error) {
       logger.error('Error loading heir activities', error, { heirId: id })
       setActivities([])

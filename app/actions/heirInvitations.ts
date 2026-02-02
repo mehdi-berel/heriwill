@@ -1,8 +1,9 @@
 "use server"
 
 import { createServerSupabaseClient } from '@/lib/supabase'
-import { logger } from '../../lib/utils/logger'
+import { logger } from '@/lib/utils/logger'
 import { sanitizeInput, sanitizeEmail, sanitizePhone } from '@/lib/utils/sanitize'
+import { notifyHeirAccepted, notifyHeirRejected } from '@/lib/services/notificationService'
 
 /**
  * Generate a unique invitation code
@@ -189,6 +190,14 @@ export async function acceptHeirInvitation(invitationCode: string) {
     throw error
   }
 
+  // Notify the owner that heir accepted
+  try {
+    const heirName = user.user_metadata?.full_name || user.email || 'An heir'
+    await notifyHeirAccepted(heir.user_id, heirName)
+  } catch (notificationError) {
+    logger.error('Error creating heir accepted notification', notificationError)
+  }
+
   return heir
 }
 
@@ -204,24 +213,37 @@ export async function rejectHeirInvitation(invitationCode: string) {
 
   // Validate code first
   const validation = await validateInvitationCode(invitationCode)
-  if (!validation.valid) {
+  if (!validation.valid || !validation.heir) {
     throw new Error(validation.error || 'Code invalide')
   }
 
   // Reject invitation
-  const { error } = await supabase
+  const { data: heir, error } = await supabase
     .from('heirs')
     .update({
       invitation_status: 'rejected',
       rejected_at: new Date().toISOString(),
+      is_active: false,
     })
     .eq('invitation_code', invitationCode)
     .eq('invitation_status', 'pending')
+    .select()
+    .single()
 
   if (error) {
     logger.error('Error rejecting invitation', error)
     throw error
   }
+
+  // Notify the owner that heir rejected
+  try {
+    const heirName = user.user_metadata?.full_name || user.email || 'An heir'
+    await notifyHeirRejected(heir.user_id, heirName)
+  } catch (notificationError) {
+    logger.error('Error creating heir rejected notification', notificationError)
+  }
+
+  return heir
 }
 
 /**

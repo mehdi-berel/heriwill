@@ -81,8 +81,11 @@ const DropdownMenuContent = React.forwardRef<
     isOpen?: boolean
     onOpenChange?: (open: boolean) => void
   }
->(({ className, children, align = "center", isOpen, onOpenChange, ...props }) => {
+>(({ className, children, align = "center", isOpen, onOpenChange, ...props }, ref) => {
   const contentRef = React.useRef<HTMLDivElement>(null)
+  
+  // Merge refs
+  React.useImperativeHandle(ref, () => contentRef.current as HTMLDivElement)
 
   React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {

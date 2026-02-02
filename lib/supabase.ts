@@ -11,13 +11,16 @@ if (!supabaseUrl || !supabaseAnonKey) {
   )
 }
 
+// Type helper for Supabase client
+type SupabaseClient = ReturnType<typeof createBrowserClient<Database>>
+
 // Client-side Supabase client (for use in Client Components)
-export function createClient() {
+export function createClient(): SupabaseClient {
   return createBrowserClient<Database>(supabaseUrl!, supabaseAnonKey!)
 }
 
 // Server-side Supabase client (for use in Server Components, API Routes, Server Actions)
-export async function createServerSupabaseClient() {
+export async function createServerSupabaseClient(): Promise<SupabaseClient> {
   const { cookies } = await import('next/headers')
   const cookieStore = await cookies()
   
@@ -47,4 +50,4 @@ export async function createServerSupabaseClient() {
 
 // Legacy export for backward compatibility (browser client)
 // DEPRECATED: Use createClient() instead
-export const supabase = createBrowserClient<Database>(supabaseUrl!, supabaseAnonKey!)
+export const supabase: SupabaseClient = createBrowserClient<Database>(supabaseUrl!, supabaseAnonKey!)

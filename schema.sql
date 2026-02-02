@@ -84,18 +84,19 @@ CREATE TABLE public.inheritance_triggers (
 CREATE TABLE public.legal (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   name text NOT NULL,
-  document_type text NOT NULL CHECK (document_type = ANY (ARRAY['will'::text, 'trust'::text, 'power_of_attorney'::text, 'healthcare_directive'::text, 'life_insurance'::text, 'deed'::text, 'other'::text])),
+  document_type text NOT NULL CHECK (document_type = ANY (ARRAY['will'::text, 'trust'::text, 'power_of_attorney'::text, 'healthcare_directive'::text, 'living_will'::text, 'deed'::text, 'contract'::text, 'other'::text])),
   description text,
-  template_file_url text,
-  template_file_path text,
-  file_size bigint,
+  template_content text,
+  template_fields jsonb DEFAULT '[]'::jsonb,
+  category text,
+  is_system_template boolean DEFAULT false,
   is_active boolean DEFAULT true,
+  created_by uuid,
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
-  user_id uuid,
   metadata jsonb DEFAULT '{}'::jsonb,
   CONSTRAINT legal_pkey PRIMARY KEY (id),
-  CONSTRAINT legal_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
+  CONSTRAINT legal_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id)
 );
 CREATE TABLE public.notaries (
   id uuid NOT NULL DEFAULT uuid_generate_v4(),
@@ -116,6 +117,25 @@ CREATE TABLE public.notaries (
   updated_at timestamp with time zone NOT NULL DEFAULT now(),
   CONSTRAINT notaries_pkey PRIMARY KEY (id),
   CONSTRAINT notaries_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
+);
+CREATE TABLE public.notifications (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  type text NOT NULL CHECK (type = ANY (ARRAY['heir_invitation'::text, 'inheritance_triggered'::text, 'vault_shared'::text, 'false_alarm'::text, 'heir_accepted'::text, 'heir_rejected'::text, 'subscription_update'::text, 'system_alert'::text])),
+  title text NOT NULL,
+  message text NOT NULL,
+  action_url text,
+  action_label text,
+  is_read boolean DEFAULT false,
+  is_archived boolean DEFAULT false,
+  priority text DEFAULT 'normal'::text CHECK (priority = ANY (ARRAY['low'::text, 'normal'::text, 'high'::text, 'urgent'::text])),
+  metadata jsonb DEFAULT '{}'::jsonb,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  read_at timestamp with time zone,
+  archived_at timestamp with time zone,
+  expires_at timestamp with time zone,
+  CONSTRAINT notifications_pkey PRIMARY KEY (id),
+  CONSTRAINT notifications_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
 );
 CREATE TABLE public.shared_vaults (
   id uuid NOT NULL DEFAULT uuid_generate_v4(),

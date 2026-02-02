@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase'
 import { logger } from '@/lib/utils/logger'
-import { sendFalseAlarmEmail } from '@/lib/services/emailService'
+import { notifyFalseAlarm } from '@/lib/services/notificationService'
 
 /**
  * API endpoint to declare false alarm and restore account
@@ -85,39 +85,32 @@ export async function POST(request: NextRequest) {
       logger.error('Error cancelling triggers', triggerUpdateError)
     }
 
-    // 6. Get all heirs to notify them
+    // 6. Get all heirs with user accounts to notify them
     const { data: heirs, error: heirsError } = await supabase
       .from('heirs')
-      .select('id, email_encrypted, full_name_encrypted')
+      .select('id, heir_user_id')
       .eq('user_id', userId)
       .eq('is_active', true)
+      .not('heir_user_id', 'is', null)
 
     if (heirsError) {
       logger.error('Error fetching heirs', heirsError)
     }
 
-    // 7. Send notification emails to heirs about false alarm
+    // 7. Send in-app notifications to heirs about false alarm
     if (heirs && heirs.length > 0) {
       for (const heir of heirs) {
         try {
-          const heirData = heir as { id: string; email_encrypted: string | null; full_name_encrypted: string | null }
+          const heirData = heir as { id: string; heir_user_id: string }
           
-          // Skip if email is not available
-          if (!heirData.email_encrypted) {
-            logger.warn(`Heir has no email address, skipping notification`)
-            continue
-          }
-          
-          // Note: email_encrypted needs to be decrypted before use
-          logger.info(`Sending false alarm notification to heir`)
-          
-          await sendFalseAlarmEmail({
-            heirEmail: heirData.email_encrypted, // TODO: Decrypt this
-            heirName: heirData.full_name_encrypted || 'Heir', // TODO: Decrypt this
-            ownerName: userData.full_name || 'Account Owner'
-          })
-        } catch (emailError) {
-          logger.error(`Failed to send email to heir`, emailError)
+          // Create in-app notification for heir
+          await notifyFalseAlarm(
+            heirData.heir_user_id,
+            userData.full_name || 'Account Owner'
+          )
+          logger.info(`Created false alarm notification for heir ${heirData.heir_user_id}`)
+        } catch (notificationError) {
+          logger.error(`Failed to create notification for heir`, notificationError)
         }
       }
     }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { logger } from '@/lib/utils/logger'
 import { Database } from '@/lib/database.types'
+import { notifyInheritanceTriggered } from '@/lib/services/notificationService'
 
 // Service role client for admin operations (bypasses RLS)
 function createServiceRoleClient() {
@@ -192,23 +193,18 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 6. Send notification emails to heirs
-    if (heirs && heirs.length > 0) {
-      for (const heir of heirs) {
+    // 6. Send in-app notifications to heirs with user accounts
+    if (activeHeirs && activeHeirs.length > 0) {
+      for (const heir of activeHeirs) {
         try {
-          // Send email notification to heir
-          // This would integrate with your email service
-          logger.info(`Sending inheritance notification to heir ${heir.email}`)
-          
-          // TODO: Implement email sending
-          // await sendHeirNotificationEmail({
-          //   heirEmail: heir.email,
-          //   heirName: heir.full_name,
-          //   ownerName: userData.full_name,
-          //   vaultName: vaults?.find(v => v.id === heir.vault_id)?.name
-          // })
-        } catch (emailError) {
-          logger.error(`Failed to send email to heir ${heir.email}`, emailError)
+          // Create in-app notification for heir
+          await notifyInheritanceTriggered(
+            heir.heir_user_id,
+            userData?.full_name || 'Account Owner'
+          )
+          logger.info(`Created inheritance notification for heir ${heir.heir_user_id}`)
+        } catch (notificationError) {
+          logger.error(`Failed to create notification for heir ${heir.heir_user_id}`, notificationError)
         }
       }
     }

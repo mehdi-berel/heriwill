@@ -7,8 +7,6 @@ import {
   Lock,
   Users,
   FolderOpen,
-  AlertCircle,
-  CheckCircle2,
   ArrowRight,
   Power
 } from "lucide-react"
@@ -225,32 +223,6 @@ export function DashboardOverview({ stats, userName }: DashboardOverviewProps) {
           })}
         </div>
       </div>
-
-      {/* Important Reminders */}
-      <Card className="bg-blue-600/5" style={{ borderColor: '#232629' }}>
-        <CardContent className="flex items-start gap-3 p-5">
-          <AlertCircle className="h-5 w-5 text-blue-400 flex-shrink-0 mt-0.5" />
-          <div className="flex-1">
-            <h3 className="text-sm font-semibold text-text-primary mb-2">
-              Important Reminders
-            </h3>
-            <div className="space-y-2 text-sm text-text-secondary">
-              <div className="flex items-start gap-2">
-                <CheckCircle2 className="h-4 w-4 text-status-success mt-0.5 flex-shrink-0" />
-                <p>Keep your vault passwords secure and share them only with trusted heirs</p>
-              </div>
-              <div className="flex items-start gap-2">
-                <CheckCircle2 className="h-4 w-4 text-status-success mt-0.5 flex-shrink-0" />
-                <p>Review and update your information regularly, especially after major life events</p>
-              </div>
-              <div className="flex items-start gap-2">
-                <CheckCircle2 className="h-4 w-4 text-status-success mt-0.5 flex-shrink-0" />
-                <p>Inform your heirs about Heriwill and ensure they know how to access their inheritance</p>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   )
 }

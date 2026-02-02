@@ -256,6 +256,8 @@ export function Sidebar({ onSignOut }: SidebarProps) {
 
               fill
 
+              sizes="32px"
+
               className="object-contain"
 
               priority

@@ -397,6 +397,68 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          id: string
+          user_id: string
+          type: string
+          title: string
+          message: string
+          action_url: string | null
+          action_label: string | null
+          is_read: boolean
+          is_archived: boolean
+          priority: string
+          metadata: Json
+          created_at: string
+          read_at: string | null
+          archived_at: string | null
+          expires_at: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          type: string
+          title: string
+          message: string
+          action_url?: string | null
+          action_label?: string | null
+          is_read?: boolean
+          is_archived?: boolean
+          priority?: string
+          metadata?: Json
+          created_at?: string
+          read_at?: string | null
+          archived_at?: string | null
+          expires_at?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          type?: string
+          title?: string
+          message?: string
+          action_url?: string | null
+          action_label?: string | null
+          is_read?: boolean
+          is_archived?: boolean
+          priority?: string
+          metadata?: Json
+          created_at?: string
+          read_at?: string | null
+          archived_at?: string | null
+          expires_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       shared_vaults: {
         Row: {
           accepted: boolean | null
@@ -784,6 +846,27 @@ export type Database = {
         }[]
       }
       mark_expired_invitations: { Args: never; Returns: number }
+      create_notification: {
+        Args: {
+          p_user_id: string
+          p_type: string
+          p_title: string
+          p_message: string
+          p_action_url?: string
+          p_action_label?: string
+          p_priority?: string
+          p_metadata?: Json
+        }
+        Returns: string
+      }
+      mark_notification_read: {
+        Args: { p_notification_id: string }
+        Returns: undefined
+      }
+      archive_notification: {
+        Args: { p_notification_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       access_level_type: "full" | "partial" | "view"

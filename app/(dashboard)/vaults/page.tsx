@@ -4,7 +4,6 @@ import { useState, useCallback, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { VaultForm } from "@/components/module/vaults/vault-form"
 import { VaultList } from "@/components/module/vaults/vault-list"
-import { VaultListSkeleton } from "@/components/ui/skeleton"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
@@ -45,7 +44,6 @@ interface Vault {
 
 export default function VaultsPage() {
   const [user, setUser] = useState<User | null>(null)
-  const [loading, setLoading] = useState(true)
   const [vaults, setVaults] = useState<Vault[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<'share' | 'delete' | 'pro' | null>(null)
@@ -154,12 +152,10 @@ export default function VaultsPage() {
         
         if (authError) {
           logger.error('Auth error', authError)
-          if (isMounted) setLoading(false)
           return
         }
         
         if (!user) {
-          if (isMounted) setLoading(false)
           router.push('/login')
           return
         }
@@ -173,10 +169,6 @@ export default function VaultsPage() {
         }
       } catch (error) {
         logger.error('Error initializing page', error)
-      } finally {
-        if (isMounted) {
-          setLoading(false)
-        }
       }
     }
 
@@ -316,21 +308,6 @@ export default function VaultsPage() {
   const handleVaultEdit = (vault: Vault) => {
     setEditingVault(vault)
     setShowForm(true)
-  }
-
-  if (loading) {
-    return (
-      <div className="p-6">
-        <div className="mb-6">
-          <div className="flex justify-between items-center mb-4">
-            <div className="h-9 w-32 bg-background-elevated/50 rounded animate-pulse" />
-            <div className="h-12 w-12 bg-background-elevated/50 rounded-full animate-pulse" />
-          </div>
-          <div className="h-11 bg-background-elevated/50 rounded-xl animate-pulse mb-4" />
-        </div>
-        <VaultListSkeleton />
-      </div>
-    )
   }
 
   return (
