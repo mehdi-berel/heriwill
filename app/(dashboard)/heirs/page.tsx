@@ -172,8 +172,8 @@ export default function HeirsPage() {
       })
 
       if (result.heir) {
-        setHeirs([result.heir as unknown as Heir, ...heirs])
-        setNewlyCreatedHeir(result.heir as unknown as Heir)
+        setHeirs([result.heir as Heir, ...heirs])
+        setNewlyCreatedHeir(result.heir as Heir)
         setShowForm(false)
         setShowInvitationModal(true)
       }

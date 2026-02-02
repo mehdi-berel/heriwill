@@ -1,5 +1,7 @@
-import { supabase } from '../../lib/supabase'
-import type { Database } from '../../lib/database.types'
+"use server"
+
+import { createServerSupabaseClient } from '@/lib/supabase'
+import type { Database } from '@/lib/database.types'
 
 type HeirRow = Database['public']['Tables']['heirs']['Row']
 type HeirUpdate = Database['public']['Tables']['heirs']['Update']
@@ -18,6 +20,7 @@ interface HeirData {
 export const heirActions = {
   // Create Heir
   createHeir: async (heirData: HeirData) => {
+    const supabase = await createServerSupabaseClient()
     const { data, error } = await supabase
       .from('heirs')
       .insert({
@@ -44,6 +47,7 @@ export const heirActions = {
 
   // Update Heir
   updateHeir: async (heirId: string, updateData: HeirUpdate) => {
+    const supabase = await createServerSupabaseClient()
     const { data, error } = await supabase
       .from('heirs')
       .update(updateData)
@@ -57,6 +61,7 @@ export const heirActions = {
 
   // Delete Heir
   deleteHeir: async (heirId: string) => {
+    const supabase = await createServerSupabaseClient()
     const { error } = await supabase
       .from('heirs')
       .delete()
@@ -67,6 +72,7 @@ export const heirActions = {
 
   // Get Heir by ID
   getHeirById: async (heirId: string) => {
+    const supabase = await createServerSupabaseClient()
     const { data, error } = await supabase
       .from('heirs')
       .select('*')
@@ -79,6 +85,7 @@ export const heirActions = {
 
   // Get All Heirs for User
   getAllHeirs: async (userId: string): Promise<HeirRow[]> => {
+    const supabase = await createServerSupabaseClient()
     const { data, error } = await supabase
       .from('heirs')
       .select('*')
@@ -98,6 +105,7 @@ export const heirActions = {
     // await sendInvitationEmail(heir.email_encrypted, heir.invitation_code)
     
     // Update invitation status
+    const supabase = await createServerSupabaseClient()
     const { data } = await supabase
       .from('heirs')
       .update({ invitation_status: 'pending' })
@@ -110,6 +118,7 @@ export const heirActions = {
 
   // Revoke Access
   revokeAccess: async (heirId: string) => {
+    const supabase = await createServerSupabaseClient()
     const { data } = await supabase
       .from('heirs')
       .update({ invitation_status: 'rejected' })
@@ -122,6 +131,7 @@ export const heirActions = {
 
   // Update Verification Status
   updateVerificationStatus: async (heirId: string, status: string) => {
+    const supabase = await createServerSupabaseClient()
     const { data } = await supabase
       .from('heirs')
       .update({ notification_status: status }) // mapped verification_status to notification_status or similar if needed, check DB

@@ -164,7 +164,7 @@ export default function AssetDetailPage() {
 
     try {
       const updatedAsset = await physicalAssetActions.updateDigitalAsset(asset.id, assetData as unknown as Record<string, unknown>)
-      setAsset(updatedAsset as unknown as Asset)
+      setAsset(updatedAsset as Asset)
       setShowEditModal(false)
       toast.success('Asset updated successfully')
     } catch (error) {
