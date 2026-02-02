@@ -6,6 +6,8 @@ import { HeirDetail } from "@/components/module/heirs/heir-detail"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft, Edit, Trash2 } from "lucide-react"
 import { supabase } from "@/lib/supabase"
+import { logger } from "@/lib/utils/logger"
+import { toast } from "@/lib/utils/toast"
 
 interface Heir {
   id: string
@@ -52,34 +54,35 @@ export default function HeirDetailPage() {
 
   const loadHeir = useCallback(async (id: string) => {
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase
+      const { data, error } = await supabase
         .from('heirs')
         .select('*')
         .eq('id', id)
-        .single() as any)
+        .single()
 
       if (error) throw error
       if (!data) throw new Error('Heir not found')
 
       // Map database fields to component interface
+      // Type assertion needed due to Supabase's dynamic typing
+      const heirData = data as Record<string, unknown>
       const mappedHeir: Heir = {
-        id: data.id,
-        full_name: data.full_name_encrypted || 'Unknown',
-        email: data.email_encrypted || '',
-        phone: data.phone_encrypted || undefined,
-        relationship: data.relationship || 'Unknown',
-        invitation_status: data.invitation_status || 'pending',
-        invitation_code: data.invitation_code || undefined,
-        access_level: data.access_level || 'view',
+        id: heirData.id as string,
+        full_name: (heirData.full_name_encrypted as string) || 'Unknown',
+        email: (heirData.email_encrypted as string) || '',
+        phone: (heirData.phone_encrypted as string) || undefined,
+        relationship: (heirData.relationship as string) || 'Unknown',
+        invitation_status: (heirData.invitation_status as 'pending' | 'accepted' | 'rejected' | 'expired') || 'pending',
+        invitation_code: (heirData.invitation_code as string) || undefined,
+        access_level: (heirData.access_level as 'full' | 'partial' | 'view') || 'view',
         verification_method: 'email',
-        verification_status: data.invitation_status === 'accepted' ? 'verified' : 'pending',
-        created_at: data.created_at,
-        accepted_at: data.accepted_at || undefined,
-        last_activity: data.updated_at || undefined,
-        invitation_expires_at: data.invitation_expires_at || undefined,
+        verification_status: heirData.invitation_status === 'accepted' ? 'verified' : 'pending',
+        created_at: heirData.created_at as string,
+        accepted_at: (heirData.accepted_at as string) || undefined,
+        last_activity: (heirData.updated_at as string) || undefined,
+        invitation_expires_at: (heirData.invitation_expires_at as string) || undefined,
         notification_preferences: {
-          email: data.notify_on_activation || true,
+          email: (heirData.notify_on_activation as boolean) ?? true,
           sms: false,
           in_app: true
         }
@@ -87,40 +90,44 @@ export default function HeirDetailPage() {
 
       setHeir(mappedHeir)
     } catch (error) {
-      console.error('Error loading heir:', error)
+      logger.error('Error loading heir', error, { heirId: id })
+      toast.error('Failed to load heir', 'Please try again')
       router.push("/heirs")
     }
   }, [router])
 
   const loadHeirActivities = useCallback(async (id: string) => {
     try {
-      // Query user_activity table for heir-related activities
-      const { data, error } = await supabase
-        .from('user_activity')
-        .select('*')
-        .eq('metadata->>heir_id', id)
-        .order('created_at', { ascending: false })
-        .limit(20)
-
-      if (error) {
-        console.error('Error fetching activities:', error)
-        setActivities([])
-        return
-      }
-
-      // Transform database records to HeirActivity format
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const activities: HeirActivity[] = (data || []).map((activity: any) => ({
-        id: activity.id,
-        type: activity.activity_type as HeirActivity['type'],
-        description: activity.metadata?.description || activity.activity_type,
-        timestamp: activity.created_at,
-        metadata: activity.metadata
-      }))
-
-      setActivities(activities)
+      // TODO: user_activity table doesn't exist in database schema
+      // Should use audit_logs table instead with resource_type='heir' and resource_id=id
+      // For now, returning empty activities
+      logger.warn('user_activity table not implemented - use audit_logs instead', { heirId: id })
+      setActivities([])
+      return
+      
+      // Correct implementation would be:
+      // const { data, error } = await supabase
+      //   .from('audit_logs')
+      //   .select('*')
+      //   .eq('resource_type', 'heir')
+      //   .eq('resource_id', id)
+      //   .order('created_at', { ascending: false })
+      //   .limit(20)
+      // if (error) {
+      //   console.error('Error fetching activities:', error)
+      //   setActivities([])
+      //   return
+      // }
+      // const activities: HeirActivity[] = (data || []).map((activity: any) => ({
+      //   id: activity.id,
+      //   type: activity.action as HeirActivity['type'],
+      //   description: activity.metadata?.description || activity.action,
+      //   timestamp: activity.created_at,
+      //   metadata: activity.metadata
+      // }))
+      // setActivities(activities)
     } catch (error) {
-      console.error('Error loading heir activities:', error)
+      logger.error('Error loading heir activities', error, { heirId: id })
       setActivities([])
     }
   }, [])
@@ -178,23 +185,26 @@ export default function HeirDetailPage() {
       
       router.push("/heirs")
     } catch (error) {
-      console.error('Error deleting heir:', error)
+      logger.error('Error deleting heir', error, { heirId })
+      toast.error('Failed to delete heir', 'Please try again')
     }
   }
 
   const handleResendInvitation = async () => {
     try {
       // In a real app, this would send an email
-      console.log('Resending invitation to heir:', heirId)
+      logger.info('Resending invitation to heir', { heirId })
+      toast.success('Invitation sent')
     } catch (error) {
-      console.error('Error resending invitation:', error)
+      logger.error('Error resending invitation', error, { heirId })
+      toast.error('Failed to send invitation', 'Please try again')
     }
   }
 
   const handleRevokeAccess = async () => {
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (supabase.from('heirs') as any)
+      await supabase
+        .from('heirs')
         .update({ invitation_status: 'rejected' })
         .eq('id', heirId)
       
@@ -202,7 +212,8 @@ export default function HeirDetailPage() {
         setHeir({ ...heir, invitation_status: 'rejected' })
       }
     } catch (error) {
-      console.error('Error revoking access:', error)
+      logger.error('Error revoking access', error, { heirId })
+      toast.error('Failed to revoke access', 'Please try again')
     }
   }
 

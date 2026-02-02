@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
@@ -60,6 +61,7 @@ interface ItemListProps {
   selectedItemType?: VaultItemType | null
   showAddButton?: boolean
   emptyMessage?: string
+  vaultCategory?: 'share' | 'delete' | 'pro'
 }
 
 const itemIcons: Record<VaultItemType, typeof Key> = {
@@ -151,8 +153,10 @@ export function ItemList({
   onSearchChange,
   selectedItemType = null,
   showAddButton = true,
-  emptyMessage = 'No items found'
+  emptyMessage = 'No items found',
+  vaultCategory
 }: ItemListProps) {
+  const router = useRouter()
   const [internalSearchTerm, setInternalSearchTerm] = useState(searchTerm)
 
   const handleSearchChange = (value: string) => {
@@ -180,7 +184,7 @@ export function ItemList({
 
   return (
     <div className="space-y-4">
-      {/* Search Bar and Add Button */}
+      {/* Search Bar, Assets/Legal Buttons, and Add Button */}
       <div className="flex gap-2 sm:gap-3">
         <div className="flex-1 relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -191,6 +195,29 @@ export function ItemList({
             className="pl-10 h-11 sm:h-10"
           />
         </div>
+        
+        {/* Assets and Legal Buttons - Only for Pro Vaults */}
+        {vaultCategory === 'pro' && (
+          <>
+            <Button
+              onClick={() => router.push('/assets')}
+              variant="outline"
+              className="h-11 sm:h-10 px-3 flex-shrink-0"
+            >
+              <Package className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Assets</span>
+            </Button>
+            <Button
+              onClick={() => router.push('/Legal')}
+              variant="outline"
+              className="h-11 sm:h-10 px-3 flex-shrink-0"
+            >
+              <Scale className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Legal</span>
+            </Button>
+          </>
+        )}
+        
         {showAddButton && onAddItem && (
           <Button onClick={onAddItem} className="h-11 sm:h-10 flex-shrink-0">
             <Plus className="h-4 w-4 sm:mr-2" />

@@ -11,6 +11,8 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { Search, Plus, ArrowLeft } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { User } from "@supabase/supabase-js"
+import { logger } from "@/lib/utils/logger"
+import { toast } from "@/lib/utils/toast"
 
 interface AssetFormData {
   name: string
@@ -40,14 +42,14 @@ interface Asset {
 interface Vault {
   id: string
   name: string
-  icon?: string
+  icon?: string | null
   category: string
 }
 
 interface Heir {
   id: string
-  full_name_encrypted: string
-  relationship?: string
+  full_name_encrypted: string | null
+  relationship?: string | null
 }
 
 function AssetsPageContent() {
@@ -74,13 +76,14 @@ function AssetsPageContent() {
         .order('created_at', { ascending: false })
 
       if (error) {
-        console.error('Error loading assets:', error)
+        logger.error('Error loading assets', error, { userId })
         return
       }
 
-      setAssets(data || [])
+      setAssets((data || []) as Asset[])
     } catch (error) {
-      console.error('Error loading assets:', error)
+      logger.error('Error loading assets', error, { userId })
+      toast.error('Failed to load assets', 'Please refresh the page')
     }
   }, [])
 
@@ -93,13 +96,13 @@ function AssetsPageContent() {
         .order('name', { ascending: true })
 
       if (error) {
-        console.error('Error loading vaults:', error)
+        logger.error('Error loading vaults', error, { userId })
         return
       }
 
-      setVaults(data || [])
+      setVaults((data || []) as Vault[])
     } catch (error) {
-      console.error('Error loading vaults:', error)
+      logger.error('Error loading vaults', error, { userId })
     }
   }, [])
 
@@ -113,13 +116,13 @@ function AssetsPageContent() {
         .order('full_name_encrypted', { ascending: true })
 
       if (error) {
-        console.error('Error loading heirs:', error)
+        logger.error('Error loading heirs', error, { userId })
         return
       }
 
-      setHeirs(data || [])
+      setHeirs((data || []) as Heir[])
     } catch (error) {
-      console.error('Error loading heirs:', error)
+      logger.error('Error loading heirs', error, { userId })
     }
   }, [])
 
@@ -160,8 +163,8 @@ function AssetsPageContent() {
     const value = typeof assetData.value === 'string' ? parseFloat(assetData.value) : assetData.value
 
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase.from('assets') as any)
+      const { error } = await supabase
+        .from('assets')
         .insert({
           user_id: user.id,
           name: assetData.name,
@@ -177,17 +180,19 @@ function AssetsPageContent() {
         .single()
 
       if (error) {
-        console.error('Error adding asset:', error)
+        logger.error('Error adding asset', error, { userId: user?.id })
+        toast.error('Failed to add asset', 'Please try again')
         return
       }
 
-      if (data) {
-        setAssets([data, ...assets])
-        setShowForm(false)
+      if (user) {
+        await loadAssets(user.id)
         setEditingAsset(null)
+        toast.success('Asset added successfully')
       }
     } catch (error) {
-      console.error('Error adding asset:', error)
+      logger.error('Error adding asset', error, { userId: user?.id })
+      toast.error('Failed to add asset', 'Please try again')
     }
   }
 
@@ -197,8 +202,8 @@ function AssetsPageContent() {
     const value = typeof assetData.value === 'string' ? parseFloat(assetData.value) : assetData.value
 
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase.from('assets') as any)
+      const { error } = await supabase
+        .from('assets')
         .update({
           name: assetData.name,
           type: assetData.type,
@@ -214,17 +219,19 @@ function AssetsPageContent() {
         .single()
 
       if (error) {
-        console.error('Error updating asset:', error)
+        logger.error('Error updating asset', error, { assetId: editingAsset.id })
+        toast.error('Failed to update asset', 'Please try again')
         return
       }
 
-      if (data) {
-        setAssets(assets.map(a => a.id === editingAsset.id ? data : a))
-        setShowForm(false)
+      if (user) {
+        await loadAssets(user.id)
         setEditingAsset(null)
+        toast.success('Asset updated successfully')
       }
     } catch (error) {
-      console.error('Error updating asset:', error)
+      logger.error('Error updating asset', error, { assetId: editingAsset.id })
+      toast.error('Failed to update asset', 'Please try again')
     }
   }
 
@@ -238,15 +245,20 @@ function AssetsPageContent() {
         .eq('id', assetToDelete)
       
       if (error) {
-        console.error('Error deleting asset:', error)
+        logger.error('Error deleting asset', error, { assetId: assetToDelete })
+        toast.error('Failed to delete asset', 'Please try again')
         return
       }
 
-      setAssets(assets.filter(a => a.id !== assetToDelete))
+      if (user) {
+        await loadAssets(user.id)
+      }
       setShowDeleteModal(false)
       setAssetToDelete(null)
+      toast.success('Asset deleted successfully')
     } catch (error) {
-      console.error('Error deleting asset:', error)
+      logger.error('Error deleting asset', error, { assetId: assetToDelete })
+      toast.error('Failed to delete asset', 'Please try again')
     }
   }
 
@@ -269,59 +281,62 @@ function AssetsPageContent() {
 
   return (
     <ProTierGuard pageName="Assets">
-      <div className="p-6 space-y-6">
-        {/* Back Button */}
-        <Button 
-          variant="ghost" 
-          onClick={() => router.push(returnTo)}
-          className="mb-4"
-        >
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Vault
-        </Button>
-        
-        {/* Header with Title and Add Button */}
-        <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold text-text-primary">Assets</h1>
+      <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+        {/* Back Button, Title and Add Button Row */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+            <Button 
+              variant="ghost" 
+              onClick={() => router.push(returnTo)}
+              className="h-10 sm:h-9 px-2 sm:px-3 flex-shrink-0"
+            >
+              <ArrowLeft className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Back to Vault</span>
+            </Button>
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-text-primary truncate">Assets</h1>
+          </div>
           
           <Button 
             onClick={() => {
               setEditingAsset(null)
               setShowForm(true)
             }}
-            className="bg-gradient-purple hover:opacity-90"
+            className="bg-gradient-purple hover:opacity-90 h-10 sm:h-9 text-sm sm:text-base px-3 sm:px-4 flex-shrink-0 ml-2"
           >
-            <Plus className="h-4 w-4 mr-2" />
-            Add Asset
+            <Plus className="h-4 w-4 mr-1 sm:mr-2" />
+            <span className="hidden xs:inline">Add Asset</span>
+            <span className="xs:hidden">Add</span>
           </Button>
         </div>
 
-        {/* Type Filter Tabs - Centered */}
-        <div className="flex justify-center gap-2">
-          {[
-            { value: 'all', label: 'All Assets' },
-            { value: 'real_estate', label: 'Real Estate' },
-            { value: 'vehicle', label: 'Vehicles' },
-            { value: 'bank_account', label: 'Bank Accounts' },
-            { value: 'investment', label: 'Investments' },
-            { value: 'insurance', label: 'Insurance' },
-            { value: 'personal_property', label: 'Personal Property' },
-            { value: 'business', label: 'Business' },
-            { value: 'other', label: 'Other' },
-          ].map((type) => (
-            <button
-              key={type.value}
-              onClick={() => setSelectedType(type.value as 'all' | Asset['type'])}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
-                selectedType === type.value
-                  ? 'bg-primary-600/10 text-primary-400 border border-primary-600/20'
-                  : 'text-text-muted hover:bg-background-hover hover:text-text-secondary border'
-              }`}
-              style={{ borderColor: selectedType === type.value ? undefined : '#232629' }}
-            >
-              {type.label}
-            </button>
-          ))}
+        {/* Type Filter Tabs - Scrollable on mobile */}
+        <div className="-mx-4 sm:mx-0 px-4 sm:px-0">
+          <div className="flex sm:flex-wrap sm:justify-center gap-2 overflow-x-auto pb-2 sm:pb-0 scrollbar-hide">
+            {[
+              { value: 'all', label: 'All Assets' },
+              { value: 'real_estate', label: 'Real Estate' },
+              { value: 'vehicle', label: 'Vehicles' },
+              { value: 'bank_account', label: 'Bank Accounts' },
+              { value: 'investment', label: 'Investments' },
+              { value: 'insurance', label: 'Insurance' },
+              { value: 'personal_property', label: 'Personal Property' },
+              { value: 'business', label: 'Business' },
+              { value: 'other', label: 'Other' },
+            ].map((type) => (
+              <button
+                key={type.value}
+                onClick={() => setSelectedType(type.value as 'all' | Asset['type'])}
+                className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors flex-shrink-0 ${
+                  selectedType === type.value
+                    ? 'bg-primary-600/10 text-primary-400 border border-primary-600/20'
+                    : 'text-text-muted hover:bg-background-hover hover:text-text-secondary border'
+                }`}
+                style={{ borderColor: selectedType === type.value ? undefined : '#232629' }}
+              >
+                {type.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Search Bar */}
@@ -331,7 +346,7 @@ function AssetsPageContent() {
             placeholder="Search assets..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
+            className="pl-10 h-10 sm:h-11 text-sm sm:text-base"
           />
         </div>
 
@@ -344,7 +359,7 @@ function AssetsPageContent() {
 
         {/* Add/Edit Asset Modal */}
         <Dialog open={showForm} onOpenChange={setShowForm}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-2xl w-[95vw] sm:w-full max-h-[90vh] overflow-y-auto">
             <DialogTitle>{editingAsset ? 'Edit Asset' : 'Add New Asset'}</DialogTitle>
             <AssetForm
               onSubmit={editingAsset ? handleUpdateAsset : handleAddAsset}
@@ -367,25 +382,26 @@ function AssetsPageContent() {
 
         {/* Delete Confirmation Modal */}
         <Dialog open={showDeleteModal} onOpenChange={setShowDeleteModal}>
-          <DialogContent>
+          <DialogContent className="w-[95vw] sm:w-full max-w-md">
             <DialogTitle>Delete Asset</DialogTitle>
             <div className="space-y-4">
               <p className="text-text-secondary">
                 Are you sure you want to delete this asset? This action cannot be undone.
               </p>
-              <div className="flex justify-end gap-3">
+              <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3">
                 <Button
                   variant="outline"
                   onClick={() => {
                     setShowDeleteModal(false)
                     setAssetToDelete(null)
                   }}
+                  className="h-10 sm:h-9 w-full sm:w-auto"
                 >
                   Cancel
                 </Button>
                 <Button
                   onClick={handleDeleteAsset}
-                  className="bg-status-error hover:bg-status-error/90"
+                  className="bg-status-error hover:bg-status-error/90 h-10 sm:h-9 w-full sm:w-auto"
                 >
                   Delete
                 </Button>

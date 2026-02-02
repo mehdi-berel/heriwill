@@ -1,10 +1,8 @@
 "use client"
 
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { 
   FolderOpen, 
-  Lock, 
   Share2, 
   Trash2,
   Shield,
@@ -20,11 +18,8 @@ export interface Vault {
   name: string
   description: string | null
   category: VaultCategory
-  is_encrypted: boolean | null
   is_locked: boolean | null
-  is_favorite: boolean | null
   is_shared: boolean | null
-  tags: string[] | null
   item_count: number
   created_at: string
   updated_at: string
@@ -85,22 +80,13 @@ export function VaultCard({
         className="w-12 h-12 rounded-full flex items-center justify-center mr-3 flex-shrink-0"
         style={{ backgroundColor: vault.color || 'rgb(124, 58, 237)' }}
       >
-        {vault.is_encrypted ? (
-          <Lock className="h-6 w-6 text-white" />
-        ) : (
-          <CategoryIcon className="h-6 w-6 text-white" />
-        )}
+        <CategoryIcon className="h-6 w-6 text-white" />
       </div>
 
       {/* Content */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-1.5">
           <h3 className="text-base font-semibold truncate">{label}</h3>
-          {vault.is_encrypted && (
-            <Badge variant="secondary" className="px-1.5 py-0.5 bg-success/20">
-              <Lock className="h-3 w-3 text-success" />
-            </Badge>
-          )}
         </div>
         <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
           <FolderOpen className="h-3.5 w-3.5" />

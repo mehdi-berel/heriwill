@@ -20,8 +20,7 @@ import {
 
 interface SettingsOverviewProps {
   userId: string
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  profile: any
+  profile: Record<string, unknown>
 }
 
 export function SettingsOverview({ profile }: SettingsOverviewProps) {
@@ -29,29 +28,29 @@ export function SettingsOverview({ profile }: SettingsOverviewProps) {
   const [showPassword, setShowPassword] = useState(false)
   const [showCurrentPassword, setShowCurrentPassword] = useState(false)
   const [formData, setFormData] = useState({
-    fullName: profile?.full_name || '',
-    email: profile?.email || '',
-    phone: profile?.phone || '',
-    address: profile?.address || '',
-    timezone: profile?.timezone || 'UTC',
-    language: profile?.language || 'en',
-    currency: profile?.currency || 'USD',
-    dateFormat: profile?.date_format || 'MM/DD/YYYY',
-    timeFormat: profile?.time_format || '12h',
+    fullName: (profile?.full_name as string) || '',
+    email: (profile?.email as string) || '',
+    phone: (profile?.phone as string) || '',
+    address: (profile?.address as string) || '',
+    timezone: (profile?.timezone as string) || 'UTC',
+    language: (profile?.language as string) || 'en',
+    currency: (profile?.currency as string) || 'USD',
+    dateFormat: (profile?.date_format as string) || 'MM/DD/YYYY',
+    timeFormat: (profile?.time_format as string) || '12h',
     notifications: {
-      email: profile?.email_notifications ?? true,
-      push: profile?.push_notifications ?? true,
-      sms: profile?.sms_notifications ?? false,
-      marketing: profile?.marketing_notifications ?? false,
-      security: profile?.security_notifications ?? true,
-      updates: profile?.update_notifications ?? true
+      email: (profile?.email_notifications as boolean) ?? true,
+      push: (profile?.push_notifications as boolean) ?? true,
+      sms: (profile?.sms_notifications as boolean) ?? false,
+      marketing: (profile?.marketing_notifications as boolean) ?? false,
+      security: (profile?.security_notifications as boolean) ?? true,
+      updates: (profile?.update_notifications as boolean) ?? true
     },
     privacy: {
-      profileVisible: profile?.profile_visible ?? true,
-      showEmail: profile?.show_email ?? false,
-      showPhone: profile?.show_phone ?? false,
-      twoFactorEnabled: profile?.two_factor_enabled ?? false,
-      sessionTimeout: profile?.session_timeout ?? 24
+      profileVisible: (profile?.profile_visible as boolean) ?? true,
+      showEmail: (profile?.show_email as boolean) ?? false,
+      showPhone: (profile?.show_phone as boolean) ?? false,
+      twoFactorEnabled: (profile?.two_factor_enabled as boolean) ?? false,
+      sessionTimeout: (profile?.session_timeout as number) ?? 24
     },
     security: {
       currentPassword: '',
@@ -68,13 +67,16 @@ export function SettingsOverview({ profile }: SettingsOverviewProps) {
   }
 
   const handleNestedChange = (category: string, field: string, value: string | boolean | number) => {
-    setFormData(prev => ({
-      ...prev,
-      [category]: {
-        ...prev[category as keyof typeof prev],
-        [field]: value
+    setFormData(prev => {
+      const categoryData = prev[category as keyof typeof prev]
+      return {
+        ...prev,
+        [category]: {
+          ...(typeof categoryData === 'object' && categoryData !== null ? categoryData : {}),
+          [field]: value
+        }
       }
-    }))
+    })
   }
 
   const handleSave = async (section: string) => {

@@ -56,8 +56,7 @@ export default function LoginPage() {
 
       // Update last_activity and last_login timestamps
       if (data.user) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await (supabase.from('users') as any).update({
+        await supabase.from('users').update({
           last_activity: new Date().toISOString(),
           last_login: new Date().toISOString()
         }).eq('id', data.user.id)

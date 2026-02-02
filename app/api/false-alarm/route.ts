@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
         }
       } as never)
       .eq('user_id', userId)
-      .eq('status', 'triggered')
+      .eq('status', 'pending') // Using 'pending' as the valid status
     const triggerUpdateError = triggerResult.error
 
     if (triggerUpdateError) {
@@ -100,8 +100,14 @@ export async function POST(request: NextRequest) {
     if (heirs && heirs.length > 0) {
       for (const heir of heirs) {
         try {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const heirData = heir as any
+          const heirData = heir as { id: string; email_encrypted: string | null; full_name_encrypted: string | null }
+          
+          // Skip if email is not available
+          if (!heirData.email_encrypted) {
+            logger.warn(`Heir has no email address, skipping notification`)
+            continue
+          }
+          
           // Note: email_encrypted needs to be decrypted before use
           logger.info(`Sending false alarm notification to heir`)
           

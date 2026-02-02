@@ -36,28 +36,9 @@ CREATE TABLE public.audit_logs (
   CONSTRAINT audit_logs_pkey PRIMARY KEY (id),
   CONSTRAINT audit_logs_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
 );
-CREATE TABLE public.heir_vault_access (
-  id uuid NOT NULL DEFAULT uuid_generate_v4(),
-  heir_id uuid NOT NULL,
-  vault_id uuid,
-  vault_item_id uuid,
-  can_view boolean DEFAULT true,
-  can_export boolean DEFAULT false,
-  can_edit boolean DEFAULT false,
-  granted_at timestamp with time zone NOT NULL DEFAULT now(),
-  accessed_at timestamp with time zone,
-  access_granted_at timestamp with time zone DEFAULT now(),
-  access_status text DEFAULT 'pending'::text CHECK (access_status = ANY (ARRAY['granted'::text, 'revoked'::text])),
-  CONSTRAINT heir_vault_access_pkey PRIMARY KEY (id),
-  CONSTRAINT heir_vault_access_heir_id_fkey FOREIGN KEY (heir_id) REFERENCES public.heirs(id),
-  CONSTRAINT heir_vault_access_vault_id_fkey FOREIGN KEY (vault_id) REFERENCES public.vaults(id),
-  CONSTRAINT heir_vault_access_vault_item_id_fkey FOREIGN KEY (vault_item_id) REFERENCES public.vault_items(id)
-);
 CREATE TABLE public.heirs (
   id uuid NOT NULL DEFAULT uuid_generate_v4(),
   user_id uuid NOT NULL,
-  inheritance_plan_id uuid,
-  access_level USER-DEFINED NOT NULL,
   heir_user_id uuid,
   notify_on_activation boolean DEFAULT true,
   notification_delay_days integer DEFAULT 0 CHECK (notification_delay_days >= 0),
@@ -74,7 +55,6 @@ CREATE TABLE public.heirs (
   relationship text,
   notification_status text DEFAULT 'pending'::text,
   notified_at timestamp with time zone,
-  death_confirmed_at timestamp with time zone,
   full_name_encrypted text,
   email_encrypted text,
   phone_encrypted text,
@@ -82,26 +62,10 @@ CREATE TABLE public.heirs (
   heir_type text DEFAULT 'family'::text CHECK (heir_type = ANY (ARRAY['family'::text, 'friend'::text, 'professional'::text, 'organization'::text])),
   CONSTRAINT heirs_pkey PRIMARY KEY (id),
   CONSTRAINT heirs_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id),
-  CONSTRAINT heirs_inheritance_plan_id_fkey FOREIGN KEY (inheritance_plan_id) REFERENCES public.inheritance_plans(id),
   CONSTRAINT heirs_heir_user_id_fkey FOREIGN KEY (heir_user_id) REFERENCES public.users(id)
-);
-CREATE TABLE public.inheritance_plans (
-  id uuid NOT NULL DEFAULT uuid_generate_v4(),
-  user_id uuid NOT NULL,
-  plan_name text NOT NULL,
-  plan_type USER-DEFINED NOT NULL,
-  is_active boolean DEFAULT true,
-  is_triggered boolean DEFAULT false,
-  triggered_at timestamp with time zone,
-  instructions_encrypted text,
-  created_at timestamp with time zone NOT NULL DEFAULT now(),
-  updated_at timestamp with time zone NOT NULL DEFAULT now(),
-  CONSTRAINT inheritance_plans_pkey PRIMARY KEY (id),
-  CONSTRAINT inheritance_plans_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
 );
 CREATE TABLE public.inheritance_triggers (
   id uuid NOT NULL DEFAULT uuid_generate_v4(),
-  inheritance_plan_id uuid NOT NULL,
   user_id uuid NOT NULL,
   trigger_metadata jsonb,
   status USER-DEFINED NOT NULL DEFAULT 'pending'::trigger_status_type,
@@ -114,7 +78,6 @@ CREATE TABLE public.inheritance_triggers (
   cancelled_at timestamp with time zone,
   trigger_reason text,
   CONSTRAINT inheritance_triggers_pkey PRIMARY KEY (id),
-  CONSTRAINT inheritance_triggers_inheritance_plan_id_fkey FOREIGN KEY (inheritance_plan_id) REFERENCES public.inheritance_plans(id),
   CONSTRAINT inheritance_triggers_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id),
   CONSTRAINT inheritance_triggers_verified_by_fkey FOREIGN KEY (verified_by) REFERENCES public.users(id)
 );
@@ -159,10 +122,6 @@ CREATE TABLE public.shared_vaults (
   vault_id uuid NOT NULL,
   owner_id uuid NOT NULL,
   shared_with_user_id uuid NOT NULL,
-  can_view boolean DEFAULT true,
-  can_edit boolean DEFAULT false,
-  can_delete boolean DEFAULT false,
-  can_share boolean DEFAULT false,
   is_active boolean DEFAULT true,
   accepted boolean DEFAULT false,
   accepted_at timestamp with time zone,
@@ -172,57 +131,6 @@ CREATE TABLE public.shared_vaults (
   CONSTRAINT shared_vaults_vault_id_fkey FOREIGN KEY (vault_id) REFERENCES public.vaults(id),
   CONSTRAINT shared_vaults_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES public.users(id),
   CONSTRAINT shared_vaults_shared_with_user_id_fkey FOREIGN KEY (shared_with_user_id) REFERENCES public.users(id)
-);
-CREATE TABLE public.subscriptions (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  user_id uuid NOT NULL,
-  plan_name text NOT NULL DEFAULT 'Premium'::text,
-  amount numeric DEFAULT 10.00,
-  currency text DEFAULT 'EUR'::text,
-  status text NOT NULL CHECK (status = ANY (ARRAY['active'::text, 'cancelled'::text, 'past_due'::text, 'paused'::text])),
-  current_period_start timestamp with time zone,
-  current_period_end timestamp with time zone,
-  cancelled_at timestamp with time zone,
-  metadata jsonb DEFAULT '{}'::jsonb,
-  created_at timestamp with time zone DEFAULT now(),
-  updated_at timestamp with time zone DEFAULT now(),
-  store_transaction_id text,
-  store_product_id text,
-  store_platform text,
-  receipt_data text,
-  revenuecat_customer_id text,
-  revenuecat_product_id text,
-  revenuecat_entitlement_id text DEFAULT 'premium'::text,
-  CONSTRAINT subscriptions_pkey PRIMARY KEY (id),
-  CONSTRAINT subscriptions_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
-);
-CREATE TABLE public.user_activity (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  user_id uuid NOT NULL,
-  activity_type text NOT NULL,
-  ip_address text,
-  user_agent text,
-  metadata jsonb DEFAULT '{}'::jsonb,
-  created_at timestamp with time zone DEFAULT now(),
-  CONSTRAINT user_activity_pkey PRIMARY KEY (id),
-  CONSTRAINT user_activity_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
-);
-CREATE TABLE public.user_sessions (
-  id uuid NOT NULL DEFAULT uuid_generate_v4(),
-  user_id uuid NOT NULL,
-  session_token text NOT NULL UNIQUE,
-  device_name text,
-  device_type text,
-  ip_address inet,
-  user_agent text,
-  location_city text,
-  location_country text,
-  is_active boolean DEFAULT true,
-  created_at timestamp with time zone NOT NULL DEFAULT now(),
-  last_activity timestamp with time zone NOT NULL DEFAULT now(),
-  expires_at timestamp with time zone NOT NULL,
-  CONSTRAINT user_sessions_pkey PRIMARY KEY (id),
-  CONSTRAINT user_sessions_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
 );
 CREATE TABLE public.users (
   id uuid NOT NULL,
@@ -243,8 +151,6 @@ CREATE TABLE public.users (
   global_trigger_method text DEFAULT 'inactivity'::text CHECK (global_trigger_method = ANY (ARRAY['inactivity'::text, 'death_certificate'::text, 'manual_trigger'::text, 'scheduled'::text, 'trusted_contact'::text, 'heir_notification'::text])),
   global_trigger_settings jsonb DEFAULT '{"inactivity_days": 30}'::jsonb,
   global_scheduled_date timestamp with time zone,
-  trusted_contact_email text,
-  trusted_contact_phone text,
   last_activity timestamp with time zone DEFAULT now(),
   last_reminder_sent_at timestamp with time zone,
   trusted_contact_heir_id uuid,
@@ -287,11 +193,8 @@ CREATE TABLE public.vaults (
   settings jsonb DEFAULT '{"autoLock": true, "autoLockTimeout": 15, "twoFactorEnabled": false, "maxFailedAttempts": 5}'::jsonb,
   access_control jsonb DEFAULT '{"allowedHeirs": [], "allowedUsers": [], "requireApproval": true}'::jsonb,
   death_settings jsonb DEFAULT '{"notifySMS": [], "notifyEmail": [], "instructions": "", "notifyContacts": true, "triggerAfterDays": 30}'::jsonb,
-  is_encrypted boolean DEFAULT false,
   is_locked boolean DEFAULT false,
   is_shared boolean DEFAULT false,
-  is_favorite boolean DEFAULT false,
-  tags ARRAY,
   sort_order integer DEFAULT 0 CHECK (sort_order >= 0),
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone NOT NULL DEFAULT now(),

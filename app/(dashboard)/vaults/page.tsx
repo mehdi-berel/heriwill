@@ -12,13 +12,13 @@ import { Search } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { User } from "@supabase/supabase-js"
 import { sanitizeInput } from "@/lib/utils/sanitize"
+import { logger } from "@/lib/utils/logger"
+import { toast } from "@/lib/utils/toast"
 
 interface VaultFormData {
   name: string
   description: string
   category: string
-  is_encrypted: boolean
-  tags: string[]
 }
 
 interface Vault {
@@ -27,11 +27,8 @@ interface Vault {
   name: string
   description: string | null
   category: 'share' | 'delete' | 'pro'
-  is_encrypted: boolean | null
   is_locked: boolean | null
-  is_favorite: boolean | null
   is_shared: boolean | null
-  tags: string[] | null
   created_at: string
   updated_at: string
   last_accessed: string | null
@@ -41,14 +38,15 @@ interface Vault {
   access_control: Record<string, unknown> | null
   death_settings: Record<string, unknown> | null
   sort_order: number | null
-  item_count: number // Add item_count to interface
+  item_count: number
+  is_inherited?: boolean
+  inherited_from_user_id?: string
 }
 
 export default function VaultsPage() {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [vaults, setVaults] = useState<Vault[]>([])
-  const [selectedVault, setSelectedVault] = useState<Vault | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<'share' | 'delete' | 'pro' | null>(null)
   const [showForm, setShowForm] = useState(false)
@@ -59,18 +57,50 @@ export default function VaultsPage() {
 
   const loadVaults = useCallback(async (userId: string) => {
     try {
-      const { data, error } = await supabase
+      // Load owned vaults
+      const { data: ownedVaults, error } = await supabase
         .from('vaults')
         .select('*')
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
 
       if (error) {
-        console.error('Error loading vaults:', error)
+        logger.error('Error loading vaults', error, { userId })
         return
       }
 
-      if (data) {
+      // Load inherited vaults via shared_vaults
+      const { data: sharedVaults, error: sharedError } = await supabase
+        .from('shared_vaults')
+        .select(`
+          vault_id,
+          owner_id,
+          accepted,
+          vaults (*)
+        `)
+        .eq('shared_with_user_id', userId)
+        .eq('is_active', true)
+        .eq('accepted', true)
+
+      if (sharedError) {
+        logger.error('Error loading shared vaults', sharedError, { userId })
+      }
+
+      // Combine owned and inherited vaults
+      const inheritedVaultData = (sharedVaults as Array<{
+        vault_id: string
+        owner_id: string
+        accepted: boolean
+        vaults: Record<string, unknown>
+      }> | null)?.map(sv => ({
+        ...(sv.vaults),
+        is_inherited: true,
+        inherited_from_user_id: sv.owner_id
+      })) || []
+
+      const allVaults = [...(ownedVaults || []), ...inheritedVaultData]
+
+      if (allVaults.length > 0) {
         // Get user's subscription tier
         const { data: userProfile } = await supabase
           .from('users')
@@ -82,14 +112,14 @@ export default function VaultsPage() {
         const isFreeUser = subscriptionTier === 'free'
         
         const vaultsWithCounts = await Promise.all(
-          data.map(async (vault, index) => {
+          allVaults.map(async (vault: Record<string, unknown>, index: number) => {
             const { count, error: countError } = await supabase
               .from('vault_items')
               .select('*', { count: 'exact', head: true })
               .eq('vault_id', (vault as Record<string, unknown>).id as string)
             
             if (countError) {
-              console.error('Error loading vault item count:', countError)
+              logger.error('Error loading vault item count', countError, { vaultId: vault.id })
             }
             
             // Lock vaults for free users:
@@ -110,7 +140,8 @@ export default function VaultsPage() {
         setVaults([])
       }
     } catch (error) {
-      console.error('Error loading vaults:', error)
+      logger.error('Error loading vaults', error, { userId })
+      toast.error('Failed to load vaults', 'Please refresh the page')
     }
   }, [])
 
@@ -122,7 +153,7 @@ export default function VaultsPage() {
         const { data: { user }, error: authError } = await supabase.auth.getUser()
         
         if (authError) {
-          console.error('Auth error:', authError)
+          logger.error('Auth error', authError)
           if (isMounted) setLoading(false)
           return
         }
@@ -141,7 +172,7 @@ export default function VaultsPage() {
           await loadVaults(user.id)
         }
       } catch (error) {
-        console.error('Error initializing page:', error)
+        logger.error('Error initializing page', error)
       } finally {
         if (isMounted) {
           setLoading(false)
@@ -164,18 +195,15 @@ export default function VaultsPage() {
     const sanitizedDescription = formData.description ? sanitizeInput(formData.description) : null
 
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase.from('vaults') as any)
+      const { error } = await supabase
+        .from('vaults')
         .insert({
           user_id: user.id,
           name: sanitizedName,
           description: sanitizedDescription,
           category: formData.category || 'share',
-          is_encrypted: formData.is_encrypted || false,
-          is_favorite: false, // Default to false
           is_locked: false,
           is_shared: false,
-          tags: formData.tags || [],
           icon: null, // Default
           color: null, // Default
           settings: { // Default settings
@@ -202,59 +230,57 @@ export default function VaultsPage() {
         .single()
 
       if (error) {
-        console.error('Error adding vault:', error)
+        logger.error('Error adding vault', error, { userId: user?.id })
+        toast.error('Failed to add vault', 'Please try again')
         return
       }
 
-      if (data) {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { item_count, ...rest } = data as Record<string, unknown>
-        setVaults([{ ...(data as Record<string, unknown>), item_count: 0 } as unknown as Vault, ...vaults])
+      if (user) {
+        await loadVaults(user.id)
         setShowForm(false)
         setEditingVault(null)
+        toast.success('Vault created successfully')
       }
     } catch (error) {
-      console.error('Error adding vault:', error)
+      logger.error('Error adding vault', error, { userId: user?.id })
+      toast.error('Failed to add vault', 'Please try again')
     }
   }
 
   const handleUpdateVault = async (formData: VaultFormData) => {
-    if (!editingVault) return
+    if (!editingVault || !user) return
 
-    // Sanitize user inputs
     const sanitizedName = sanitizeInput(formData.name)
     const sanitizedDescription = formData.description ? sanitizeInput(formData.description) : null
 
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase.from('vaults') as any)
+      const { error } = await supabase
+        .from('vaults')
         .update({
           name: sanitizedName,
           description: sanitizedDescription,
-          category: formData.category,
-          is_encrypted: formData.is_encrypted,
-          // Only update fields present in form
-          tags: formData.tags || [],
-          last_accessed: new Date().toISOString()
+          category: formData.category
         })
         .eq('id', editingVault.id)
-        .select()
-        .single()
 
       if (error) {
-        console.error('Error updating vault:', error)
+        logger.error('Error updating vault', error, { vaultId: editingVault.id })
+        toast.error('Failed to update vault', 'Please try again')
         return
       }
 
-      if (data) {
-        const updatedVault = { ...(data as Record<string, unknown>), item_count: editingVault.item_count || 0 }
-        setVaults(vaults.map(v => v.id === editingVault.id ? updatedVault as unknown as Vault : v))
-        setShowForm(false)
-        setEditingVault(null)
-      }
+      await loadVaults(user.id)
+      setShowForm(false)
+      setEditingVault(null)
+      toast.success('Vault updated successfully')
     } catch (error) {
-      console.error('Error updating vault:', error)
+      logger.error('Error updating vault', error, { vaultId: editingVault?.id })
+      toast.error('Failed to update vault', 'Please try again')
     }
+  }
+
+  const handleVaultSelect = (vault: Vault) => {
+    router.push(`/vaults/${vault.id}`)
   }
 
   const handleDeleteVault = (vaultId: string) => {
@@ -263,7 +289,7 @@ export default function VaultsPage() {
   }
 
   const confirmDeleteVault = async () => {
-    if (!vaultToDelete) return
+    if (!vaultToDelete || !user) return
 
     try {
       const { error } = await supabase
@@ -272,24 +298,19 @@ export default function VaultsPage() {
         .eq('id', vaultToDelete)
       
       if (error) {
-        console.error('Error deleting vault:', error)
+        logger.error('Error deleting vault', error, { vaultId: vaultToDelete })
+        toast.error('Failed to delete vault', 'Please try again')
         return
       }
       
-      setVaults(vaults.filter(v => v.id !== vaultToDelete))
-      if (selectedVault?.id === vaultToDelete) {
-        setSelectedVault(null)
-      }
-      
+      await loadVaults(user.id)
       setShowDeleteModal(false)
       setVaultToDelete(null)
+      toast.success('Vault deleted successfully')
     } catch (error) {
-      console.error('Error deleting vault:', error)
+      logger.error('Error deleting vault', error, { vaultId: vaultToDelete })
+      toast.error('Failed to delete vault', 'Please try again')
     }
-  }
-
-  const handleVaultSelect = (vault: Vault) => {
-    router.push(`/vaults/${vault.id}`)
   }
 
   const handleVaultEdit = (vault: Vault) => {

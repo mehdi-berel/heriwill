@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase'
 import { logger } from '@/lib/utils/logger'
+import type { Database } from '@/lib/database.types'
 
 /**
  * Inheritance Plan Execution Service
@@ -69,8 +70,8 @@ export async function executeInheritancePlan(userId: string): Promise<void> {
  * Mark user as deceased in the database
  */
 async function markUserAsDeceased(userId: string): Promise<void> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase.from('users') as any)
+  const { error } = await supabase
+    .from('users')
     .update({
       is_active: false,
       account_locked: true,
@@ -90,10 +91,10 @@ async function markUserAsDeceased(userId: string): Promise<void> {
  * Get all vaults and their assigned heirs
  */
 async function getVaultActions(userId: string): Promise<VaultAction[]> {
-  // Get all vaults for the user
+  // Get all vaults for the user with access_control
   const { data: vaults, error: vaultsError } = await supabase
     .from('vaults')
-    .select('id, name, category')
+    .select('id, name, category, access_control')
     .eq('user_id', userId)
 
   if (vaultsError) {
@@ -103,25 +104,16 @@ async function getVaultActions(userId: string): Promise<VaultAction[]> {
 
   const vaultActions: VaultAction[] = []
 
-  // For each vault, get assigned heirs
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  for (const vault of (vaults || []) as any[]) {
-    const { data: heirAccess, error: accessError } = await supabase
-      .from('heir_vault_access')
-      .select('heir_id')
-      .eq('vault_id', vault.id)
-
-    if (accessError) {
-      logger.error('Error fetching heir access for vault', accessError, { vaultId: vault.id })
-      continue
-    }
+  // For each vault, get assigned heirs from access_control.allowedHeirs
+  for (const vault of (vaults || []) as Array<{ id: string; name: string; category: string; access_control: unknown }>) {
+    const accessControl = vault.access_control as { allowedHeirs?: string[] } | null
+    const heirIds = accessControl?.allowedHeirs || []
 
     vaultActions.push({
       vault_id: vault.id,
       vault_name: vault.name,
       category: vault.category as VaultAction['category'],
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      heir_ids: ((heirAccess || []) as any[]).map(h => h.heir_id)
+      heir_ids: heirIds
     })
   }
 
@@ -143,8 +135,7 @@ async function getHeirs(userId: string): Promise<Array<{ id: string; email: stri
     throw error
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return (heirs || []).map((heir: any) => ({
+  return (heirs || []).map((heir: { id: string; email_encrypted: string | null; full_name_encrypted: string | null }) => ({
     id: heir.id,
     email: heir.email_encrypted || '',
     full_name: heir.full_name_encrypted || 'Unknown'
@@ -176,7 +167,8 @@ async function executeVaultAction(userId: string, action: VaultAction): Promise<
 }
 
 /**
- * Grant vault access to heirs
+ * Grant vault access to heirs via shared_vaults
+ * Creates shared_vaults records when inheritance trigger activates
  */
 async function shareVaultWithHeirs(vaultId: string, heirIds: string[]): Promise<void> {
   if (heirIds.length === 0) {
@@ -184,19 +176,39 @@ async function shareVaultWithHeirs(vaultId: string, heirIds: string[]): Promise<
     return
   }
 
-  // Update heir_vault_access to grant access
+  // Get vault owner
+  const { data: vault } = await supabase
+    .from('vaults')
+    .select('user_id')
+    .eq('id', vaultId)
+    .single()
+
+  if (!vault) {
+    logger.error('Vault not found', { vaultId })
+    return
+  }
+
+  // Create shared_vaults records to grant access
+  // Use upsert to handle cases where records might already exist
   for (const heirId of heirIds) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (supabase.from('heir_vault_access') as any)
-      .update({
-        access_granted: true,
-        access_granted_at: new Date().toISOString()
+    const { error } = await supabase
+      .from('shared_vaults')
+      .upsert({
+        vault_id: vaultId,
+        owner_id: vault.user_id,
+        shared_with_user_id: heirId,
+        accepted: true,
+        accepted_at: new Date().toISOString(),
+        is_active: true,
+        shared_at: new Date().toISOString()
+      }, {
+        onConflict: 'vault_id,shared_with_user_id'
       })
-      .eq('vault_id', vaultId)
-      .eq('heir_id', heirId)
 
     if (error) {
       logger.error('Error granting vault access to heir', error, { heirId, vaultId })
+    } else {
+      logger.info('Granted vault access to heir', { heirId, vaultId })
     }
   }
 
@@ -248,8 +260,7 @@ async function notifyNotaryForSignOff(userId: string, vaultId: string): Promise<
     return
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const notaryData = notary as any
+  const notaryData = notary as { id: string; name: string; email: string }
 
   // TODO: Send email notification to notary
   logger.info('Notary notification pending', { 
@@ -305,13 +316,13 @@ async function createAuditLog(
   action: string,
   metadata: Record<string, unknown>
 ): Promise<void> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase.from('audit_logs') as any)
+  const { error } = await supabase
+    .from('audit_logs')
     .insert({
       user_id: userId,
       action,
       resource_type: 'inheritance_plan',
-      metadata,
+      metadata: metadata as unknown as Database['public']['Tables']['audit_logs']['Insert']['metadata'],
       risk_level: 'high',
       created_at: new Date().toISOString()
     })

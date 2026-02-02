@@ -118,8 +118,8 @@ export function ProfileSettings() {
       if (authUpdateError) throw authUpdateError
 
       // Update public.users table
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error } = await (supabase.from('users') as any)
+      const { error } = await supabase
+        .from('users')
         .update(sanitizedData)
         .eq('id', user.id)
 

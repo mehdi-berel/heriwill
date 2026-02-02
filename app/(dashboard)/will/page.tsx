@@ -1,18 +1,12 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
-import { WillCategories } from "@/components/module/will/will-categories"
-import { TestamentDetails } from "@/components/module/will/testament-details"
-import { BeneficiariesSection } from "@/components/module/will/beneficiaries-section"
-import { ExecutorDetails } from "@/components/module/will/executor-details"
-import { BurialPreferences } from "@/components/module/will/burial-preferences"
-import { FuneralDetails } from "@/components/module/will/funeral-details"
-import { ServiceProviders } from "@/components/module/will/service-providers"
 import { Card, CardContent } from "@/components/ui/card"
-import { FileText, AlertCircle, CheckCircle, Heart } from "lucide-react"
-import { supabase } from '@/lib/supabase'
-import { User } from "@supabase/supabase-js"
+import { CheckCircle, FileText, Heart, AlertCircle } from "lucide-react"
+import { supabase } from "@/lib/supabase"
+import { toast } from "@/lib/utils/toast"
+import { logger } from "@/lib/utils/logger"
 
 interface WillData {
   user_id: string
@@ -34,10 +28,6 @@ interface WishData {
   funeral_home?: string // Added missing property
 }
 
-interface SaveData {
-  [key: string]: unknown
-}
-
 interface WillCategory {
   id: string
   title: string
@@ -48,10 +38,8 @@ interface WillCategory {
 }
 
 export default function WillPage() {
-  const [user, setUser] = useState<User | null>(null)
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
-  const [willData, setWillData] = useState<WillData | null>(null)
-  const [wishData, setWishData] = useState<WishData | null>(null)
+  const [willData] = useState<WillData | null>(null)
+  const [wishData] = useState<WishData | null>(null)
   const router = useRouter()
 
   const categories: WillCategory[] = [
@@ -105,6 +93,42 @@ export default function WillPage() {
     },
   ]
 
+  const loadWillData = useCallback(async (userId: string) => {
+    try {
+      // TODO: user_wills table doesn't exist in database schema
+      // Need to create migration or use alternative storage (users table metadata, legal table, etc.)
+      toast.warning('Feature not available', 'Will management is being implemented')
+      // const { data } = await supabase
+      //   .from('user_wills')
+      //   .select('*')
+      //   .eq('user_id', userId)
+      //   .single()
+      // if (data) {
+      //   setWillData(data as unknown as WillData)
+      // }
+    } catch (error) {
+      logger.error('Error loading will data', error, { userId })
+    }
+  }, [])
+
+  const loadWishData = useCallback(async (userId: string) => {
+    try {
+      // TODO: user_wishes table doesn't exist in database schema
+      // Need to create migration or use alternative storage (users table metadata, legal table, etc.)
+      toast.warning('Feature not available', 'Wishes management is being implemented')
+      // const { data } = await supabase
+      //   .from('user_wishes')
+      //   .select('*')
+      //   .eq('user_id', userId)
+      //   .single()
+      // if (data) {
+      //   setWishData(data as unknown as WishData)
+      // }
+    } catch (error) {
+      logger.error('Error loading wish data', error, { userId })
+    }
+  }, [])
+
   useEffect(() => {
     const getUser = async () => {
       const { data: { user } } = await supabase.auth.getUser()
@@ -112,7 +136,6 @@ export default function WillPage() {
         router.push("/login")
         return
       }
-      setUser(user)
       
       // Load will data and wish data
       await Promise.all([
@@ -126,77 +149,14 @@ export default function WillPage() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!session?.user) {
         router.push("/login")
-      } else {
-        setUser(session.user)
       }
     })
 
     return () => subscription.unsubscribe()
-  }, [router])
+  }, [router, loadWillData, loadWishData])
 
-  const loadWillData = async (userId: string) => {
-    try {
-      const { data } = await supabase
-        .from('user_wills')
-        .select('*')
-        .eq('user_id', userId)
-        .single()
-
-      if (data) {
-        setWillData(data as unknown as WillData)
-      }
-    } catch (error) {
-      console.error('Error loading will data:', error)
-    }
-  }
-
-  const loadWishData = async (userId: string) => {
-    try {
-      const { data } = await supabase
-        .from('user_wishes')
-        .select('*')
-        .eq('user_id', userId)
-        .single()
-
-      if (data) {
-        setWishData(data as unknown as WishData)
-      }
-    } catch (error) {
-      console.error('Error loading wish data:', error)
-    }
-  }
-
-  const handleSave = async (category: string, data: SaveData) => {
-    try {
-      if (!user) return
-
-      const updateData = {
-        user_id: user.id,
-        ...data,
-        updated_at: new Date().toISOString()
-      }
-
-      // Determine which table to update based on category
-      const isWishCategory = ['burial', 'funeral', 'providers'].includes(category)
-      const tableName = isWishCategory ? 'user_wishes' : 'user_wills'
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error } = await (supabase.from(tableName as any) as any)
-        .upsert(updateData, { onConflict: 'user_id' })
-
-      if (error) throw error
-
-      // Reload appropriate data
-      if (isWishCategory) {
-        await loadWishData(user.id)
-      } else {
-        await loadWillData(user.id)
-      }
-      setSelectedCategory(null)
-    } catch (error) {
-      console.error('Error saving data:', error)
-    }
-  }
+  // handleSave function removed - not used until will management is fully implemented
+  // TODO: Implement when user_wills and user_wishes tables are created
 
   const completedCount = categories.filter(c => c.completed).length
 
@@ -252,6 +212,22 @@ export default function WillPage() {
         </Card>
 
         {/* Categories or Form */}
+        {/* TODO: Implement will form components when user_wills table is created */}
+        <div className="bg-background-secondary p-6 rounded-lg border border-border">
+          <p className="text-text-secondary">
+            Will management features are being implemented. The following components need to be created:
+          </p>
+          <ul className="list-disc list-inside mt-4 space-y-2 text-text-secondary">
+            <li>WillCategories - Category selection component</li>
+            <li>TestamentDetails - Testament content form</li>
+            <li>BeneficiariesSection - Beneficiary management</li>
+            <li>ExecutorDetails - Executor information form</li>
+            <li>BurialPreferences - Burial preference form</li>
+            <li>FuneralDetails - Funeral details form</li>
+            <li>ServiceProviders - Service provider management</li>
+          </ul>
+        </div>
+        {/* Commented out until components are implemented
         {!selectedCategory ? (
           <div>
             <h2 className="text-xl font-semibold text-text-primary mb-4">Will Sections</h2>
@@ -265,47 +241,48 @@ export default function WillPage() {
             {selectedCategory === 'testament' && (
               <TestamentDetails
                 initialData={willData as unknown as Record<string, unknown>}
-                onSave={(data) => handleSave('testament', data as unknown as Record<string, unknown>)}
+                onSave={(data: any) => handleSave('testament', data as unknown as Record<string, unknown>)}
                 onCancel={() => setSelectedCategory(null)}
               />
             )}
             {selectedCategory === 'beneficiaries' && (
               <BeneficiariesSection
                 initialData={willData as unknown as Record<string, unknown>}
-                onSave={(data) => handleSave('beneficiaries', data as unknown as Record<string, unknown>)}
+                onSave={(data: any) => handleSave('beneficiaries', data as unknown as Record<string, unknown>)}
                 onCancel={() => setSelectedCategory(null)}
               />
             )}
             {selectedCategory === 'executor' && (
               <ExecutorDetails
                 initialData={willData as unknown as Record<string, unknown>}
-                onSave={(data) => handleSave('executor', data as unknown as Record<string, unknown>)}
+                onSave={(data: any) => handleSave('executor', data as unknown as Record<string, unknown>)}
                 onCancel={() => setSelectedCategory(null)}
               />
             )}
             {selectedCategory === 'burial' && (
               <BurialPreferences
                 initialData={wishData as unknown as Record<string, unknown>}
-                onSave={(data) => handleSave('burial', data as unknown as Record<string, unknown>)}
+                onSave={(data: any) => handleSave('burial', data as unknown as Record<string, unknown>)}
                 onCancel={() => setSelectedCategory(null)}
               />
             )}
             {selectedCategory === 'funeral' && (
               <FuneralDetails
                 initialData={wishData as unknown as Record<string, unknown>}
-                onSave={(data) => handleSave('funeral', data as unknown as Record<string, unknown>)}
+                onSave={(data: any) => handleSave('funeral', data as unknown as Record<string, unknown>)}
                 onCancel={() => setSelectedCategory(null)}
               />
             )}
             {selectedCategory === 'providers' && (
               <ServiceProviders
                 initialData={wishData as unknown as Record<string, unknown>}
-                onSave={(data) => handleSave('providers', data as unknown as Record<string, unknown>)}
+                onSave={(data: any) => handleSave('providers', data as unknown as Record<string, unknown>)}
                 onCancel={() => setSelectedCategory(null)}
               />
             )}
           </div>
         )}
+        */}
     </div>
   )
 }

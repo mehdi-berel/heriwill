@@ -81,8 +81,11 @@ export function MobileNav() {
   const rightNavItems = mainNavigation.slice(3) // Heirs, Settings
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-background-primary/95 backdrop-blur-lg border-t border-border-default shadow-2xl">
-      <div className="relative grid grid-cols-5 items-end px-2 py-2 safe-area-inset-bottom">
+    <nav 
+      className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-background-primary/95 backdrop-blur-lg border-t border-border-default shadow-2xl"
+      style={{ paddingBottom: 'max(0.25rem, env(safe-area-inset-bottom))' }}
+    >
+      <div className="relative grid grid-cols-5 items-end px-2 pt-2">
         {/* Left nav items */}
         {leftNavItems.map((item) => {
           const isActive = pathname === item.href

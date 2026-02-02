@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { ShieldCheck, FolderOpen, Info, User, ArrowLeft, Lock } from "lucide-react"
 import { supabase } from "@/lib/supabase"
+import { logger } from "@/lib/utils/logger"
 
 interface SharedVault {
   id: string
@@ -48,60 +49,71 @@ export function InheritancePage({ userId }: InheritancePageProps) {
     try {
       setLoading(true)
       
-      // Get vaults shared with this user as an heir
-      const { data: accessData, error: accessError } = await supabase
-        .from('heir_vault_access')
-        .select(`
-          vault_id,
-          can_view,
-          can_export,
-          can_edit,
-          vaults (
-            id,
-            name,
-            description,
-            icon,
-            color,
-            category,
-            user_id,
-            created_at
-          )
-        `)
-        .eq('heir_id', userId)
+      // Step 1: Check if this user is an heir and if there are any completed inheritance triggers
+      const { data: heirData, error: heirError } = await supabase
+        .from('heirs')
+        .select('user_id, heir_user_id')
+        .eq('heir_user_id', userId)
+        .eq('is_active', true)
 
-      if (accessError) {
-        console.error('Error loading shared vaults:', accessError)
+      if (heirError) {
+        logger.error('Error loading heir data', heirError, { userId })
         setSharedVaults([])
         return
       }
 
-      if (!accessData || accessData.length === 0) {
+      if (!heirData || heirData.length === 0) {
         setSharedVaults([])
         return
       }
 
-      // Get owner names and item counts
-      interface VaultAccess {
-        vaults: {
-          id: string
-          user_id: string
-          name: string
-          description: string | null
-          category: string
-          is_encrypted: boolean
-          icon?: string
-          color?: string
-          created_at: string
-        }
-        can_view: boolean
-        can_export: boolean
-        can_edit: boolean
+      // Step 2: Get all owner IDs where this user is an heir
+      const ownerIds = heirData.map(h => h.user_id)
+
+      // Step 3: Check for completed inheritance triggers for these owners
+      const { data: triggersData, error: triggersError } = await supabase
+        .from('inheritance_triggers')
+        .select('user_id')
+        .in('user_id', ownerIds)
+        .eq('status', 'completed')
+
+      if (triggersError) {
+        logger.error('Error loading triggers', triggersError, { userId, ownerIds })
+        setSharedVaults([])
+        return
       }
 
+      if (!triggersData || triggersData.length === 0) {
+        // No completed triggers, so no vaults to show
+        setSharedVaults([])
+        return
+      }
+
+      // Step 4: Get triggered owner IDs
+      const triggeredOwnerIds = triggersData.map(t => t.user_id)
+
+      // Step 5: Get all vaults from triggered owners
+      // Note: shared_vaults table doesn't have access control rules
+      // Any heir can view/download all vaults once inheritance trigger is activated
+      const { data: vaultsData, error: vaultsError } = await supabase
+        .from('vaults')
+        .select('id, name, description, icon, color, category, user_id, created_at')
+        .in('user_id', triggeredOwnerIds)
+
+      if (vaultsError) {
+        logger.error('Error loading vault details', vaultsError, { userId, triggeredOwnerIds })
+        setSharedVaults([])
+        return
+      }
+
+      if (!vaultsData || vaultsData.length === 0) {
+        setSharedVaults([])
+        return
+      }
+
+      // Step 6: Get owner names and item counts for each vault
       const vaultsWithDetails = await Promise.all(
-        accessData.map(async (access: VaultAccess) => {
-          const vault = access.vaults
-          
+        vaultsData.map(async (vault) => {
           // Get owner name
           const { data: ownerData } = await supabase
             .from('users')
@@ -126,9 +138,9 @@ export function InheritancePage({ userId }: InheritancePageProps) {
             category: vault.category,
             shared_from_user_id: vault.user_id,
             shared_from_user_name: owner?.full_name || owner?.email || 'Unknown',
-            can_view: access.can_view,
-            can_export: access.can_export,
-            can_edit: access.can_edit,
+            can_view: true, // All heirs can view once trigger is activated
+            can_export: true, // All heirs can download once trigger is activated
+            can_edit: false, // Heirs have read-only access
             item_count: count || 0,
             created_at: vault.created_at
           }
@@ -137,7 +149,7 @@ export function InheritancePage({ userId }: InheritancePageProps) {
 
       setSharedVaults(vaultsWithDetails)
     } catch (error) {
-      console.error('Error loading shared vaults:', error)
+      logger.error('Error loading shared vaults', error, { userId })
       setSharedVaults([])
     } finally {
       setLoading(false)
@@ -155,14 +167,14 @@ export function InheritancePage({ userId }: InheritancePageProps) {
         .order('created_at', { ascending: false })
 
       if (error) {
-        console.error('Error loading vault items:', error)
+        logger.error('Error loading vault items', error, { vaultId: vault.id })
         setVaultItems([])
         return
       }
 
       setVaultItems(data || [])
     } catch (error) {
-      console.error('Error loading vault items:', error)
+      logger.error('Error loading vault items', error, { vaultId: vault.id })
       setVaultItems([])
     } finally {
       setLoadingItems(false)

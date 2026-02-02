@@ -1,6 +1,7 @@
 "use server"
 
 import { createServerSupabaseClient } from '@/lib/supabase'
+import { logger } from '../../lib/utils/logger'
 import { sanitizeInput, sanitizeEmail, sanitizePhone } from '@/lib/utils/sanitize'
 
 /**
@@ -68,8 +69,8 @@ export async function createHeirInvitation(data: {
   const sanitizedRelationship = data.relationship ? sanitizeInput(data.relationship) : null
 
   // Create heir with invitation
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: heir, error } = await (supabase.from('heirs') as any)
+  const { data: heir, error } = await supabase
+    .from('heirs')
     .insert({
       user_id: user.id,
       full_name_encrypted: sanitizedFullName,
@@ -77,7 +78,6 @@ export async function createHeirInvitation(data: {
       phone_encrypted: sanitizedPhone,
       relationship: sanitizedRelationship,
       heir_type: data.heir_type || 'family',
-      access_level: 'view',
       invitation_code: invitationCode,
       invitation_status: 'pending',
       invitation_expires_at: expirationDate.toISOString(),
@@ -91,7 +91,7 @@ export async function createHeirInvitation(data: {
     .single()
 
   if (error) {
-    console.error('Error creating heir invitation:', error)
+    logger.error('Error creating heir invitation', error)
     throw error
   }
 
@@ -107,8 +107,8 @@ export async function createHeirInvitation(data: {
  */
 export async function validateInvitationCode(code: string) {
   const supabase = await createServerSupabaseClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: heir, error } = await (supabase.from('heirs') as any)
+  const { data: heir, error } = await supabase
+    .from('heirs')
     .select('*')
     .eq('invitation_code', code)
     .single()
@@ -131,8 +131,8 @@ export async function validateInvitationCode(code: string) {
   // Check expiration
   if (heir.invitation_expires_at && new Date(heir.invitation_expires_at) < new Date()) {
     // Mark as expired
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (supabase.from('heirs') as any)
+    await supabase
+      .from('heirs')
       .update({ invitation_status: 'expired' })
       .eq('id', heir.id)
 
@@ -170,8 +170,8 @@ export async function acceptHeirInvitation(invitationCode: string) {
   }
 
   // Accept invitation
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: heir, error } = await (supabase.from('heirs') as any)
+  const { data: heir, error } = await supabase
+    .from('heirs')
     .update({
       heir_user_id: user.id,
       has_accepted: true,
@@ -185,7 +185,7 @@ export async function acceptHeirInvitation(invitationCode: string) {
     .single()
 
   if (error) {
-    console.error('Error accepting invitation:', error)
+    logger.error('Error accepting invitation', error)
     throw error
   }
 
@@ -209,8 +209,8 @@ export async function rejectHeirInvitation(invitationCode: string) {
   }
 
   // Reject invitation
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase.from('heirs') as any)
+  const { error } = await supabase
+    .from('heirs')
     .update({
       invitation_status: 'rejected',
       rejected_at: new Date().toISOString(),
@@ -219,7 +219,7 @@ export async function rejectHeirInvitation(invitationCode: string) {
     .eq('invitation_status', 'pending')
 
   if (error) {
-    console.error('Error rejecting invitation:', error)
+    logger.error('Error rejecting invitation', error)
     throw error
   }
 }
@@ -234,15 +234,15 @@ export async function getPendingInvitations() {
     return []
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: heirs, error } = await (supabase.from('heirs') as any)
+  const { data: heirs, error } = await supabase
+    .from('heirs')
     .select('*, users!heirs_user_id_fkey(full_name, email)')
     .eq('email_encrypted', user.email || '')
     .eq('invitation_status', 'pending')
     .order('created_at', { ascending: false })
 
   if (error) {
-    console.error('Error fetching pending invitations:', error)
+    logger.error('Error fetching pending invitations', error)
     return []
   }
 
@@ -259,15 +259,15 @@ export async function cancelHeirInvitation(heirId: string) {
     throw new Error('Not authenticated')
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase.from('heirs') as any)
+  const { error } = await supabase
+    .from('heirs')
     .delete()
     .eq('id', heirId)
     .eq('user_id', user.id)
     .eq('invitation_status', 'pending')
 
   if (error) {
-    console.error('Error canceling invitation:', error)
+    logger.error('Error canceling invitation', error)
     throw error
   }
 }

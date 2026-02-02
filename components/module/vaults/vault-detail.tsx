@@ -11,11 +11,8 @@ interface Vault {
   name: string
   description: string
   category: 'share' | 'delete' | 'pro'
-  is_encrypted: boolean
   is_locked: boolean
-  is_favorite: boolean
   is_shared: boolean
-  tags: string[]
   item_count: number
   created_at: string
   last_accessed?: string
@@ -95,6 +92,7 @@ export function VaultDetail({
         onAddItem={handleAddItem}
         showAddButton={true}
         emptyMessage="Add your first item to get started."
+        vaultCategory={vault.category}
       />
 
       {/* Item Form Modal */}

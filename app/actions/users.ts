@@ -1,4 +1,5 @@
 import { supabase } from '../../lib/supabase'
+import type { Database } from '../../lib/database.types'
 
 // Removed unused type definitions
 
@@ -26,15 +27,6 @@ interface EmergencyContactData {
   phone?: string
 }
 
-interface ActivityData {
-  user_id: string
-  type: string
-  description?: string
-  ipAddress?: string
-  userAgent?: string
-  metadata?: Record<string, unknown>
-}
-
 // User Management Actions
 export const userActions = {
   // Get User Profile
@@ -51,8 +43,8 @@ export const userActions = {
 
   // Update User Profile
   updateUserProfile: async (userId: string, updateData: UserUpdateData) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await (supabase.from('users') as any)
+    const { data, error } = await supabase
+      .from('users')
       .update({
         ...updateData,
         updated_at: new Date().toISOString()
@@ -67,9 +59,9 @@ export const userActions = {
 
   // Update Last Activity
   updateLastActivity: async (userId: string) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data } = await (supabase.from('users') as any)
-      .update({ 
+    await supabase
+      .from('users')
+      .update({
         last_activity: new Date().toISOString(),
         updated_at: new Date().toISOString()
       })
@@ -77,16 +69,16 @@ export const userActions = {
       .select()
       .single()
 
-    return data
+    return { id: userId }
   },
 
   // Update Subscription
   updateSubscription: async (userId: string, subscriptionData: SubscriptionData) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data } = await (supabase.from('users') as any)
+    await supabase
+      .from('users')
       .update({
-        subscription_tier: subscriptionData.tier as string,
-        subscription_status: subscriptionData.status as string,
+        subscription_tier: subscriptionData.tier,
+        subscription_status: subscriptionData.status,
         subscription_expires_at: subscriptionData.expiresAt,
         updated_at: new Date().toISOString()
       })
@@ -94,16 +86,16 @@ export const userActions = {
       .select()
       .single()
 
-    return data
+    return { id: userId }
   },
 
   // Update Global Trigger Settings
   updateGlobalTrigger: async (userId: string, triggerData: TriggerData) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data } = await (supabase.from('users') as any)
+    await supabase
+      .from('users')
       .update({
-        global_trigger_method: triggerData.method as string,
-        global_trigger_settings: triggerData.settings as Record<string, unknown>,
+        global_trigger_method: triggerData.method,
+        global_trigger_settings: triggerData.settings as unknown as Database['public']['Tables']['users']['Update']['global_trigger_settings'],
         global_scheduled_date: triggerData.scheduledDate,
         trusted_contact_email: triggerData.trustedContactEmail,
         trusted_contact_phone: triggerData.trustedContactPhone,
@@ -114,13 +106,13 @@ export const userActions = {
       .select()
       .single()
 
-    return data
+    return { id: userId }
   },
 
   // Update Emergency Contact
   updateEmergencyContact: async (userId: string, contactData: EmergencyContactData) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data } = await (supabase.from('users') as any)
+    await supabase
+      .from('users')
       .update({
         emergency_contact_email: contactData.email,
         emergency_contact_phone: contactData.phone,
@@ -130,14 +122,14 @@ export const userActions = {
       .select()
       .single()
 
-    return data
+    return { id: userId }
   },
 
   // Lock/Unlock Account
   toggleAccountLock: async (userId: string, isLocked: boolean) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data } = await (supabase.from('users') as any)
-      .update({ 
+    await supabase
+      .from('users')
+      .update({
         account_locked: isLocked,
         updated_at: new Date().toISOString()
       })
@@ -145,14 +137,14 @@ export const userActions = {
       .select()
       .single()
 
-    return data
+    return { id: userId }
   },
 
   // Update Email Verification
   updateEmailVerification: async (userId: string, isVerified: boolean) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data } = await (supabase.from('users') as any)
-      .update({ 
+    await supabase
+      .from('users')
+      .update({
         email_verified: isVerified,
         updated_at: new Date().toISOString()
       })
@@ -160,14 +152,14 @@ export const userActions = {
       .select()
       .single()
 
-    return data
+    return { id: userId }
   },
 
   // Update Last Login
   updateLastLogin: async (userId: string) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data } = await (supabase.from('users') as any)
-      .update({ 
+    await supabase
+      .from('users')
+      .update({
         last_login: new Date().toISOString(),
         last_activity: new Date().toISOString(),
         updated_at: new Date().toISOString()
@@ -176,14 +168,14 @@ export const userActions = {
       .select()
       .single()
 
-    return data
+    return { id: userId }
   },
 
   // Update Last Reminder Sent
   updateLastReminderSent: async (userId: string) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data } = await (supabase.from('users') as any)
-      .update({ 
+    await supabase
+      .from('users')
+      .update({
         last_reminder_sent_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       })
@@ -191,12 +183,12 @@ export const userActions = {
       .select()
       .single()
 
-    return data
+    return { id: userId }
   },
 
   // Get User Statistics
   getUserStats: async (userId: string) => {
-    const { data: user } = await userActions.getUserProfile(userId)
+    const user = await userActions.getUserProfile(userId)
     
     // Get counts from related tables
     const { data: vaults } = await supabase
@@ -209,16 +201,10 @@ export const userActions = {
       .select('count')
       .eq('user_id', userId)
 
-    const { data: plans } = await supabase
-      .from('inheritance_plans')
-      .select('count')
-      .eq('user_id', userId)
-
     const userData = user as Record<string, unknown>
     const stats = {
       totalVaults: vaults?.length || 0,
       totalHeirs: heirs?.length || 0,
-      totalPlans: plans?.length || 0,
       subscriptionTier: userData?.subscription_tier || 'free',
       subscriptionStatus: userData?.subscription_status || 'inactive',
       isAccountLocked: userData?.account_locked || false,
@@ -228,57 +214,5 @@ export const userActions = {
     }
 
     return stats
-  }
-}
-
-// User Activity Actions
-export const userActivityActions = {
-  // Log User Activity
-  logActivity: async (activityData: ActivityData) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await (supabase.from('user_activity') as any)
-      .insert({
-        user_id: activityData.user_id,
-        activity_type: activityData.type,
-        // description: activityData.description, // Not in schema based on MCP, check if needed or add to metadata
-        ip_address: activityData.ipAddress,
-        user_agent: activityData.userAgent,
-        metadata: {
-          ...activityData.metadata,
-          description: activityData.description
-        },
-        created_at: new Date().toISOString()
-      })
-      .select()
-      .single()
-
-    if (error) throw new Error(error.message)
-    return data
-  },
-
-  // Get User Activities
-  getUserActivities: async (userId: string, limit: number = 50) => {
-    const { data, error } = await supabase
-      .from('user_activity')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(limit)
-
-    if (error) throw new Error(error.message)
-    return data || []
-  },
-
-  // Get Recent Activities
-  getRecentActivities: async (userId: string, hours: number = 24) => {
-    const { data, error } = await supabase
-      .from('user_activity')
-      .select('*')
-      .eq('user_id', userId)
-      .gte('created_at', new Date(Date.now() - hours * 60 * 60 * 1000).toISOString())
-      .order('created_at', { ascending: false })
-
-    if (error) throw new Error(error.message)
-    return data || []
   }
 }

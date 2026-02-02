@@ -17,9 +17,6 @@ interface VaultFormData {
   name: string
   description: string
   category: 'share' | 'delete' | 'pro'
-  is_encrypted: boolean
-  is_favorite: boolean
-  tags: string[]
   access_control: {
     allowedHeirs: string[]
     requireApproval: boolean
@@ -38,9 +35,6 @@ export function VaultForm({ onSubmit, onCancel, initialData }: VaultFormProps) {
     name: initialData?.name || '',
     description: initialData?.description || '',
     category: initialData?.category || 'share',
-    is_encrypted: initialData?.is_encrypted || false,
-    is_favorite: initialData?.is_favorite || false,
-    tags: initialData?.tags || [],
     access_control: {
       allowedHeirs: initialData?.access_control?.allowedHeirs || [],
       requireApproval: initialData?.access_control?.requireApproval || true

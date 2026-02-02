@@ -9,6 +9,7 @@ import { Switch } from "@/components/ui/switch"
 import { Select, SelectItem } from "@/components/ui/select"
 import { Save, X } from "lucide-react"
 import { supabase } from "@/lib/supabase"
+import type { Database } from '@/lib/database.types'
 
 interface SignOffSettingsProps {
   method: string
@@ -102,7 +103,7 @@ export function SignOffSettings({ method, userId, onSave, onCancel }: SignOffSet
         .eq('user_id', userId)
         .eq('is_active', true)
 
-      setHeirs(data || [])
+      setHeirs((data || []) as Heir[])
     } catch (error) {
       console.error('Error loading heirs:', error)
     }
@@ -195,9 +196,12 @@ export function SignOffSettings({ method, userId, onSave, onCancel }: SignOffSet
       }
 
       // Update the settings in users table
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error } = await (supabase.from('users') as any)
-        .update(settingsToSave)
+      const { error } = await supabase
+        .from('users')
+        .update({
+          ...settingsToSave,
+          global_trigger_settings: settingsToSave.global_trigger_settings as unknown as Database['public']['Tables']['users']['Update']['global_trigger_settings']
+        })
         .eq('id', userId)
 
       if (error) throw error

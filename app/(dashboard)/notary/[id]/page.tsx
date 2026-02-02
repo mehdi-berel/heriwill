@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button"
 import { ArrowLeft } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { User } from "@supabase/supabase-js"
-import { toast } from "sonner"
+import { toast } from "@/lib/utils/toast"
+import { logger } from "@/lib/utils/logger"
 
 interface Notary {
   id: string
@@ -45,14 +46,16 @@ export default function NotaryDetailPage() {
         .single()
 
       if (error) {
-        console.error('Error loading notary:', error)
+        logger.error('Error loading notary', error, { notaryId: id })
+        toast.error('Failed to load notary', 'Please try again')
         router.push("/notary")
         return
       }
 
-      setNotary(data)
+      setNotary(data as Notary)
     } catch (error) {
-      console.error('Error loading notary:', error)
+      logger.error('Error loading notary', error, { notaryId: id })
+      toast.error('Failed to load notary', 'Please try again')
       router.push("/notary")
     }
   }, [router])
@@ -92,7 +95,7 @@ export default function NotaryDetailPage() {
         toast.success('Notary deleted successfully')
         router.push("/notary")
       } catch (error) {
-        console.error('Error deleting notary:', error)
+        logger.error('Error deleting notary', error, { notaryId })
         toast.error('Failed to delete notary')
       }
     }
@@ -103,14 +106,14 @@ export default function NotaryDetailPage() {
 
     try {
       // First, set all notaries to non-primary
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (supabase.from('notaries') as any)
+      await supabase
+        .from('notaries')
         .update({ is_primary: false })
         .eq('user_id', user.id)
 
       // Then set the selected notary as primary
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error } = await (supabase.from('notaries') as any)
+      const { error } = await supabase
+        .from('notaries')
         .update({ is_primary: true })
         .eq('id', notary.id)
 
@@ -118,7 +121,8 @@ export default function NotaryDetailPage() {
 
       await loadNotary(notary.id)
     } catch (error) {
-      console.error('Error setting primary notary:', error)
+      logger.error('Error setting primary notary', error, { notaryId: notary.id })
+      toast.error('Failed to set primary notary', 'Please try again')
     }
   }
 

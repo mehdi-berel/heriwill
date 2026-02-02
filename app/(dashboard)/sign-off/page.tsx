@@ -13,7 +13,8 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Clock, Users, Bell, Calendar, Hand, AlertCircle, Power } from "lucide-react"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
-import { toast } from "sonner"
+import { toast } from "@/lib/utils/toast"
+import { logger } from "@/lib/utils/logger"
 import { supabase } from "@/lib/supabase"
 import { getGlobalTrigger, deleteGlobalTrigger } from "@/lib/services/globalTriggerService"
 import { User } from "@supabase/supabase-js"
@@ -114,8 +115,7 @@ export default function SignOffPage() {
       if (globalTrigger) {
         let method = globalTrigger.global_trigger_method
         if (method === 'scheduled') {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          method = 'scheduled_date' as any
+          method = 'scheduled_date' as typeof method
         }
         setSelectedMethod(method)
         setActiveMethod(method)
@@ -134,7 +134,8 @@ export default function SignOffPage() {
         setIsActivated(false)
       }
     } catch (error) {
-      console.error('Error loading sign-off settings:', error)
+      logger.error('Error loading sign-off settings', error, { userId })
+      toast.error('Failed to load settings', 'Please refresh the page')
     }
   }
 
@@ -170,7 +171,8 @@ export default function SignOffPage() {
                       setIsActivated(false)
                       setActiveMethod(null)
                     } catch (error) {
-                      console.error('Error deactivating trigger:', error)
+                      logger.error('Error deactivating trigger', error, { userId: user.id })
+                      toast.error('Failed to deactivate', 'Please try again')
                     } finally {
                       setSaving(false)
                     }
@@ -186,7 +188,8 @@ export default function SignOffPage() {
                       await loadSignOffSettings(user.id)
                       setIsActivated(true)
                     } catch (error) {
-                      console.error('Error activating trigger:', error)
+                      logger.error('Error activating trigger', error, { userId: user.id, method: activeMethod })
+                      toast.error('Failed to activate', 'Please try again')
                     } finally {
                       setSaving(false)
                     }

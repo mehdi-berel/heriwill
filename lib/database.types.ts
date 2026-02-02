@@ -1,4 +1,4 @@
-﻿export type Json =
+export type Json =
   | string
   | number
   | boolean
@@ -6,784 +6,1005 @@
   | { [key: string]: Json | undefined }
   | Json[]
 
-export interface Database {
+export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "13.0.5"
+  }
   public: {
     Tables: {
-      users: {
-        Row: {
-          id: string
-          email: string
-          full_name: string | null
-          avatar_url: string | null
-          emergency_contact_email: string | null
-          emergency_contact_phone: string | null
-          is_active: boolean
-          account_locked: boolean
-          created_at: string
-          updated_at: string
-          last_login: string | null
-          email_verified: boolean
-          subscription_tier: string
-          subscription_status: string
-          subscription_expires_at: string | null
-          global_trigger_method: string
-          global_trigger_settings: Json
-          global_scheduled_date: string | null
-          trusted_contact_email: string | null
-          trusted_contact_phone: string | null
-          last_activity: string
-          last_reminder_sent_at: string | null
-          trusted_contact_heir_id: string | null
-          locked_until: string | null
-          failed_login_attempts: number
-          inheritance_triggered: boolean
-          inheritance_triggered_at: string | null
-          user_type: string
-        }
-        Insert: {
-          id: string
-          email: string
-          full_name?: string | null
-          avatar_url?: string | null
-          emergency_contact_email?: string | null
-          emergency_contact_phone?: string | null
-          is_active?: boolean
-          account_locked?: boolean
-          created_at?: string
-          updated_at?: string
-          last_login?: string | null
-          email_verified?: boolean
-          subscription_tier?: string
-          subscription_status?: string
-          subscription_expires_at?: string | null
-          global_trigger_method?: string
-          global_trigger_settings?: Json
-          global_scheduled_date?: string | null
-          trusted_contact_email?: string | null
-          trusted_contact_phone?: string | null
-          last_activity?: string
-          last_reminder_sent_at?: string | null
-          trusted_contact_heir_id?: string | null
-          locked_until?: string | null
-          failed_login_attempts?: number
-          inheritance_triggered?: boolean
-          inheritance_triggered_at?: string | null
-          user_type?: string
-        }
-        Update: {
-          id?: string
-          email?: string
-          full_name?: string | null
-          avatar_url?: string | null
-          emergency_contact_email?: string | null
-          emergency_contact_phone?: string | null
-          is_active?: boolean
-          account_locked?: boolean
-          created_at?: string
-          updated_at?: string
-          last_login?: string | null
-          email_verified?: boolean
-          subscription_tier?: string
-          subscription_status?: string
-          subscription_expires_at?: string | null
-          global_trigger_method?: string
-          global_trigger_settings?: Json
-          global_scheduled_date?: string | null
-          trusted_contact_email?: string | null
-          trusted_contact_phone?: string | null
-          last_activity?: string
-          last_reminder_sent_at?: string | null
-          trusted_contact_heir_id?: string | null
-          locked_until?: string | null
-          failed_login_attempts?: number
-          inheritance_triggered?: boolean
-          inheritance_triggered_at?: string | null
-          user_type?: string
-        }
-      }
-      vaults: {
-        Row: {
-          id: string
-          user_id: string
-          name: string
-          description: string | null
-          icon: string | null
-          color: string | null
-          settings: Json
-          access_control: Json
-          death_settings: Json
-          is_encrypted: boolean
-          is_locked: boolean
-          is_shared: boolean
-          is_favorite: boolean
-          tags: string[] | null
-          sort_order: number
-          created_at: string
-          updated_at: string
-          last_accessed: string | null
-          category: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          name: string
-          description?: string | null
-          icon?: string | null
-          color?: string | null
-          settings?: Json
-          access_control?: Json
-          death_settings?: Json
-          is_encrypted?: boolean
-          is_locked?: boolean
-          is_shared?: boolean
-          is_favorite?: boolean
-          tags?: string[] | null
-          sort_order?: number
-          created_at?: string
-          updated_at?: string
-          last_accessed?: string | null
-          category?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          name?: string
-          description?: string | null
-          icon?: string | null
-          color?: string | null
-          settings?: Json
-          access_control?: Json
-          death_settings?: Json
-          is_encrypted?: boolean
-          is_locked?: boolean
-          is_shared?: boolean
-          is_favorite?: boolean
-          tags?: string[] | null
-          sort_order?: number
-          created_at?: string
-          updated_at?: string
-          last_accessed?: string | null
-          category?: string
-        }
-      }
-      heirs: {
-        Row: {
-          id: string
-          user_id: string
-          inheritance_plan_id: string | null
-          access_level: string
-          heir_user_id: string | null
-          notify_on_activation: boolean
-          notification_delay_days: number
-          is_active: boolean
-          has_accepted: boolean
-          accepted_at: string | null
-          created_at: string
-          updated_at: string
-          invitation_code: string | null
-          invitation_status: string
-          invitation_expires_at: string | null
-          invited_at: string | null
-          rejected_at: string | null
-          relationship: string | null
-          notification_status: string
-          notified_at: string | null
-          death_confirmed_at: string | null
-          full_name_encrypted: string | null
-          email_encrypted: string | null
-          phone_encrypted: string | null
-          relationship_encrypted: string | null
-          heir_type: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          inheritance_plan_id?: string | null
-          access_level: string
-          heir_user_id?: string | null
-          notify_on_activation?: boolean
-          notification_delay_days?: number
-          is_active?: boolean
-          has_accepted?: boolean
-          accepted_at?: string | null
-          created_at?: string
-          updated_at?: string
-          invitation_code?: string | null
-          invitation_status?: string
-          invitation_expires_at?: string | null
-          invited_at?: string | null
-          rejected_at?: string | null
-          relationship?: string | null
-          notification_status?: string
-          notified_at?: string | null
-          death_confirmed_at?: string | null
-          full_name_encrypted?: string | null
-          email_encrypted?: string | null
-          phone_encrypted?: string | null
-          relationship_encrypted?: string | null
-          heir_type?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          inheritance_plan_id?: string | null
-          access_level?: string
-          heir_user_id?: string | null
-          notify_on_activation?: boolean
-          notification_delay_days?: number
-          is_active?: boolean
-          has_accepted?: boolean
-          accepted_at?: string | null
-          created_at?: string
-          updated_at?: string
-          invitation_code?: string | null
-          invitation_status?: string
-          invitation_expires_at?: string | null
-          invited_at?: string | null
-          rejected_at?: string | null
-          relationship?: string | null
-          notification_status?: string
-          notified_at?: string | null
-          death_confirmed_at?: string | null
-          full_name_encrypted?: string | null
-          email_encrypted?: string | null
-          phone_encrypted?: string | null
-          relationship_encrypted?: string | null
-          heir_type?: string
-        }
-      }
-      inheritance_plans: {
-        Row: {
-          id: string
-          user_id: string
-          plan_name: string
-          plan_type: string
-          is_active: boolean
-          is_triggered: boolean
-          triggered_at: string | null
-          instructions_encrypted: string | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          plan_name: string
-          plan_type: string
-          is_active?: boolean
-          is_triggered?: boolean
-          triggered_at?: string | null
-          instructions_encrypted?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          plan_name?: string
-          plan_type?: string
-          is_active?: boolean
-          is_triggered?: boolean
-          triggered_at?: string | null
-          instructions_encrypted?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-      }
-      inheritance_triggers: {
-        Row: {
-          id: string
-          inheritance_plan_id: string
-          user_id: string
-          trigger_metadata: Json | null
-          status: string
-          requires_verification: boolean
-          verification_code: string | null
-          verified_at: string | null
-          verified_by: string | null
-          triggered_at: string
-          completed_at: string | null
-          cancelled_at: string | null
-          trigger_reason: string | null
-        }
-        Insert: {
-          id?: string
-          inheritance_plan_id: string
-          user_id: string
-          trigger_metadata?: Json | null
-          status?: string
-          requires_verification?: boolean
-          verification_code?: string | null
-          verified_at?: string | null
-          verified_by?: string | null
-          triggered_at?: string
-          completed_at?: string | null
-          cancelled_at?: string | null
-          trigger_reason?: string | null
-        }
-        Update: {
-          id?: string
-          inheritance_plan_id?: string
-          user_id?: string
-          trigger_metadata?: Json | null
-          status?: string
-          requires_verification?: boolean
-          verification_code?: string | null
-          verified_at?: string | null
-          verified_by?: string | null
-          triggered_at?: string
-          completed_at?: string | null
-          cancelled_at?: string | null
-          trigger_reason?: string | null
-        }
-      }
-      vault_items: {
-        Row: {
-          id: string
-          vault_id: string
-          user_id: string
-          item_type: string
-          storage_path: string
-          storage_bucket: string
-          file_size: number | null
-          title_encrypted: string
-          tags: string[] | null
-          is_favorite: boolean
-          password_strength: number | null
-          password_last_changed: string | null
-          requires_password_change: boolean
-          created_at: string
-          updated_at: string
-          last_accessed: string | null
-          metadata: Json
-        }
-        Insert: {
-          id?: string
-          vault_id: string
-          user_id: string
-          item_type: string
-          storage_path: string
-          storage_bucket?: string
-          file_size?: number | null
-          title_encrypted: string
-          tags?: string[] | null
-          is_favorite?: boolean
-          password_strength?: number | null
-          password_last_changed?: string | null
-          requires_password_change?: boolean
-          created_at?: string
-          updated_at?: string
-          last_accessed?: string | null
-          metadata?: Json
-        }
-        Update: {
-          id?: string
-          vault_id?: string
-          user_id?: string
-          item_type?: string
-          storage_path?: string
-          storage_bucket?: string
-          file_size?: number | null
-          title_encrypted?: string
-          tags?: string[] | null
-          is_favorite?: boolean
-          password_strength?: number | null
-          password_last_changed?: string | null
-          requires_password_change?: boolean
-          created_at?: string
-          updated_at?: string
-          last_accessed?: string | null
-          metadata?: Json
-        }
-      }
       assets: {
         Row: {
-          id: string
-          user_id: string
-          name: string
-          type: string
-          description: string | null
-          value: number | null
-          location: string | null
-          ownership_type: string
-          documents: string[] | null
-          notes: string | null
           created_at: string
-          updated_at: string
-          vault_id: string | null
+          description: string | null
+          documents: string[] | null
           heir_ids: string[] | null
+          id: string
+          location: string | null
+          name: string
+          notes: string | null
+          ownership_type: string
+          type: string
+          updated_at: string
+          user_id: string
+          value: number | null
+          vault_id: string | null
         }
         Insert: {
-          id?: string
-          user_id: string
-          name: string
-          type: string
-          description?: string | null
-          value?: number | null
-          location?: string | null
-          ownership_type: string
-          documents?: string[] | null
-          notes?: string | null
           created_at?: string
-          updated_at?: string
-          vault_id?: string | null
+          description?: string | null
+          documents?: string[] | null
           heir_ids?: string[] | null
+          id?: string
+          location?: string | null
+          name: string
+          notes?: string | null
+          ownership_type: string
+          type: string
+          updated_at?: string
+          user_id: string
+          value?: number | null
+          vault_id?: string | null
         }
         Update: {
-          id?: string
-          user_id?: string
-          name?: string
-          type?: string
-          description?: string | null
-          value?: number | null
-          location?: string | null
-          ownership_type?: string
-          documents?: string[] | null
-          notes?: string | null
           created_at?: string
-          updated_at?: string
-          vault_id?: string | null
+          description?: string | null
+          documents?: string[] | null
           heir_ids?: string[] | null
+          id?: string
+          location?: string | null
+          name?: string
+          notes?: string | null
+          ownership_type?: string
+          type?: string
+          updated_at?: string
+          user_id?: string
+          value?: number | null
+          vault_id?: string | null
         }
+        Relationships: [
+          {
+            foreignKeyName: "assets_vault_id_fkey"
+            columns: ["vault_id"]
+            isOneToOne: false
+            referencedRelation: "vaults"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       audit_logs: {
         Row: {
-          id: string
-          user_id: string | null
           action: string
-          resource_type: string
-          resource_id: string | null
-          ip_address: string | null
-          user_agent: string | null
-          old_values: Json | null
-          new_values: Json | null
-          risk_level: string | null
           created_at: string
-          metadata: Json
-        }
-        Insert: {
-          id?: string
-          user_id?: string | null
-          action: string
-          resource_type: string
-          resource_id?: string | null
-          ip_address?: string | null
-          user_agent?: string | null
-          old_values?: Json | null
-          new_values?: Json | null
-          risk_level?: string | null
-          created_at?: string
-          metadata?: Json
-        }
-        Update: {
-          id?: string
-          user_id?: string | null
-          action?: string
-          resource_type?: string
-          resource_id?: string | null
-          ip_address?: string | null
-          user_agent?: string | null
-          old_values?: Json | null
-          new_values?: Json | null
-          risk_level?: string | null
-          created_at?: string
-          metadata?: Json
-        }
-      }
-      heir_vault_access: {
-        Row: {
           id: string
-          heir_id: string
-          vault_id: string | null
-          vault_item_id: string | null
-          can_view: boolean
-          can_export: boolean
-          can_edit: boolean
-          granted_at: string
-          accessed_at: string | null
-          access_granted_at: string | null
-          access_status: string | null
+          ip_address: unknown
+          metadata: Json | null
+          new_values: Json | null
+          old_values: Json | null
+          resource_id: string | null
+          resource_type: string
+          risk_level: string | null
+          user_agent: string | null
+          user_id: string | null
         }
         Insert: {
+          action: string
+          created_at?: string
           id?: string
-          heir_id: string
-          vault_id?: string | null
-          vault_item_id?: string | null
-          can_view?: boolean
-          can_export?: boolean
-          can_edit?: boolean
-          granted_at?: string
-          accessed_at?: string | null
-          access_granted_at?: string | null
-          access_status?: string | null
+          ip_address?: unknown
+          metadata?: Json | null
+          new_values?: Json | null
+          old_values?: Json | null
+          resource_id?: string | null
+          resource_type: string
+          risk_level?: string | null
+          user_agent?: string | null
+          user_id?: string | null
         }
         Update: {
+          action?: string
+          created_at?: string
           id?: string
-          heir_id?: string
-          vault_id?: string | null
-          vault_item_id?: string | null
-          can_view?: boolean
-          can_export?: boolean
-          can_edit?: boolean
-          granted_at?: string
-          accessed_at?: string | null
-          access_granted_at?: string | null
-          access_status?: string | null
+          ip_address?: unknown
+          metadata?: Json | null
+          new_values?: Json | null
+          old_values?: Json | null
+          resource_id?: string | null
+          resource_type?: string
+          risk_level?: string | null
+          user_agent?: string | null
+          user_id?: string | null
         }
+        Relationships: [
+          {
+            foreignKeyName: "audit_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      heirs: {
+        Row: {
+          accepted_at: string | null
+          created_at: string
+          email_encrypted: string | null
+          full_name_encrypted: string | null
+          has_accepted: boolean | null
+          heir_type: string | null
+          heir_user_id: string | null
+          id: string
+          invitation_code: string | null
+          invitation_expires_at: string | null
+          invitation_status: string | null
+          invited_at: string | null
+          is_active: boolean | null
+          notification_delay_days: number | null
+          notification_status: string | null
+          notified_at: string | null
+          notify_on_activation: boolean | null
+          phone_encrypted: string | null
+          rejected_at: string | null
+          relationship: string | null
+          relationship_encrypted: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          created_at?: string
+          email_encrypted?: string | null
+          full_name_encrypted?: string | null
+          has_accepted?: boolean | null
+          heir_type?: string | null
+          heir_user_id?: string | null
+          id?: string
+          invitation_code?: string | null
+          invitation_expires_at?: string | null
+          invitation_status?: string | null
+          invited_at?: string | null
+          is_active?: boolean | null
+          notification_delay_days?: number | null
+          notification_status?: string | null
+          notified_at?: string | null
+          notify_on_activation?: boolean | null
+          phone_encrypted?: string | null
+          rejected_at?: string | null
+          relationship?: string | null
+          relationship_encrypted?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          accepted_at?: string | null
+          created_at?: string
+          email_encrypted?: string | null
+          full_name_encrypted?: string | null
+          has_accepted?: boolean | null
+          heir_type?: string | null
+          heir_user_id?: string | null
+          id?: string
+          invitation_code?: string | null
+          invitation_expires_at?: string | null
+          invitation_status?: string | null
+          invited_at?: string | null
+          is_active?: boolean | null
+          notification_delay_days?: number | null
+          notification_status?: string | null
+          notified_at?: string | null
+          notify_on_activation?: boolean | null
+          phone_encrypted?: string | null
+          rejected_at?: string | null
+          relationship?: string | null
+          relationship_encrypted?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "heirs_heir_user_id_fkey"
+            columns: ["heir_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "heirs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inheritance_triggers: {
+        Row: {
+          cancelled_at: string | null
+          completed_at: string | null
+          id: string
+          requires_verification: boolean | null
+          status: Database["public"]["Enums"]["trigger_status_type"]
+          trigger_metadata: Json | null
+          trigger_reason: string | null
+          triggered_at: string
+          user_id: string
+          verification_code: string | null
+          verified_at: string | null
+          verified_by: string | null
+        }
+        Insert: {
+          cancelled_at?: string | null
+          completed_at?: string | null
+          id?: string
+          requires_verification?: boolean | null
+          status?: Database["public"]["Enums"]["trigger_status_type"]
+          trigger_metadata?: Json | null
+          trigger_reason?: string | null
+          triggered_at?: string
+          user_id: string
+          verification_code?: string | null
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Update: {
+          cancelled_at?: string | null
+          completed_at?: string | null
+          id?: string
+          requires_verification?: boolean | null
+          status?: Database["public"]["Enums"]["trigger_status_type"]
+          trigger_metadata?: Json | null
+          trigger_reason?: string | null
+          triggered_at?: string
+          user_id?: string
+          verification_code?: string | null
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inheritance_triggers_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inheritance_triggers_verified_by_fkey"
+            columns: ["verified_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      legal: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          document_type: string
+          file_size: number | null
+          id: string
+          is_active: boolean | null
+          metadata: Json | null
+          name: string
+          template_file_path: string | null
+          template_file_url: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          document_type: string
+          file_size?: number | null
+          id?: string
+          is_active?: boolean | null
+          metadata?: Json | null
+          name: string
+          template_file_path?: string | null
+          template_file_url?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          document_type?: string
+          file_size?: number | null
+          id?: string
+          is_active?: boolean | null
+          metadata?: Json | null
+          name?: string
+          template_file_path?: string | null
+          template_file_url?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "legal_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       notaries: {
         Row: {
-          id: string
-          user_id: string
-          name: string
-          firm_name: string | null
-          email: string
-          phone: string
           address: string
           city: string
-          state: string
-          zip_code: string
-          license_number: string | null
-          specialization: string | null
-          notes: string | null
-          is_primary: boolean
           created_at: string
+          email: string
+          firm_name: string | null
+          id: string
+          is_primary: boolean | null
+          license_number: string | null
+          name: string
+          notes: string | null
+          phone: string
+          specialization: string | null
+          state: string
           updated_at: string
+          user_id: string
+          zip_code: string
         }
         Insert: {
-          id?: string
-          user_id: string
-          name: string
-          firm_name?: string | null
-          email: string
-          phone: string
           address: string
           city: string
-          state: string
-          zip_code: string
-          license_number?: string | null
-          specialization?: string | null
-          notes?: string | null
-          is_primary?: boolean
           created_at?: string
+          email: string
+          firm_name?: string | null
+          id?: string
+          is_primary?: boolean | null
+          license_number?: string | null
+          name: string
+          notes?: string | null
+          phone: string
+          specialization?: string | null
+          state: string
           updated_at?: string
+          user_id: string
+          zip_code: string
         }
         Update: {
-          id?: string
-          user_id?: string
-          name?: string
-          firm_name?: string | null
-          email?: string
-          phone?: string
           address?: string
           city?: string
-          state?: string
-          zip_code?: string
-          license_number?: string | null
-          specialization?: string | null
-          notes?: string | null
-          is_primary?: boolean
           created_at?: string
+          email?: string
+          firm_name?: string | null
+          id?: string
+          is_primary?: boolean | null
+          license_number?: string | null
+          name?: string
+          notes?: string | null
+          phone?: string
+          specialization?: string | null
+          state?: string
           updated_at?: string
+          user_id?: string
+          zip_code?: string
         }
+        Relationships: [
+          {
+            foreignKeyName: "notaries_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       shared_vaults: {
         Row: {
-          id: string
-          vault_id: string
-          owner_id: string
-          shared_with_user_id: string
-          can_view: boolean
-          can_edit: boolean
-          can_delete: boolean
-          can_share: boolean
-          is_active: boolean
-          accepted: boolean
+          accepted: boolean | null
           accepted_at: string | null
-          shared_at: string
           expires_at: string | null
-        }
-        Insert: {
-          id?: string
-          vault_id: string
+          id: string
+          is_active: boolean | null
           owner_id: string
+          shared_at: string
           shared_with_user_id: string
-          can_view?: boolean
-          can_edit?: boolean
-          can_delete?: boolean
-          can_share?: boolean
-          is_active?: boolean
-          accepted?: boolean
+          vault_id: string
+        }
+        Insert: {
+          accepted?: boolean | null
           accepted_at?: string | null
-          shared_at?: string
           expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          owner_id: string
+          shared_at?: string
+          shared_with_user_id: string
+          vault_id: string
         }
         Update: {
+          accepted?: boolean | null
+          accepted_at?: string | null
+          expires_at?: string | null
           id?: string
-          vault_id?: string
+          is_active?: boolean | null
           owner_id?: string
-          shared_with_user_id?: string
-          can_view?: boolean
-          can_edit?: boolean
-          can_delete?: boolean
-          can_share?: boolean
-          is_active?: boolean
-          accepted?: boolean
-          accepted_at?: string | null
           shared_at?: string
-          expires_at?: string | null
+          shared_with_user_id?: string
+          vault_id?: string
         }
+        Relationships: [
+          {
+            foreignKeyName: "shared_vaults_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shared_vaults_shared_with_user_id_fkey"
+            columns: ["shared_with_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shared_vaults_vault_id_fkey"
+            columns: ["vault_id"]
+            isOneToOne: false
+            referencedRelation: "vaults"
+            referencedColumns: ["id"]
+          },
+        ]
       }
-      subscriptions: {
+      users: {
         Row: {
+          account_locked: boolean | null
+          avatar_url: string | null
+          created_at: string
+          email: string
+          email_verified: boolean | null
+          emergency_contact_email: string | null
+          emergency_contact_phone: string | null
+          failed_login_attempts: number | null
+          full_name: string | null
+          global_scheduled_date: string | null
+          global_trigger_method: string | null
+          global_trigger_settings: Json | null
           id: string
-          user_id: string
-          plan_name: string
-          amount: number
-          currency: string
-          status: string
-          current_period_start: string | null
-          current_period_end: string | null
-          cancelled_at: string | null
-          metadata: Json
-          created_at: string | null
-          updated_at: string | null
-          store_transaction_id: string | null
-          store_product_id: string | null
-          store_platform: string | null
-          receipt_data: string | null
-          revenuecat_customer_id: string | null
-          revenuecat_product_id: string | null
-          revenuecat_entitlement_id: string
+          is_active: boolean | null
+          last_activity: string | null
+          last_login: string | null
+          last_reminder_sent_at: string | null
+          locked_until: string | null
+          subscription_expires_at: string | null
+          subscription_status: string | null
+          subscription_tier: string | null
+          trusted_contact_heir_id: string | null
+          updated_at: string
+          user_type: string | null
         }
         Insert: {
-          id?: string
-          user_id: string
-          plan_name?: string
-          amount?: number
-          currency?: string
-          status: string
-          current_period_start?: string | null
-          current_period_end?: string | null
-          cancelled_at?: string | null
-          metadata?: Json
-          created_at?: string | null
-          updated_at?: string | null
-          store_transaction_id?: string | null
-          store_product_id?: string | null
-          store_platform?: string | null
-          receipt_data?: string | null
-          revenuecat_customer_id?: string | null
-          revenuecat_product_id?: string | null
-          revenuecat_entitlement_id?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          plan_name?: string
-          amount?: number
-          currency?: string
-          status?: string
-          current_period_start?: string | null
-          current_period_end?: string | null
-          cancelled_at?: string | null
-          metadata?: Json
-          created_at?: string | null
-          updated_at?: string | null
-          store_transaction_id?: string | null
-          store_product_id?: string | null
-          store_platform?: string | null
-          receipt_data?: string | null
-          revenuecat_customer_id?: string | null
-          revenuecat_product_id?: string | null
-          revenuecat_entitlement_id?: string
-        }
-      }
-      user_activity: {
-        Row: {
+          account_locked?: boolean | null
+          avatar_url?: string | null
+          created_at?: string
+          email: string
+          email_verified?: boolean | null
+          emergency_contact_email?: string | null
+          emergency_contact_phone?: string | null
+          failed_login_attempts?: number | null
+          full_name?: string | null
+          global_scheduled_date?: string | null
+          global_trigger_method?: string | null
+          global_trigger_settings?: Json | null
           id: string
-          user_id: string
-          activity_type: string
-          ip_address: string | null
-          user_agent: string | null
-          metadata: Json
-          created_at: string | null
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          activity_type: string
-          ip_address?: string | null
-          user_agent?: string | null
-          metadata?: Json
-          created_at?: string | null
+          is_active?: boolean | null
+          last_activity?: string | null
+          last_login?: string | null
+          last_reminder_sent_at?: string | null
+          locked_until?: string | null
+          subscription_expires_at?: string | null
+          subscription_status?: string | null
+          subscription_tier?: string | null
+          trusted_contact_heir_id?: string | null
+          updated_at?: string
+          user_type?: string | null
         }
         Update: {
+          account_locked?: boolean | null
+          avatar_url?: string | null
+          created_at?: string
+          email?: string
+          email_verified?: boolean | null
+          emergency_contact_email?: string | null
+          emergency_contact_phone?: string | null
+          failed_login_attempts?: number | null
+          full_name?: string | null
+          global_scheduled_date?: string | null
+          global_trigger_method?: string | null
+          global_trigger_settings?: Json | null
           id?: string
-          user_id?: string
-          activity_type?: string
-          ip_address?: string | null
-          user_agent?: string | null
-          metadata?: Json
-          created_at?: string | null
+          is_active?: boolean | null
+          last_activity?: string | null
+          last_login?: string | null
+          last_reminder_sent_at?: string | null
+          locked_until?: string | null
+          subscription_expires_at?: string | null
+          subscription_status?: string | null
+          subscription_tier?: string | null
+          trusted_contact_heir_id?: string | null
+          updated_at?: string
+          user_type?: string | null
         }
+        Relationships: [
+          {
+            foreignKeyName: "users_trusted_contact_heir_id_fkey"
+            columns: ["trusted_contact_heir_id"]
+            isOneToOne: false
+            referencedRelation: "heirs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_sessions: {
         Row: {
-          id: string
-          user_id: string
-          session_token: string
+          created_at: string
           device_name: string | null
           device_type: string | null
-          ip_address: string | null
-          user_agent: string | null
+          expires_at: string
+          id: string
+          ip_address: unknown
+          is_active: boolean | null
+          last_activity: string
           location_city: string | null
           location_country: string | null
-          is_active: boolean
-          created_at: string
-          last_activity: string
-          expires_at: string
+          session_token: string
+          user_agent: string | null
+          user_id: string
         }
         Insert: {
-          id?: string
-          user_id: string
-          session_token: string
+          created_at?: string
           device_name?: string | null
           device_type?: string | null
-          ip_address?: string | null
-          user_agent?: string | null
+          expires_at: string
+          id?: string
+          ip_address?: unknown
+          is_active?: boolean | null
+          last_activity?: string
           location_city?: string | null
           location_country?: string | null
-          is_active?: boolean
-          created_at?: string
-          last_activity?: string
-          expires_at: string
+          session_token: string
+          user_agent?: string | null
+          user_id: string
         }
         Update: {
-          id?: string
-          user_id?: string
-          session_token?: string
+          created_at?: string
           device_name?: string | null
           device_type?: string | null
-          ip_address?: string | null
-          user_agent?: string | null
+          expires_at?: string
+          id?: string
+          ip_address?: unknown
+          is_active?: boolean | null
+          last_activity?: string
           location_city?: string | null
           location_country?: string | null
-          is_active?: boolean
-          created_at?: string
-          last_activity?: string
-          expires_at?: string
+          session_token?: string
+          user_agent?: string | null
+          user_id?: string
         }
+        Relationships: [
+          {
+            foreignKeyName: "user_sessions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vault_items: {
+        Row: {
+          created_at: string
+          file_size: number | null
+          id: string
+          is_favorite: boolean | null
+          item_type: Database["public"]["Enums"]["vault_item_type"]
+          last_accessed: string | null
+          metadata: Json | null
+          password_last_changed: string | null
+          password_strength: number | null
+          requires_password_change: boolean | null
+          storage_bucket: string
+          storage_path: string
+          tags: string[] | null
+          title_encrypted: string
+          updated_at: string
+          user_id: string
+          vault_id: string
+        }
+        Insert: {
+          created_at?: string
+          file_size?: number | null
+          id?: string
+          is_favorite?: boolean | null
+          item_type: Database["public"]["Enums"]["vault_item_type"]
+          last_accessed?: string | null
+          metadata?: Json | null
+          password_last_changed?: string | null
+          password_strength?: number | null
+          requires_password_change?: boolean | null
+          storage_bucket?: string
+          storage_path: string
+          tags?: string[] | null
+          title_encrypted: string
+          updated_at?: string
+          user_id: string
+          vault_id: string
+        }
+        Update: {
+          created_at?: string
+          file_size?: number | null
+          id?: string
+          is_favorite?: boolean | null
+          item_type?: Database["public"]["Enums"]["vault_item_type"]
+          last_accessed?: string | null
+          metadata?: Json | null
+          password_last_changed?: string | null
+          password_strength?: number | null
+          requires_password_change?: boolean | null
+          storage_bucket?: string
+          storage_path?: string
+          tags?: string[] | null
+          title_encrypted?: string
+          updated_at?: string
+          user_id?: string
+          vault_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vault_items_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vault_items_vault_id_fkey"
+            columns: ["vault_id"]
+            isOneToOne: false
+            referencedRelation: "vaults"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vaults: {
+        Row: {
+          access_control: Json | null
+          category: string
+          color: string | null
+          created_at: string
+          death_settings: Json | null
+          description: string | null
+          icon: string | null
+          id: string
+          is_locked: boolean | null
+          is_shared: boolean | null
+          last_accessed: string | null
+          name: string
+          settings: Json | null
+          sort_order: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_control?: Json | null
+          category?: string
+          color?: string | null
+          created_at?: string
+          death_settings?: Json | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_locked?: boolean | null
+          is_shared?: boolean | null
+          last_accessed?: string | null
+          name: string
+          settings?: Json | null
+          sort_order?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_control?: Json | null
+          category?: string
+          color?: string | null
+          created_at?: string
+          death_settings?: Json | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_locked?: boolean | null
+          is_shared?: boolean | null
+          last_accessed?: string | null
+          name?: string
+          settings?: Json | null
+          sort_order?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vaults_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      check_inactivity_triggers: { Args: never; Returns: undefined }
+      check_scheduled_triggers: { Args: never; Returns: undefined }
+      cleanup_expired_invitations: { Args: never; Returns: number }
+      confirm_heir_death: { Args: { p_heir_id: string }; Returns: Json }
+      confirm_trusted_contact_death: {
+        Args: { p_heir_id: string }
+        Returns: Json
+      }
+      delete_user_account: {
+        Args: { user_id_to_delete: string }
+        Returns: Json
+      }
+      generate_invitation_code: { Args: never; Returns: string }
+      get_heir_vaults: {
+        Args: { heir_uuid: string }
+        Returns: {
+          can_edit: boolean
+          can_export: boolean
+          can_view: boolean
+          owner_email: string
+          vault_category: string
+          vault_id: string
+          vault_name: string
+        }[]
+      }
+      get_vault_heirs: {
+        Args: { vault_uuid: string }
+        Returns: {
+          access_status: string
+          can_edit: boolean
+          can_export: boolean
+          can_view: boolean
+          heir_email: string
+          heir_id: string
+          heir_name: string
+          relationship: string
+        }[]
+      }
+      mark_expired_invitations: { Args: never; Returns: number }
     }
     Enums: {
+      access_level_type: "full" | "partial" | "view"
+      alert_type:
+        | "failed_login"
+        | "suspicious_activity"
+        | "data_breach"
+        | "weak_password"
+        | "compromised_password"
+        | "unauthorized_access"
+        | "new_device"
+        | "location_change"
+      inheritance_plan_type:
+        | "full_access"
+        | "partial_access"
+        | "view_only"
+        | "destroy"
+      severity_type: "info" | "warning" | "critical"
+      trigger_reason_type:
+        | "inactivity"
+        | "manual"
+        | "scheduled"
+        | "emergency_contact"
+      trigger_status_type:
+        | "pending"
+        | "processing"
+        | "completed"
+        | "cancelled"
+        | "failed"
+      two_fa_method_type: "totp" | "sms" | "email" | "hardware_key"
+      vault_category_type:
+        | "delete_after_death"
+        | "share_after_death"
+        | "sign_off_after_death"
+      vault_item_type:
+        | "password"
+        | "document"
+        | "video"
+        | "image"
+        | "note"
+        | "crypto"
+        | "bank"
+        | "other"
+        | "legal"
+        | "assets"
+    }
+    CompositeTypes: {
       [_ in never]: never
     }
   }
 }
+
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
+
+export type Tables<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+      Row: infer R
+    }
+    ? R
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+        Row: infer R
+      }
+      ? R
+      : never
+    : never
+
+export type TablesInsert<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Insert: infer I
+    }
+    ? I
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Insert: infer I
+      }
+      ? I
+      : never
+    : never
+
+export type TablesUpdate<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Update: infer U
+    }
+    ? U
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Update: infer U
+      }
+      ? U
+      : never
+    : never
+
+export type Enums<
+  DefaultSchemaEnumNameOrOptions extends
+    | keyof DefaultSchema["Enums"]
+    | { schema: keyof DatabaseWithoutInternals },
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    : never = never,
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
+    : never
+
+export type CompositeTypes<
+  PublicCompositeTypeNameOrOptions extends
+    | keyof DefaultSchema["CompositeTypes"]
+    | { schema: keyof DatabaseWithoutInternals },
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    : never = never,
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+    : never
+
+export const Constants = {
+  public: {
+    Enums: {
+      access_level_type: ["full", "partial", "view"],
+      alert_type: [
+        "failed_login",
+        "suspicious_activity",
+        "data_breach",
+        "weak_password",
+        "compromised_password",
+        "unauthorized_access",
+        "new_device",
+        "location_change",
+      ],
+      inheritance_plan_type: [
+        "full_access",
+        "partial_access",
+        "view_only",
+        "destroy",
+      ],
+      severity_type: ["info", "warning", "critical"],
+      trigger_reason_type: [
+        "inactivity",
+        "manual",
+        "scheduled",
+        "emergency_contact",
+      ],
+      trigger_status_type: [
+        "pending",
+        "processing",
+        "completed",
+        "cancelled",
+        "failed",
+      ],
+      two_fa_method_type: ["totp", "sms", "email", "hardware_key"],
+      vault_category_type: [
+        "delete_after_death",
+        "share_after_death",
+        "sign_off_after_death",
+      ],
+      vault_item_type: [
+        "password",
+        "document",
+        "video",
+        "image",
+        "note",
+        "crypto",
+        "bank",
+        "other",
+        "legal",
+        "assets",
+      ],
+    },
+  },
+} as const

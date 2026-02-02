@@ -122,8 +122,7 @@ export async function checkStorageLimit(userId: string, additionalSizeBytes: num
     let totalBytes = 0
     if (vaults) {
       for (const vault of vaults) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const vaultData = (vault as any).vault_data as { size?: number } | null
+        const vaultData = (vault as unknown as { vault_data: { size?: number } | null }).vault_data
         if (vaultData?.size) {
           totalBytes += vaultData.size
         }

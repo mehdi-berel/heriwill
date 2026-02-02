@@ -6,7 +6,8 @@ import { PDFEditor } from "@/components/module/legal/pdf-editor"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft } from "lucide-react"
 import { supabase } from "@/lib/supabase"
-import { toast } from "sonner"
+import { toast } from "@/lib/utils/toast"
+import { logger } from "@/lib/utils/logger"
 
 interface LegalDocument {
   id: string
@@ -42,7 +43,7 @@ export default function LegalDocumentDetailPage() {
         .single()
       
       if (error) {
-        console.error('Error loading document:', error)
+        logger.error('Error loading document', error, { documentId: id })
         throw error
       }
 
@@ -51,9 +52,10 @@ export default function LegalDocumentDetailPage() {
       }
 
       // Set document data directly
-      setDocument(data)
+      setDocument(data as LegalDocument)
     } catch (error) {
-      console.error('Error loading document:', error)
+      logger.error('Error loading document', error, { documentId: id })
+      toast.error('Failed to load document', 'Please try again')
       router.push("/Legal")
     }
   }, [router])
@@ -99,7 +101,7 @@ export default function LegalDocumentDetailPage() {
         .eq('id', documentId)
 
       if (error) {
-        console.error('Error saving content:', error)
+        logger.error('Error saving content', error, { documentId })
         toast.error('Failed to save document')
         return
       }
@@ -107,7 +109,7 @@ export default function LegalDocumentDetailPage() {
       toast.success('Document saved successfully!')
       await loadDocument(documentId)
     } catch (error) {
-      console.error('Error saving document:', error)
+      logger.error('Error saving document', error, { documentId })
       toast.error('Failed to save document')
     }
   }

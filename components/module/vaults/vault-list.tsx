@@ -9,11 +9,8 @@ interface Vault {
   name: string
   description: string | null
   category: 'share' | 'delete' | 'pro'
-  is_encrypted: boolean | null
   is_locked: boolean | null
-  is_favorite: boolean | null
   is_shared: boolean | null
-  tags: string[] | null
   item_count: number
   created_at: string
   updated_at: string

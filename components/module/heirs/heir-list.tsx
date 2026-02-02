@@ -22,7 +22,6 @@ interface Heir {
   heir_type: 'family' | 'friend' | 'professional' | 'organization' | null
   invitation_status: 'pending' | 'accepted' | 'rejected' | 'expired' | null
   invitation_code: string | null
-  access_level: 'full' | 'partial' | 'view'
   created_at: string
   accepted_at: string | null
   invitation_expires_at: string | null
@@ -31,7 +30,6 @@ interface Heir {
   is_active: boolean | null
   notify_on_activation: boolean | null
   notification_delay_days: number | null
-  inheritance_plan_id: string | null
   heir_user_id: string | null
   updated_at: string
   rejected_at: string | null

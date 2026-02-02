@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { FeedbackButton } from "@/components/module/feedback/feedback-button"
 import { useRevenueCat } from "@/contexts/RevenueCatContext"
 import { supabase } from "@/lib/supabase"
-import { Crown, Zap, CheckCircle, LogOut } from "lucide-react"
+import { Crown, Zap, CheckCircle, LogOut, HelpCircle } from "lucide-react"
 
 export function Header() {
   const { entitlements, loading } = useRevenueCat()
@@ -50,39 +50,42 @@ export function Header() {
   const Icon = config?.icon
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background-primary/80 backdrop-blur-xl" style={{ borderColor: '#232629' }}>
-      <div className="flex h-14 items-center justify-between px-3 md:px-6">
-        {/* Left side - Inheritance and Help (mobile only) */}
-        <div className="flex items-center gap-1 md:hidden">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-text-secondary hover:text-text-primary text-xs px-2"
-            asChild
-          >
-            <Link href="/inheritance">Inheritance</Link>
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-text-secondary hover:text-text-primary text-xs px-2"
-            asChild
-          >
-            <Link href="/help">Help</Link>
-          </Button>
+    <header className="sticky top-0 z-50 w-full border-b bg-background-primary/95 backdrop-blur-xl shadow-sm" style={{ borderColor: '#232629' }}>
+      <div className="flex h-16 md:h-14 items-center justify-between px-4 md:px-6">
+        {/* Left side - Logo/Brand (mobile only) */}
+        <div className="flex items-center md:hidden">
+          <Link href="/" className="flex items-center gap-2">
+            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center shadow-lg">
+              <span className="text-white font-bold text-sm">H</span>
+            </div>
+            <span className="text-base font-bold text-text-primary">Heriwill</span>
+          </Link>
         </div>
 
         {/* Right side - Tier badge and actions */}
-        <div className="flex items-center gap-1 md:gap-2 ml-auto">
+        <div className="flex items-center gap-2 md:gap-2 ml-auto">
           {/* Subscription Tier Badge */}
           {config && (
             <Link href="/upgrade">
-              <Badge variant="outline" className={`flex items-center gap-1 md:gap-1.5 cursor-pointer transition-all hover:scale-105 text-xs md:text-sm ${config.className}`}>
-                {Icon && <Icon className="h-3 w-3 md:h-3.5 md:w-3.5" />}
-                <span className="font-semibold hidden sm:inline">{config.label}</span>
+              <Badge variant="outline" className={`flex items-center gap-1.5 cursor-pointer transition-all hover:scale-105 h-9 px-2 md:px-3 text-xs md:text-sm ${config.className}`}>
+                {Icon && <Icon className="h-3.5 w-3.5 md:h-3.5 md:w-3.5" />}
+                <span className="font-semibold hidden md:inline">{config.label}</span>
               </Badge>
             </Link>
           )}
+
+          {/* Help Button - Mobile icon only */}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-9 w-9 p-0 flex items-center justify-center md:hidden text-text-secondary hover:text-text-primary"
+            asChild
+            title="Help"
+          >
+            <Link href="/help">
+              <HelpCircle className="h-4 w-4" />
+            </Link>
+          </Button>
 
           {/* Feedback Button */}
           <FeedbackButton />
@@ -92,7 +95,7 @@ export function Header() {
             variant="ghost"
             size="sm"
             onClick={handleSignOut}
-            className="md:hidden text-text-secondary hover:text-status-error transition-colors p-2"
+            className="md:hidden text-text-secondary hover:text-status-error transition-colors h-9 w-9 p-0 flex items-center justify-center"
             title="Sign Out"
           >
             <LogOut className="h-4 w-4" />

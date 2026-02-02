@@ -23,14 +23,14 @@ import {
 interface Vault {
   id: string
   name: string
-  icon?: string
+  icon?: string | null
   category?: string
 }
 
 interface Heir {
   id: string
-  full_name_encrypted: string
-  relationship?: string
+  full_name_encrypted: string | null
+  relationship?: string | null
 }
 
 interface AssetFormData {

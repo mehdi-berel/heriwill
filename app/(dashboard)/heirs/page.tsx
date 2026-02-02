@@ -6,12 +6,17 @@ import { HeirForm } from "@/components/module/heirs/heir-form"
 import { HeirList } from "@/components/module/heirs/heir-list"
 import { HeirInvitation } from "@/components/module/heirs/heir-invitation"
 import { HeirInvitationCard } from "@/components/module/heirs/heir-invitation-card"
+import { SuccessorCard } from "@/components/module/heirs/successor-card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
-import { Search, Users, Mail, Heart } from "lucide-react"
+import { Search, Users, Mail, Heart, Scale } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { User } from "@supabase/supabase-js"
+import { Badge } from "@/components/ui/badge"
+import { getUserTier } from "@/lib/middleware/tierEnforcement"
+import { logger } from "@/lib/utils/logger"
+import { toast } from "@/lib/utils/toast"
 import { 
   createHeirInvitation, 
   getPendingInvitations, 
@@ -27,7 +32,6 @@ interface Heir {
   phone_encrypted: string | null
   relationship: string | null
   heir_type: 'family' | 'friend' | 'professional' | 'organization' | null
-  access_level: 'full' | 'partial' | 'view'
   invitation_status: 'pending' | 'accepted' | 'rejected' | 'expired' | null
   invitation_code: string | null
   invited_at: string | null
@@ -39,7 +43,6 @@ interface Heir {
   is_active: boolean | null
   rejected_at: string | null
   heir_user_id: string | null
-  inheritance_plan_id: string | null
   created_at: string
   updated_at: string
 }
@@ -68,6 +71,8 @@ export default function HeirsPage() {
   const [receivedInvitations, setReceivedInvitations] = useState<Heir[]>([])
   const [showInvitationModal, setShowInvitationModal] = useState(false)
   const [newlyCreatedHeir, setNewlyCreatedHeir] = useState<Heir | null>(null)
+  const [userTier, setUserTier] = useState<'free' | 'premium' | 'pro'>('free')
+  const [trustedContactMap, setTrustedContactMap] = useState<Record<string, boolean>>({})
   const router = useRouter()
 
   const loadHeirs = useCallback(async (userId: string) => {
@@ -79,13 +84,14 @@ export default function HeirsPage() {
         .order('created_at', { ascending: false })
 
       if (error) {
-        console.error('Error loading heirs:', error)
+        logger.error('Error loading heirs', error, { userId })
         return
       }
 
-      setHeirs(data || [])
+      setHeirs((data || []) as Heir[])
     } catch (error) {
-      console.error('Error loading heirs:', error)
+      logger.error('Error loading heirs', error, { userId })
+      toast.error('Failed to load heirs', 'Please refresh the page')
     }
   }, [])
 
@@ -93,8 +99,30 @@ export default function HeirsPage() {
     try {
       const invitations = await getPendingInvitations()
       setReceivedInvitations(invitations as Heir[])
+      
+      // Check trusted contact status for accepted invitations
+      const acceptedInvitations = (invitations as Heir[]).filter(inv => inv.has_accepted)
+      const trustedMap: Record<string, boolean> = {}
+      
+      for (const invitation of acceptedInvitations) {
+        if (invitation.user_id) {
+          // Check if this heir is the trusted contact for the owner
+          const { data: ownerData } = await supabase
+            .from('users')
+            .select('trusted_contact_heir_id')
+            .eq('id', invitation.user_id)
+            .single()
+          
+          const owner = ownerData as { trusted_contact_heir_id?: string | null } | null
+          if (owner && owner.trusted_contact_heir_id === invitation.id) {
+            trustedMap[invitation.id] = true
+          }
+        }
+      }
+      
+      setTrustedContactMap(trustedMap)
     } catch (error) {
-      console.error('Error loading invitations:', error)
+      logger.error('Error loading invitations', error)
     }
   }, [])
 
@@ -106,6 +134,10 @@ export default function HeirsPage() {
         return
       }
       setUser(user)
+      
+      // Get user tier
+      const tier = await getUserTier(user.id)
+      setUserTier(tier)
       
       // Load heirs data and invitations
       await loadHeirs(user.id)
@@ -140,13 +172,14 @@ export default function HeirsPage() {
       })
 
       if (result.heir) {
-        setHeirs([result.heir, ...heirs])
-        setNewlyCreatedHeir(result.heir)
+        setHeirs([result.heir as unknown as Heir, ...heirs])
+        setNewlyCreatedHeir(result.heir as unknown as Heir)
         setShowForm(false)
         setShowInvitationModal(true)
       }
     } catch (error) {
-      console.error('Error adding heir:', error)
+      logger.error('Error adding heir', error, { userId: user?.id })
+      toast.error('Failed to add heir', 'Please try again')
     }
   }
 
@@ -154,8 +187,8 @@ export default function HeirsPage() {
     if (!editingHeir) return
 
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase.from('heirs') as any)
+      const { error } = await supabase
+        .from('heirs')
         .update({
           full_name_encrypted: formData.full_name,
           email_encrypted: formData.email,
@@ -170,17 +203,20 @@ export default function HeirsPage() {
         .single()
 
       if (error) {
-        console.error('Error updating heir:', error)
+        logger.error('Error updating heir', error, { heirId: editingHeir.id })
+        toast.error('Failed to update heir', 'Please try again')
         return
       }
 
-      if (data) {
-        setHeirs(heirs.map(h => h.id === editingHeir.id ? data : h))
+      if (user) {
+        await loadHeirs(user.id)
         setShowForm(false)
         setEditingHeir(null)
+        toast.success('Heir updated successfully')
       }
     } catch (error) {
-      console.error('Error updating heir:', error)
+      logger.error('Error updating heir', error, { heirId: editingHeir?.id })
+      toast.error('Failed to update heir', 'Please try again')
     }
   }
 
@@ -199,16 +235,20 @@ export default function HeirsPage() {
         .eq('id', heirToDelete)
       
       if (error) {
-        console.error('Error deleting heir:', error)
+        logger.error('Error deleting heir', error, { heirId: heirToDelete })
+        toast.error('Failed to delete heir', 'Please try again')
         return
       }
       
-      setHeirs(heirs.filter(h => h.id !== heirToDelete))
-      
+      if (user) {
+        await loadHeirs(user.id)
+      }
       setShowDeleteModal(false)
       setHeirToDelete(null)
+      toast.success('Heir deleted successfully')
     } catch (error) {
-      console.error('Error deleting heir:', error)
+      logger.error('Error deleting heir', error, { heirId: heirToDelete })
+      toast.error('Failed to delete heir', 'Please try again')
     }
   }
 
@@ -227,7 +267,8 @@ export default function HeirsPage() {
       await loadReceivedInvitations()
       await loadHeirs(user?.id || '')
     } catch (error) {
-      console.error('Error accepting invitation:', error)
+      logger.error('Error accepting invitation', error, { invitationCode })
+      toast.error('Failed to accept invitation', 'Please try again')
     }
   }
 
@@ -236,7 +277,8 @@ export default function HeirsPage() {
       await rejectHeirInvitation(invitationCode)
       await loadReceivedInvitations()
     } catch (error) {
-      console.error('Error declining invitation:', error)
+      logger.error('Error declining invitation', error, { invitationCode })
+      toast.error('Failed to decline invitation', 'Please try again')
     }
   }
 
@@ -246,15 +288,35 @@ export default function HeirsPage() {
         <div className="mb-6">
           <div className="flex justify-between items-center mb-4">
             <h1 className="text-3xl font-bold">Heirs</h1>
-            <Button 
-              onClick={() => {
-                setEditingHeir(null)
-                setShowForm(true)
-              }}
-              className="h-12 w-12 rounded-full p-0"
-            >
-              <span className="text-2xl">+</span>
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button 
+                onClick={() => {
+                  if (userTier === 'pro') {
+                    router.push('/notary')
+                  }
+                }}
+                variant="outline"
+                className="h-10 px-4 relative"
+                disabled={userTier !== 'pro'}
+              >
+                <Scale className="h-4 w-4 mr-2" />
+                <span className="hidden sm:inline">Notary</span>
+                {userTier !== 'pro' && (
+                  <Badge className="ml-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white border-0 text-xs px-1.5 py-0">
+                    PRO
+                  </Badge>
+                )}
+              </Button>
+              <Button 
+                onClick={() => {
+                  setEditingHeir(null)
+                  setShowForm(true)
+                }}
+                className="h-12 w-12 rounded-full p-0"
+              >
+                <span className="text-2xl">+</span>
+              </Button>
+            </div>
           </div>
           
           {/* 3-Tab System */}
@@ -380,7 +442,7 @@ export default function HeirsPage() {
               </div>
             ) : (
               receivedInvitations.filter(h => h.has_accepted).map((successor) => (
-                <HeirInvitationCard
+                <SuccessorCard
                   key={successor.id}
                   successor={{
                     id: successor.id,
@@ -393,9 +455,8 @@ export default function HeirsPage() {
                     invited_at: successor.invited_at || ''
                   }}
                   ownerName={user?.email || 'Owner'}
-                  isAccepted={true}
-                  onAccept={() => {}}
-                  onDecline={() => {}}
+                  ownerUserId={successor.user_id || ''}
+                  isTrustedContact={trustedContactMap[successor.id] || false}
                 />
               ))
             )}

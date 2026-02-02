@@ -23,17 +23,17 @@ interface Notary {
   id: string
   user_id: string
   name: string
-  firm_name?: string
+  firm_name?: string | null
   email: string
   phone: string
   address: string
   city: string
   state: string
   zip_code: string
-  license_number?: string
-  specialization?: string
-  notes?: string
-  is_primary: boolean
+  license_number?: string | null
+  specialization?: string | null
+  notes?: string | null
+  is_primary: boolean | null
   created_at: string
   updated_at: string
 }

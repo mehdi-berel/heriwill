@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import type { Database } from '@/lib/database.types';
+import { logger } from '@/lib/utils/logger';
 
 type UserUpdate = Database['public']['Tables']['users']['Update'];
 
@@ -38,12 +39,10 @@ export async function saveGlobalTrigger(
     const updateData: UserUpdate = {};
     
     if (settings.global_trigger_method) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      updateData.global_trigger_method = settings.global_trigger_method as any;
+      updateData.global_trigger_method = settings.global_trigger_method as Database['public']['Tables']['users']['Update']['global_trigger_method'];
     }
     if (settings.global_trigger_settings) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      updateData.global_trigger_settings = settings.global_trigger_settings as any;
+      updateData.global_trigger_settings = settings.global_trigger_settings as unknown as Database['public']['Tables']['users']['Update']['global_trigger_settings'];
     }
     if (settings.global_scheduled_date !== undefined) {
       updateData.global_scheduled_date = settings.global_scheduled_date;
@@ -52,19 +51,19 @@ export async function saveGlobalTrigger(
       updateData.trusted_contact_heir_id = settings.trusted_contact_heir_id;
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (supabase.from('users') as any)
+    const { error } = await supabase
+      .from('users')
       .update(updateData)
       .eq('id', userId);
 
     if (error) {
-      console.error('Error saving global trigger:', error);
+      logger.error('Error saving global trigger', error, { userId });
       throw error;
     }
 
-    console.log('Global trigger saved successfully:', updateData);
+    logger.info('Global trigger saved successfully', { userId, updateData });
   } catch (error) {
-    console.error('Error in saveGlobalTrigger:', error);
+    logger.error('Error in saveGlobalTrigger', error, { userId });
     throw error;
   }
 }
@@ -83,7 +82,7 @@ export async function getGlobalTrigger(
       .single();
 
     if (error) {
-      console.error('Error fetching global trigger:', error);
+      logger.error('Error fetching global trigger', error, { userId });
       throw error;
     }
 
@@ -107,7 +106,7 @@ export async function getGlobalTrigger(
       last_activity: triggerData.last_activity,
     };
   } catch (error) {
-    console.error('Error in getGlobalTrigger:', error);
+    logger.error('Error in getGlobalTrigger', error, { userId });
     return null;
   }
 }
@@ -117,24 +116,24 @@ export async function getGlobalTrigger(
  */
 export async function deleteGlobalTrigger(userId: string): Promise<void> {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (supabase.from('users') as any)
-      .update({
-        global_trigger_method: null,
-        global_trigger_settings: null,
-        global_scheduled_date: null,
-        trusted_contact_heir_id: null,
-      })
-      .eq('id', userId);
+    const { error } = await supabase
+    .from('users')
+    .update({ 
+      global_trigger_method: null as Database['public']['Tables']['users']['Update']['global_trigger_method'],
+      global_trigger_settings: null as Database['public']['Tables']['users']['Update']['global_trigger_settings'],
+      global_scheduled_date: null as Database['public']['Tables']['users']['Update']['global_scheduled_date'],
+      trusted_contact_heir_id: null as Database['public']['Tables']['users']['Update']['trusted_contact_heir_id']
+    })
+    .eq('id', userId);
 
     if (error) {
-      console.error('Error deleting global trigger:', error);
+      logger.error('Error deleting global trigger', error, { userId });
       throw error;
     }
 
-    console.log('Global trigger deleted successfully');
+    logger.info('Global trigger deleted successfully', { userId });
   } catch (error) {
-    console.error('Error in deleteGlobalTrigger:', error);
+    logger.error('Error in deleteGlobalTrigger', error, { userId });
     throw error;
   }
 }
@@ -180,7 +179,7 @@ export async function checkGlobalTriggerConditions(userId: string): Promise<bool
 
     return false;
   } catch (error) {
-    console.error('Error checking trigger conditions:', error);
+    logger.error('Error checking trigger conditions', error, { userId });
     return false;
   }
 }
@@ -190,8 +189,8 @@ export async function checkGlobalTriggerConditions(userId: string): Promise<bool
  */
 export async function updateLastActivity(userId: string): Promise<void> {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (supabase.from('users') as any)
+    const { error } = await supabase
+      .from('users')
       .update({ last_activity: new Date().toISOString() })
       .eq('id', userId);
 

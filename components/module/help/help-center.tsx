@@ -28,114 +28,174 @@ const FAQ_DATA: FAQItem[] = [
   {
     category: "Getting Started",
     question: "What is HeriWill?",
-    answer: "HeriWill is a comprehensive digital legacy and inheritance planning platform. It helps you organize your digital assets, legal documents, and ensure your wishes are carried out by securely storing and managing information for your heirs."
+    answer: "HeriWill is a comprehensive digital legacy and inheritance planning platform. It helps you organize your digital assets, physical assets, legal documents, and ensure your wishes are carried out by securely storing and managing information for your heirs. With HeriWill, you can create secure vaults, designate heirs, manage assets, and set up inheritance triggers."
   },
   {
     category: "Getting Started",
     question: "How do I create my first vault?",
-    answer: "Navigate to the Vaults page from the dashboard, click 'Create Vault', choose a category (Share after death, Delete after death, or Sign-off after death), give it a name and description, then start adding items to your vault."
+    answer: "Navigate to the Vaults page from the dashboard and click the '+' button. Choose a vault category (Share, Delete, or Pro for notary services), give it a name and description, then start adding items. You can store passwords, documents, photos, videos, and other important files in your vault."
   },
   {
     category: "Getting Started",
     question: "Is my data secure?",
-    answer: "Yes, your data is encrypted and stored securely. We use industry-standard encryption protocols to protect your sensitive information. Your vaults and documents are only accessible to you and the heirs you designate."
+    answer: "Yes, your data is encrypted and stored securely using Supabase's enterprise-grade security. We use industry-standard encryption protocols to protect your sensitive information. Your vaults and documents are only accessible to you and the heirs you designate after inheritance triggers are activated."
+  },
+  {
+    category: "Getting Started",
+    question: "What are the different subscription plans?",
+    answer: "Classic (Free): 1 vault, 1 heir, 1GB storage. Legacy (€10/month or €100/year): Unlimited vaults & heirs, 10GB storage, advanced features. Pro (€20/month or €200/year): Everything in Legacy plus 100GB storage, asset management, legal documents, and notary services."
   },
 
   // Heirs & Beneficiaries
   {
     category: "Heirs & Beneficiaries",
     question: "How do I add an heir?",
-    answer: "Go to the Heirs page, click 'Add Heir', fill in their information (name, email, relationship), choose their heir type, and send the invitation. They'll receive an email with a link to create their account and accept the invitation."
+    answer: "Go to the Heirs page, click the '+' button, fill in their information (name, email, phone, relationship, heir type), set an expiration date for the invitation (default 7 days), and click 'Send Invitation'. An invitation link will be generated that you can share with them. They can create an account and accept the invitation through the link."
   },
   {
     category: "Heirs & Beneficiaries",
     question: "Can I have multiple heirs?",
-    answer: "Yes, you can add as many heirs as you need. Different subscription tiers may have different limits. Pro plan offers unlimited heirs."
+    answer: "Yes! Classic plan allows 1 heir, while Legacy and Pro plans offer unlimited heirs. You can assign different access levels (view, partial, or full) to each heir and designate them to specific vaults."
   },
   {
     category: "Heirs & Beneficiaries",
     question: "What happens when an heir accepts the invitation?",
-    answer: "When an heir accepts your invitation, they create their account and are linked to you. They won't have access to your information until the sign-off conditions are met (based on your chosen trigger method)."
+    answer: "When an heir accepts your invitation, they create their HeriWill account and are linked to you as a successor. They'll appear in your 'Heirs' tab with 'accepted' status. They won't have access to your vaults until inheritance is triggered. You can view them in the Heirs page and assign them to specific vaults."
+  },
+  {
+    category: "Heirs & Beneficiaries",
+    question: "How do heirs accept invitations?",
+    answer: "Heirs receive an invitation link from you. When they open the link, they're directed to create a HeriWill account with their email and password. After account creation, the invitation is automatically accepted and they become linked to you. They can also view pending invitations in their Heirs page under the 'Pending' tab."
+  },
+  {
+    category: "Heirs & Beneficiaries",
+    question: "Can I assign heirs to specific vaults?",
+    answer: "Yes! Open any vault, click 'Assign Heirs', and select which heirs should have access to that vault. You can assign multiple heirs to a single vault and control their access levels. This is available on all subscription tiers."
   },
 
   // Vaults & Assets
   {
     category: "Vaults & Assets",
     question: "What can I store in a vault?",
-    answer: "You can store various types of digital items including passwords, documents, photos, videos, notes, and other important files. Each vault can be categorized based on what should happen to it after your passing."
+    answer: "You can store various types of items: passwords, documents, photos, videos, notes, files, and encrypted data. Each vault item can have tags, metadata, and be marked as favorite. Storage limits: Classic (1GB), Legacy (10GB), Pro (100GB)."
   },
   {
     category: "Vaults & Assets",
     question: "What's the difference between vault categories?",
-    answer: "Share after death: Contents are shared with designated heirs. Delete after death: Contents are permanently deleted. Sign-off after death: Requires additional verification before sharing."
+    answer: "Share: Contents are shared with designated heirs after inheritance triggers. Delete: Contents are permanently deleted. Pro: Requires notary verification and sign-off before sharing (Pro plan only). You can also mark vaults as favorites, lock them, or share them with specific heirs."
   },
   {
     category: "Vaults & Assets",
-    question: "How do I add assets?",
-    answer: "Go to the Assets page, click 'Add Asset', select the asset type (Real Estate, Vehicle, Bank Account, Investment, etc.), fill in the details, and optionally assign it to specific heirs."
+    question: "How do I add items to a vault?",
+    answer: "Open a vault, click 'Add Item', enter the item details (title, type, content), optionally upload files, add tags for organization, and save. You can search and filter items by type, tags, or favorites. Items support various types including passwords, documents, photos, and more."
+  },
+  {
+    category: "Vaults & Assets",
+    question: "How do I manage physical assets?",
+    answer: "Go to the Assets page (Pro plan only), click 'Add Asset', select the asset type (Real Estate, Vehicle, Bank Account, Investment, Insurance, Personal Property, Business, or Other), fill in details like value, location, ownership type, attach documents, and assign to heirs. You can track total asset value and organize by type."
+  },
+  {
+    category: "Vaults & Assets",
+    question: "What asset types can I track?",
+    answer: "Pro plan users can track: Real Estate, Vehicles, Bank Accounts, Investments, Insurance Policies, Personal Property, Business Assets, and Other. Each asset can include value, location, ownership type (sole, joint, tenants in common, community property), documents, notes, and heir assignments."
   },
 
-  // Sign-off & Triggers
+  // Inheritance & Triggers
   {
-    category: "Sign-off & Triggers",
-    question: "What are sign-off methods?",
-    answer: "Sign-off methods determine when your inheritance plan activates. Options include: Inactivity Detection (after no account activity), Trusted Contact (designated person confirms), Heir Notification (heirs verify), Scheduled Date (specific date/time), or Manual Trigger (you activate it)."
+    category: "Inheritance & Triggers",
+    question: "How does inheritance triggering work?",
+    answer: "You can set up inheritance plans that determine when and how your vaults are shared with heirs. The system supports manual triggers where you can activate inheritance immediately, or automated triggers based on inactivity. When triggered, designated heirs receive notifications and gain access to assigned vaults."
   },
   {
-    category: "Sign-off & Triggers",
-    question: "What is a trusted contact?",
-    answer: "A trusted contact is someone you designate (an heir or notary) who can confirm your passing. They'll be contacted to verify the situation before your inheritance plan is activated."
+    category: "Inheritance & Triggers",
+    question: "What is a manual trigger?",
+    answer: "Manual trigger allows you to immediately activate your inheritance plan. Go to the Inheritance page and click 'Trigger Inheritance Plan Now'. This will notify all your heirs and grant them access to their assigned vaults. This is useful for testing or immediate activation."
   },
   {
-    category: "Sign-off & Triggers",
-    question: "How does inactivity detection work?",
-    answer: "You set a period of inactivity (e.g., 90 days). If you don't log in or interact with your account for that period, the system will send reminders. If you still don't respond, your sign-off plan will be triggered."
+    category: "Inheritance & Triggers",
+    question: "Can I create multiple inheritance plans?",
+    answer: "Yes, you can create multiple inheritance plans with different configurations. Each plan can have its own name, type, instructions, and trigger conditions. Plans can be activated or deactivated, and you can track which plans have been triggered."
+  },
+  {
+    category: "Inheritance & Triggers",
+    question: "What happens when inheritance is triggered?",
+    answer: "When triggered: 1) An inheritance trigger record is created, 2) All designated heirs are notified, 3) Heirs gain access to their assigned vaults, 4) Audit logs are created for tracking, 5) Your account status is updated. Vaults remain secure and only accessible to designated heirs."
   },
 
-  // Legal Documents
+  // Legal Documents & Notary
   {
-    category: "Legal Documents",
+    category: "Legal Documents & Notary",
     question: "What legal documents can I upload?",
-    answer: "You can upload wills, trusts, powers of attorney, advance directives, property deeds, insurance policies, and other important legal documents. These can be organized and shared with relevant parties."
+    answer: "Pro plan users can upload and manage legal documents including wills, trusts, powers of attorney, advance directives, property deeds, insurance policies, and other important documents. Documents are stored securely in the Legal section and can be organized by type and status."
   },
   {
-    category: "Legal Documents",
-    question: "Do I need a notary?",
-    answer: "While not required for all documents, having a notary can help verify important legal documents. You can add notaries to your account who can assist with document verification."
+    category: "Legal Documents & Notary",
+    question: "How do I add a notary?",
+    answer: "Go to the Notary page (Pro plan only), click 'Add Notary', fill in their information (name, firm, email, phone, specialization), and mark if they're your primary notary. You can add multiple notaries and assign them to specific vaults for verification and sign-off."
+  },
+  {
+    category: "Legal Documents & Notary",
+    question: "What is a Pro vault?",
+    answer: "Pro vaults (available on Pro plan) are special vaults that require notary verification and sign-off before contents are shared with heirs. When you create a Pro vault, you can assign a notary who will be notified to verify and certify the vault contents before inheritance activation."
+  },
+  {
+    category: "Legal Documents & Notary",
+    question: "Can notaries access my vaults?",
+    answer: "Notaries you designate can be assigned to Pro vaults for verification purposes. They receive notifications when sign-off is required but don&apos;t have automatic access to vault contents. Their role is to verify and certify documents according to your inheritance plan."
   },
 
   // Subscription & Billing
   {
     category: "Subscription & Billing",
     question: "What subscription plans are available?",
-    answer: "We offer three plans: Classic (free with basic features), Premium (enhanced features and storage), and Pro (unlimited vaults, heirs, and priority support). Visit the Billing page to see detailed pricing."
+    answer: "Classic (Free): 1 vault, 1 heir, 1GB storage, basic features. Legacy (€10/month or €100/year): Unlimited vaults & heirs, 10GB storage, advanced security, priority support. Pro (€20/month or €200/year): Everything in Legacy + 100GB storage, asset management, legal documents, notary services. Save 17% with yearly billing!"
   },
   {
     category: "Subscription & Billing",
     question: "How do I upgrade my plan?",
-    answer: "Go to Settings → Billing, or click the subscription badge in the header. Choose your desired plan (Premium or Pro), select monthly or yearly billing, and complete the payment process."
+    answer: "Click the 'Upgrade' button in the sidebar or visit the Upgrade page. Choose your desired plan (Legacy or Pro), select monthly or yearly billing, and you'll be redirected to our secure payment page powered by RevenueCat. After payment, your account is upgraded immediately."
   },
   {
     category: "Subscription & Billing",
-    question: "Can I cancel my subscription?",
-    answer: "Yes, you can cancel anytime from the Billing page. Your subscription will remain active until the end of your current billing period, then revert to the Classic plan."
+    question: "What payment methods do you accept?",
+    answer: "We accept all major credit cards, debit cards, and payment methods through our secure payment processor RevenueCat. You can choose between monthly or yearly billing, with yearly plans offering a 17% discount."
+  },
+  {
+    category: "Subscription & Billing",
+    question: "What happens if I reach my storage limit?",
+    answer: "If you reach your storage limit, you won't be able to upload new files until you upgrade your plan or delete some items. Classic: 1GB, Legacy: 10GB, Pro: 100GB. You can check your current usage in the dashboard."
   },
 
   // Account & Security
   {
     category: "Account & Security",
     question: "How do I change my password?",
-    answer: "Go to Settings → Security, enter your current password, then your new password twice, and click 'Change Password'. Your password must be at least 6 characters long."
+    answer: "Go to Settings → Security, click 'Change Password', enter your current password, then your new password twice, and click 'Update Password'. Your password must be at least 6 characters long. For security, you'll be logged out and need to sign in again."
   },
   {
     category: "Account & Security",
     question: "How do I update my profile information?",
-    answer: "Navigate to Settings → Profile, update your name or email, and click 'Save Changes'. Email changes require verification."
+    answer: "Navigate to Settings → Profile, update your full name or email address, and click 'Save Changes'. Email changes require verification through a confirmation link sent to your new email address."
   },
   {
     category: "Account & Security",
     question: "What if I forget my password?",
-    answer: "On the login page, click 'Forgot Password', enter your email, and you'll receive a password reset link. Follow the link to create a new password."
+    answer: "On the login page, click 'Forgot your password?', enter your email, and you'll receive a password reset link. Follow the link to create a new password. The reset link expires after 24 hours for security."
+  },
+  {
+    category: "Account & Security",
+    question: "Can I sign in with Google or LinkedIn?",
+    answer: "Yes! HeriWill supports OAuth authentication. On the login or signup page, click 'Sign in with Google' or 'Sign in with LinkedIn' to authenticate using your existing account. This provides a secure and convenient way to access your account."
+  },
+  {
+    category: "Account & Security",
+    question: "Is two-factor authentication available?",
+    answer: "Account security is managed through Supabase's authentication system. We recommend using a strong, unique password and enabling any additional security features provided by your OAuth provider (Google/LinkedIn) if you use social login."
+  },
+  {
+    category: "Account & Security",
+    question: "How is my data encrypted?",
+    answer: "All sensitive data including vault contents, heir information, and personal details are encrypted using industry-standard encryption. Data is encrypted at rest in our database and in transit using HTTPS. Only you and your designated heirs (after inheritance triggers) can access your encrypted information."
   }
 ]
 
@@ -143,8 +203,8 @@ const CATEGORIES = [
   { name: "Getting Started", icon: HelpCircle },
   { name: "Heirs & Beneficiaries", icon: Users },
   { name: "Vaults & Assets", icon: Vault },
-  { name: "Sign-off & Triggers", icon: Calendar },
-  { name: "Legal Documents", icon: FileText },
+  { name: "Inheritance & Triggers", icon: Calendar },
+  { name: "Legal Documents & Notary", icon: FileText },
   { name: "Subscription & Billing", icon: CreditCard },
   { name: "Account & Security", icon: Shield }
 ]
@@ -165,10 +225,13 @@ export function HelpCenter() {
   return (
     <div className="max-w-5xl mx-auto space-y-4 px-4 py-4">
       {/* Header */}
-      <div className="text-center pb-4">
-        <h1 className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-primary-400 to-primary-600 bg-clip-text text-transparent">
+      <div className="text-center pb-6">
+        <h1 className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-primary-400 to-primary-600 bg-clip-text text-transparent mb-3">
           Help Center
         </h1>
+        <p className="text-lg text-gray-400 max-w-2xl mx-auto">
+          Find answers to common questions about HeriWill&apos;s features, security, and how to manage your digital legacy
+        </p>
       </div>
 
       {/* Categories */}
@@ -284,17 +347,29 @@ export function HelpCenter() {
             Still need help?
           </CardTitle>
           <CardDescription className="text-base mt-3 leading-relaxed">
-            Can&apos;t find what you&apos;re looking for? Our support team is here to help you with any questions.
+            Can&apos;t find what you&apos;re looking for? Our support team is here to help you with any questions about your account, features, or inheritance planning.
           </CardDescription>
         </CardHeader>
-        <CardContent className="pt-2">
-          <Button
-            onClick={() => window.open('https://heriwill.com/contact', '_blank')}
-            className="bg-primary-500 hover:bg-primary-600 h-12 px-6 text-base font-medium shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105"
-          >
-            <Mail className="h-5 w-5 mr-2" />
-            Contact Support
-          </Button>
+        <CardContent className="pt-2 space-y-4">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Button
+              onClick={() => window.open('https://heriwill.com/contact', '_blank')}
+              className="bg-primary-500 hover:bg-primary-600 h-12 px-6 text-base font-medium shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105"
+            >
+              <Mail className="h-5 w-5 mr-2" />
+              Contact Support
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => window.open('https://heriwill.com', '_blank')}
+              className="h-12 px-6 text-base font-medium border-gray-700 hover:border-primary-500/50"
+            >
+              Visit Website
+            </Button>
+          </div>
+          <p className="text-sm text-gray-500">
+            Response time: Within 24 hours for Legacy users, within 12 hours for Pro users
+          </p>
         </CardContent>
       </Card>
     </div>

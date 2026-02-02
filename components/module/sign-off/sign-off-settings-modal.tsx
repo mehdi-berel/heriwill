@@ -104,7 +104,7 @@ export function SignOffSettingsModal({
         .eq('user_id', userId)
         .eq('is_active', true)
 
-      setHeirs(data || [])
+      setHeirs((data || []) as Heir[])
     } catch (error) {
       console.error('Error loading heirs:', error)
     }

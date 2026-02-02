@@ -73,7 +73,7 @@ export function VaultAssign({
           console.error('Error loading notaries:', error)
           setNotaries([])
         } else {
-          setNotaries(data || [])
+          setNotaries((data || []) as Notary[])
         }
       } else {
         // Load heirs from Supabase
@@ -88,15 +88,17 @@ export function VaultAssign({
           setHeirs([])
         } else {
           // Map database fields to component interface
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const mappedHeirs: Heir[] = (data || []).map((heir: any) => ({
-            id: heir.id,
-            full_name: heir.full_name_encrypted || 'Unknown',
-            email: heir.email_encrypted || '',
-            relationship: heir.relationship || 'Unknown',
-            invitation_status: heir.invitation_status || 'pending',
-            access_level: heir.access_level || 'view'
-          }))
+          const mappedHeirs: Heir[] = (data || []).map((heir: unknown) => {
+            const h = heir as { id: string; full_name_encrypted: string | null; email_encrypted: string | null; relationship: string | null; invitation_status?: string | null; access_level?: string | null }
+            return {
+              id: h.id,
+              full_name: h.full_name_encrypted || 'Unknown',
+              email: h.email_encrypted || '',
+              relationship: h.relationship || 'Unknown',
+              invitation_status: h.invitation_status || 'pending',
+              access_level: (h.access_level as 'full' | 'partial' | 'view') || 'view'
+            }
+          })
           setHeirs(mappedHeirs)
         }
       }

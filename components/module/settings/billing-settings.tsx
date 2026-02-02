@@ -17,10 +17,8 @@ export function BillingSettings({
   subscriptionTier: propTier,
 }: BillingSettingsProps) {
   const { entitlements, loading: contextLoading, refreshEntitlements } = useRevenueCat()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [offerings, setOfferings] = useState<any>(null)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [customerInfo, setCustomerInfo] = useState<any>(null)
+  const [offerings, setOfferings] = useState<unknown>(null)
+  const [customerInfo, setCustomerInfo] = useState<unknown>(null)
   const [subscriptionTier, setSubscriptionTier] = useState(propTier || 'free')
   const [loading, setLoading] = useState(false)
   const [purchaseLoading, setPurchaseLoading] = useState<string | null>(null)
@@ -141,8 +139,8 @@ export function BillingSettings({
   }
 
   const handleManageSubscription = () => {
-    if (customerInfo?.managementURL) {
-      window.open(customerInfo.managementURL, '_blank')
+    if ((customerInfo as { managementURL?: string })?.managementURL) {
+      window.open((customerInfo as { managementURL: string }).managementURL, '_blank')
     }
   }
 
@@ -175,7 +173,7 @@ export function BillingSettings({
       )}
 
       {/* Available Plans */}
-      {offerings?.current && subscriptionTier === 'free' && (
+      {(offerings as { current?: { availablePackages: unknown[] } })?.current && subscriptionTier === 'free' && (
         <Card className="border-gray-700">
           <CardHeader>
             <CardTitle>Available Plans</CardTitle>
@@ -212,7 +210,7 @@ export function BillingSettings({
             </div>
 
             <div className="grid gap-6 md:grid-cols-2">
-              {offerings.current.availablePackages
+              {(offerings as { current: { availablePackages: Array<Record<string, unknown>> } }).current.availablePackages
                 .filter((pkg: Record<string, unknown>) => {
                   return billingPeriod === 'monthly' 
                     ? isMonthlyPackage(pkg.identifier as string)
@@ -344,7 +342,7 @@ export function BillingSettings({
                   variant="outline" 
                   size="sm"
                   onClick={handleManageSubscription}
-                  disabled={!customerInfo?.managementURL}
+                  disabled={!(customerInfo as { managementURL?: string })?.managementURL}
                 >
                   <ExternalLink className="h-4 w-4 mr-2" />
                   Manage
@@ -384,7 +382,7 @@ export function BillingSettings({
                     variant="outline" 
                     size="sm"
                     onClick={handleManageSubscription}
-                    disabled={!customerInfo?.managementURL}
+                    disabled={!(customerInfo as { managementURL?: string })?.managementURL}
                   >
                     <ExternalLink className="h-4 w-4 mr-2" />
                     Open Customer Portal

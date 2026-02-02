@@ -67,11 +67,12 @@ async function checkInactivityTriggers() {
     const now = new Date()
 
     for (const user of users) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const settings = user.global_trigger_settings as any
-      const inactivityDays = settings?.inactivity_days || 90 // Default 90 days
-      const warningDays = settings?.warning_days || 7 // Default 7 days warning
+      const settings = user.global_trigger_settings as Record<string, unknown> | null
+      const inactivityDays = (settings?.inactivity_days as number) || 90 // Default 90 days
+      const warningDays = (settings?.warning_days as number) || 7 // Default 7 days warning
 
+      if (!user.last_activity) continue // Skip if no last activity
+      
       const lastActivity = new Date(user.last_activity)
       const diffTime = Math.abs(now.getTime() - lastActivity.getTime())
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
@@ -130,7 +131,7 @@ async function checkVerificationTimeouts() {
     const { data, error } = await supabase
       .from('inheritance_triggers')
       .select('*')
-      .eq('status', 'pending_verification')
+      .eq('status', 'pending') // Using 'pending' as the valid status
 
     if (error) {
       logger.error('Error fetching pending triggers', error)

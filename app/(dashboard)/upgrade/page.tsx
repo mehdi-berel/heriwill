@@ -10,7 +10,8 @@ import { Check, Crown, Loader2, Zap, Gift } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { getCheckoutUrl } from "@/lib/revenuecat-config"
 import { User } from "@supabase/supabase-js"
-import { toast } from "sonner"
+import { toast } from "@/lib/utils/toast"
+import { logger } from "@/lib/utils/logger"
 
 // Remove local Package interface if importing from library, or keep if library not available
 // interface Package {
@@ -64,7 +65,7 @@ function UpgradePageContent() {
       window.location.href = paywallUrl
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to redirect to payment page.'
-      console.error('Redirect error:', error)
+      logger.error('Redirect error', error, { plan })
       toast.error(errorMessage)
       setPurchasing(null)
     }
@@ -104,25 +105,20 @@ function UpgradePageContent() {
     '1 vault',
     '1 heir',
     'Store up to 1GB',
-    'Basic security',
-    'Email support',
-    'Essential features',
   ]
 
   const legacyFeatures = [
     'Unlimited vaults',
     'Unlimited heirs',
     'Store up to 10GB',
-    'Advanced security',
-    'Priority email & chat support',
   ]
 
   const proFeatures = [
     'Everything in Legacy',
     'Store up to 100GB',
+    'Pro vault & Notary',
     'Asset management',
-    'Legal document storage',
-    'Notary services',
+    'Legal document templates'
   ]
 
   return (
@@ -139,11 +135,7 @@ function UpgradePageContent() {
             <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
               Simple, Transparent Pricing
             </h1>
-            {currentPlan !== 'free' && (
-              <Badge className="bg-gradient-to-r from-primary-600 to-indigo-600 text-white text-sm px-4 py-1.5">
-                Current Plan: {currentPlan === 'premium' ? 'Legacy' : currentPlan.charAt(0).toUpperCase() + currentPlan.slice(1)}
-              </Badge>
-            )}
+            <p className="text-gray-400 text-lg mb-4">Choose the perfect plan for your digital legacy needs</p>
           </div>
 
           {/* Billing Period Toggle */}
@@ -182,6 +174,14 @@ function UpgradePageContent() {
               ? 'border-primary-500 bg-gradient-to-br from-gray-900/80 to-primary-900/20 shadow-xl shadow-primary-500/20'
               : 'border-gray-800 bg-gray-900/60'
           } p-6 md:p-8 relative transform transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl flex-shrink-0 w-[85vw] md:w-auto snap-center`}>
+            {currentPlan === 'free' && (
+              <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 z-10">
+                <Badge className="bg-gradient-to-r from-primary-500 to-indigo-500 text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-lg border border-primary-400/50 flex items-center gap-1.5">
+                  <Check size={14} className="fill-current" />
+                  Active Plan
+                </Badge>
+              </div>
+            )}
             {/* Plan Icon */}
             <div className="mb-4">
               <div className="inline-flex p-2 rounded-lg bg-gray-800/50 border border-gray-700">
@@ -217,18 +217,34 @@ function UpgradePageContent() {
 
             {/* CTA Button */}
             {currentPlan === 'free' ? (
-              <div className="w-full py-3 px-4 rounded-xl font-bold text-base bg-gray-800 text-white border-2 border-gray-700 flex items-center justify-center">
-                Current Plan
+              <div className="w-full py-3 px-4 rounded-xl font-bold text-base bg-primary-600/20 text-primary-300 border-2 border-primary-500/50 flex items-center justify-center gap-2">
+                <Check size={18} className="text-primary-400" />
+                Active
               </div>
             ) : (
-              <Button variant="outline" className="w-full py-3 rounded-xl text-base font-bold bg-gray-800 hover:bg-gray-700 text-white border-2 border-gray-700 hover:border-gray-600" disabled>
-                Current Plan
+              <Button variant="outline" className="w-full py-3 rounded-xl text-base font-bold bg-gray-800 hover:bg-gray-700 text-white border-2 border-gray-700 hover:border-gray-600">
+                Get Started
               </Button>
             )}
           </Card>
 
           {/* Legacy Plan (Premium) */}
-          <Card className={`rounded-xl md:rounded-2xl border-2 border-primary-500 bg-gradient-to-br from-gray-900/80 to-primary-900/20 shadow-xl shadow-primary-500/20 p-6 md:p-8 relative transform transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl md:scale-105 flex-shrink-0 w-[85vw] md:w-auto snap-center`}>
+          <Card 
+            className={`rounded-xl md:rounded-2xl border-2 ${
+              currentPlan === 'premium'
+                ? 'border-primary-500 bg-gradient-to-br from-gray-900/80 to-primary-900/20 shadow-xl shadow-primary-500/20'
+                : 'border-primary-500 bg-gray-900/60 shadow-xl shadow-primary-500/20'
+            } p-6 md:p-8 relative transform transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl md:scale-105 flex-shrink-0 w-[85vw] md:w-auto snap-center`}
+            style={{ borderColor: 'rgb(168 85 247)' }}
+          >
+            {currentPlan === 'premium' && (
+              <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 z-10">
+                <Badge className="bg-gradient-to-r from-primary-500 to-indigo-500 text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-lg border border-primary-400/50 flex items-center gap-1.5">
+                  <Check size={14} className="fill-current" />
+                  Active Plan
+                </Badge>
+              </div>
+            )}
             {/* Plan Icon */}
             <div className="mb-4">
               <div className="inline-flex p-2 rounded-lg bg-gradient-to-br from-primary-600/20 to-indigo-600/20 border border-primary-500/30">
@@ -275,23 +291,36 @@ function UpgradePageContent() {
             </div>
 
             {/* CTA Button */}
-            <Button
-              onClick={() => handlePurchase('premium')}
-              disabled={purchasing !== null || currentPlan === 'premium' || currentPlan === 'pro'}
-              className="w-full"
-              size="lg"
-            >
-              {purchasing === 'premium' ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Processing...
-                </>
-              ) : currentPlan === 'premium' || currentPlan === 'pro' ? (
-                'Current Plan'
-              ) : (
-                'Subscribe to Legacy'
-              )}
-            </Button>
+            {currentPlan === 'premium' ? (
+              <div className="w-full py-3 px-4 rounded-xl font-bold text-base bg-primary-600/20 text-primary-300 border-2 border-primary-500/50 flex items-center justify-center gap-2">
+                <Check size={18} className="text-primary-400" />
+                Active
+              </div>
+            ) : currentPlan === 'pro' ? (
+              <Button
+                variant="outline"
+                className="w-full py-3 rounded-xl text-base font-bold bg-gray-800 hover:bg-gray-700 text-white border-2 border-gray-700 hover:border-gray-600"
+                disabled
+              >
+                Downgrade
+              </Button>
+            ) : (
+              <Button
+                onClick={() => handlePurchase('premium')}
+                disabled={purchasing !== null}
+                className="w-full"
+                size="lg"
+              >
+                {purchasing === 'premium' ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  'Subscribe to Legacy'
+                )}
+              </Button>
+            )}
           </Card>
 
           {/* Pro Plan */}
@@ -300,13 +329,6 @@ function UpgradePageContent() {
               ? 'border-amber-500 bg-gradient-to-br from-gray-900/80 to-amber-900/20 shadow-xl shadow-amber-500/20'
               : 'border-gray-800 bg-gray-900/60'
           } p-6 md:p-8 relative transform transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl flex-shrink-0 w-[85vw] md:w-auto snap-center`}>
-            {currentPlan === 'pro' && (
-              <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-amber-600 to-orange-600 text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-lg flex items-center gap-1">
-                <Crown size={12} className="fill-current" />
-                Enterprise
-              </div>
-            )}
-            
             {/* Plan Icon */}
             <div className="mb-4">
               <div className={`inline-flex p-2 rounded-lg ${
@@ -361,24 +383,28 @@ function UpgradePageContent() {
             </div>
 
             {/* CTA Button */}
-            <Button
-              onClick={() => handlePurchase('pro')}
-              disabled={purchasing !== null || currentPlan === 'pro'}
-              className="w-full"
-              size="lg"
-              variant={currentPlan === 'pro' ? 'secondary' : 'default'}
-            >
-              {purchasing === 'pro' ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Processing...
-                </>
-              ) : currentPlan === 'pro' ? (
-                'Current Plan'
-              ) : (
-                'Upgrade to Pro'
-              )}
-            </Button>
+            {currentPlan === 'pro' ? (
+              <div className="w-full py-3 px-4 rounded-xl font-bold text-base bg-amber-600/20 text-amber-300 border-2 border-amber-500/50 flex items-center justify-center gap-2">
+                <Crown size={18} className="text-amber-400 fill-current" />
+                Active
+              </div>
+            ) : (
+              <Button
+                onClick={() => handlePurchase('pro')}
+                disabled={purchasing !== null}
+                className="w-full"
+                size="lg"
+              >
+                {purchasing === 'pro' ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  'Upgrade to Pro'
+                )}
+              </Button>
+            )}
           </Card>
         </div>
     </div>

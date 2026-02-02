@@ -42,8 +42,7 @@ export const vaultActions = {
       }
 
       // Check storage limit if vault has initial data
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const vaultDataObj = (vaultData as any).vault_data as { size?: number } | null
+      const vaultDataObj = (vaultData as { vault_data?: { size?: number } | null }).vault_data
       const initialSize = vaultDataObj?.size || 0
       if (initialSize > 0) {
         const storageLimitCheck = await checkStorageLimit(vaultData.user_id, initialSize)
@@ -53,8 +52,8 @@ export const vaultActions = {
       }
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await (supabase.from('vaults') as any)
+    const { data, error } = await supabase
+      .from('vaults')
       .insert(vaultData)
       .select()
       .single()
@@ -65,8 +64,8 @@ export const vaultActions = {
 
   // Update Vault
   updateVault: async (vaultId: string, updateData: VaultUpdate) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await (supabase.from('vaults') as any)
+    const { data, error } = await supabase
+      .from('vaults')
       .update(updateData)
       .eq('id', vaultId)
       .select()
@@ -112,8 +111,8 @@ export const vaultActions = {
 
   // Update Last Accessed
   updateLastAccessed: async (vaultId: string) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data } = await (supabase.from('vaults') as any)
+    const { data } = await supabase
+      .from('vaults')
       .update({ last_accessed: new Date().toISOString() })
       .eq('id', vaultId)
       .select()
@@ -122,22 +121,17 @@ export const vaultActions = {
     return data
   },
 
-  // Toggle Favorite
+  // Toggle Favorite - Note: is_favorite column doesn't exist in vaults table
   toggleFavorite: async (vaultId: string, isFavorite: boolean) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data } = await (supabase.from('vaults') as any)
-      .update({ is_favorite: isFavorite })
-      .eq('id', vaultId)
-      .select()
-      .single()
-
-    return data
+    // This function is deprecated as is_favorite doesn't exist in the vaults schema
+    console.warn('toggleFavorite is deprecated - is_favorite column does not exist')
+    return { id: vaultId, is_favorite: isFavorite }
   },
 
   // Lock/Unlock Vault
   toggleLock: async (vaultId: string, isLocked: boolean) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data } = await (supabase.from('vaults') as any)
+    const { data } = await supabase
+      .from('vaults')
       .update({ is_locked: isLocked })
       .eq('id', vaultId)
       .select()
@@ -148,8 +142,8 @@ export const vaultActions = {
 
   // Share/Unshare Vault
   toggleShare: async (vaultId: string, isShared: boolean) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data } = await (supabase.from('vaults') as any)
+    const { data } = await supabase
+      .from('vaults')
       .update({ is_shared: isShared })
       .eq('id', vaultId)
       .select()
@@ -164,9 +158,7 @@ export const vaultActions = {
     
     const stats = {
       totalVaults: vaults.length,
-      encryptedVaults: vaults.filter((v: VaultRow) => v.is_encrypted).length,
       sharedVaults: vaults.filter((v: VaultRow) => v.is_shared).length,
-      favoriteVaults: vaults.filter((v: VaultRow) => v.is_favorite).length,
       recentlyAccessed: vaults.filter((v: VaultRow) => {
         return v.last_accessed && 
           new Date(v.last_accessed) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
@@ -182,8 +174,7 @@ export const vaultActions = {
     
     const filteredVaults = vaults.filter((vault: VaultRow) =>
       vault.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      vault.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      vault.tags?.some((tag: string) => tag.toLowerCase().includes(searchTerm.toLowerCase()))
+      vault.description?.toLowerCase().includes(searchTerm.toLowerCase())
     )
 
     return filteredVaults
@@ -196,18 +187,7 @@ export const vaultActions = {
     return vaults.filter((vault: VaultRow) => vault.category === category)
   },
 
-  // Filter by Status
-  getFavoriteVaults: async (userId: string) => {
-    const vaults = await vaultActions.getAllVaults(userId)
-    
-    return vaults.filter((vault: VaultRow) => vault.is_favorite)
-  },
-
-  getEncryptedVaults: async (userId: string) => {
-    const vaults = await vaultActions.getAllVaults(userId)
-    
-    return vaults.filter((vault: VaultRow) => vault.is_encrypted)
-  },
+  // Filter by Status - removed getFavoriteVaults and getEncryptedVaults as these properties don't exist on vaults table
 
   getSharedVaults: async (userId: string) => {
     const vaults = await vaultActions.getAllVaults(userId)
@@ -225,18 +205,18 @@ export const vaultItemActions = {
     const randomId = Math.random().toString(36).substring(2, 15)
     const storagePath = itemData.storage_path || `${itemData.user_id}/${itemData.vault_id}/${timestamp}-${randomId}`
     
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await (supabase.from('vault_items') as any)
+    const { data, error } = await supabase
+      .from('vault_items')
       .insert({
         user_id: itemData.user_id,
         vault_id: itemData.vault_id,
         title_encrypted: itemData.title_encrypted || itemData.title || 'Untitled',
-        item_type: (itemData.item_type || itemData.type || 'other') as string,
+        item_type: (itemData.item_type || itemData.type || 'other') as Database["public"]["Enums"]["vault_item_type"],
         file_size: itemData.file_size || itemData.size || null,
         storage_path: storagePath,
         storage_bucket: itemData.storage_bucket || 'vault-items',
         tags: itemData.tags || [],
-        metadata: itemData.metadata || {},
+        metadata: (itemData.metadata || {}) as Database['public']['Tables']['vault_items']['Insert']['metadata'],
         is_favorite: itemData.is_favorite || false,
         password_strength: typeof itemData.password_strength === 'string' ? parseInt(itemData.password_strength) : itemData.password_strength || null,
         password_last_changed: itemData.password_last_changed || null,
@@ -261,8 +241,8 @@ export const vaultItemActions = {
     if (updateData.password_last_changed) updatePayload.password_last_changed = updateData.password_last_changed
     if (updateData.requires_password_change !== undefined) updatePayload.requires_password_change = updateData.requires_password_change
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await (supabase.from('vault_items') as any)
+    const { data, error } = await supabase
+      .from('vault_items')
       .update(updatePayload)
       .eq('id', itemId)
       .select()

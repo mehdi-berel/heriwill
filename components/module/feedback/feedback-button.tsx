@@ -66,14 +66,15 @@ export function FeedbackButton() {
   return (
     <div className="relative" ref={formRef}>
       <Button 
-        variant="outline" 
+        variant="ghost" 
         size="sm" 
-        className="bg-background-elevated"
+        className="h-9 w-9 md:w-auto p-0 md:px-3 flex items-center justify-center md:justify-start gap-0 md:gap-2 text-text-secondary hover:text-text-primary"
         onMouseEnter={() => setIsExpanded(true)}
         onClick={() => setIsExpanded(!isExpanded)}
+        title="Feedback"
       >
         <MessageSquare className="h-4 w-4" />
-        <span>Feedback</span>
+        <span className="hidden md:inline">Feedback</span>
       </Button>
 
       {isExpanded && (

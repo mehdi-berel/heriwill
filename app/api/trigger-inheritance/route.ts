@@ -26,6 +26,7 @@ type UserData = {
 type VaultData = {
   id: string
   name: string
+  category?: string
 }
 
 type HeirData = {
@@ -33,10 +34,6 @@ type HeirData = {
   email: string
   full_name: string
   vault_id: string
-}
-
-type PlanData = {
-  id: string
 }
 
 /**
@@ -109,12 +106,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 2. Get all user's vaults
+    // 2. Get all vaults for the user
     const { data: vaults, error: vaultsError } = await supabase
       .from('vaults')
-      .select('id, name')
-      .eq('user_id', userId)
-      .eq('is_active', true) as { data: VaultData[] | null; error: unknown }
+      .select('id, name, category')
+      .eq('user_id', userId) as { data: VaultData[] | null; error: unknown }
 
     if (vaultsError) {
       logger.error('Error fetching vaults', vaultsError)
@@ -133,48 +129,11 @@ export async function POST(request: NextRequest) {
       logger.error('Error fetching heirs', heirsError)
     }
 
-    // 4. Get or create a default inheritance plan for the user
-    let plan: PlanData | null = null
-    const { data: planResult, error: planError } = await supabase
-      .from('inheritance_plans')
-      .select('id')
-      .eq('user_id', userId)
-      .eq('is_active', true)
-      .limit(1)
-      .single() as { data: PlanData | null; error: unknown }
-
-    // If no plan exists, create a default one
-    if (planError || !planResult) {
-      const planResult = await supabase
-        .from('inheritance_plans')
-        .insert({
-          user_id: userId,
-          plan_name: 'Manual Trigger Plan',
-          plan_type: 'manual',
-          is_active: true,
-          is_triggered: true,
-          triggered_at: new Date().toISOString(),
-        } as never)
-        .select('id')
-        .single()
-      const inheritancePlan = planResult.data
-      const createPlanError = planResult.error
-
-      if (createPlanError) {
-        logger.error('Error creating inheritance plan', createPlanError)
-        return NextResponse.json({ error: 'Failed to create inheritance plan' }, { status: 500 })
-      }
-      plan = inheritancePlan as PlanData | null
-    } else {
-      plan = planResult
-    }
-
     // Create inheritance trigger record
     const triggerResult = await supabase
       .from('inheritance_triggers')
       .insert({
         user_id: userId,
-        inheritance_plan_id: plan!.id,
         trigger_metadata: {
           type: 'manual',
           reason: reason || 'User manually triggered inheritance plan',
@@ -194,9 +153,44 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to create trigger' }, { status: 500 })
     }
 
-    // 5. Vaults remain accessible - no status update needed
-    // Access is controlled via heir_vault_access table
-    logger.info(`${vaultIds.length} vaults will be accessible to heirs`)
+    // 5. Create shared_vaults entries for heirs with user accounts
+    // This grants them access to deceased user's vaults
+    const { data: activeHeirs } = await supabase
+      .from('heirs')
+      .select('id, heir_user_id, user_id')
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .not('heir_user_id', 'is', null) as { data: Array<{ id: string; heir_user_id: string; user_id: string }> | null; error: unknown }
+
+    if (activeHeirs && activeHeirs.length > 0 && vaults && vaults.length > 0) {
+      const sharedVaultEntries = []
+      
+      for (const heir of activeHeirs) {
+        for (const vault of vaults) {
+          sharedVaultEntries.push({
+            vault_id: vault.id,
+            owner_id: userId,
+            shared_with_user_id: heir.heir_user_id,
+            is_active: true,
+            accepted: true, // Auto-accept for inheritance
+            accepted_at: new Date().toISOString(),
+            shared_at: new Date().toISOString()
+          })
+        }
+      }
+
+      if (sharedVaultEntries.length > 0) {
+        const { error: sharedVaultsError } = await supabase
+          .from('shared_vaults')
+          .insert(sharedVaultEntries as never)
+
+        if (sharedVaultsError) {
+          logger.error('Error creating shared vaults for heirs', sharedVaultsError)
+        } else {
+          logger.info(`Created ${sharedVaultEntries.length} shared vault entries for ${activeHeirs.length} heirs`)
+        }
+      }
+    }
 
     // 6. Send notification emails to heirs
     if (heirs && heirs.length > 0) {

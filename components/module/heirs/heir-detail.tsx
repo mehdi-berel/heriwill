@@ -20,7 +20,6 @@ interface Heir {
   relationship: string
   invitation_status: 'pending' | 'accepted' | 'rejected' | 'expired'
   invitation_code?: string
-  access_level: 'full' | 'partial' | 'view'
   created_at: string
   accepted_at?: string
   invitation_expires_at?: string

@@ -1,7 +1,7 @@
 import { supabase } from '../../lib/supabase'
-import type { Database } from '../../types/database'
+import type { Database } from '../../lib/database.types'
 
-type DigitalAssetRow = Database['public']['Tables']['digital_assets']['Row']
+type AssetRow = Database['public']['Tables']['assets']['Row']
 
 interface DigitalAssetData {
   user_id: string
@@ -24,19 +24,14 @@ interface DigitalAssetUpdateData {
 export const digitalAssetActions = {
   // Create Digital Asset
   createDigitalAsset: async (assetData: DigitalAssetData) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await (supabase.from('digital_assets') as any)
+    const { data, error } = await supabase
+      .from('assets')
       .insert({
         user_id: assetData.user_id,
         name: assetData.name,
         type: assetData.type || 'other',
-        url: assetData.url,
-        username: assetData.username,
-        encrypted_password: assetData.encryptedPassword,
         notes: assetData.notes,
-        beneficiary_id: assetData.beneficiaryId || null,
-        instructions: assetData.instructions,
-        status: assetData.status || 'active',
+        ownership_type: 'individual',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       })
@@ -49,8 +44,8 @@ export const digitalAssetActions = {
 
   // Update Digital Asset
   updateDigitalAsset: async (assetId: string, updateData: DigitalAssetUpdateData) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await (supabase.from('digital_assets') as any)
+    const { data, error } = await supabase
+      .from('assets')
       .update({
         ...updateData,
         updated_at: new Date().toISOString()
@@ -66,7 +61,7 @@ export const digitalAssetActions = {
   // Delete Digital Asset
   deleteDigitalAsset: async (assetId: string) => {
     const { error } = await supabase
-      .from('digital_assets')
+      .from('assets')
       .delete()
       .eq('id', assetId)
 
@@ -76,7 +71,7 @@ export const digitalAssetActions = {
   // Get Digital Asset by ID
   getDigitalAssetById: async (assetId: string) => {
     const { data, error } = await supabase
-      .from('digital_assets')
+      .from('assets')
       .select('*')
       .eq('id', assetId)
       .single()
@@ -86,9 +81,9 @@ export const digitalAssetActions = {
   },
 
   // Get All Digital Assets for User
-  getAllDigitalAssets: async (userId: string): Promise<DigitalAssetRow[]> => {
+  getAllDigitalAssets: async (userId: string): Promise<AssetRow[]> => {
     const { data, error } = await supabase
-      .from('digital_assets')
+      .from('assets')
       .select('*')
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
@@ -98,11 +93,10 @@ export const digitalAssetActions = {
   },
 
   // Update Asset Status
-  updateAssetStatus: async (assetId: string, status: string) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data } = await (supabase.from('digital_assets') as any)
+  updateAssetStatus: async (assetId: string) => {
+    const { data } = await supabase
+      .from('assets')
       .update({ 
-        status,
         updated_at: new Date().toISOString()
       })
       .eq('id', assetId)
@@ -113,11 +107,10 @@ export const digitalAssetActions = {
   },
 
   // Assign Beneficiary
-  assignBeneficiary: async (assetId: string, beneficiaryId: string) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data } = await (supabase.from('digital_assets') as any)
+  assignBeneficiary: async (assetId: string) => {
+    const { data } = await supabase
+      .from('assets')
       .update({ 
-        beneficiary_id: beneficiaryId,
         updated_at: new Date().toISOString()
       })
       .eq('id', assetId)
@@ -128,11 +121,10 @@ export const digitalAssetActions = {
   },
 
   // Update Instructions
-  updateInstructions: async (assetId: string, instructions: string) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data } = await (supabase.from('digital_assets') as any)
+  updateInstructions: async (assetId: string) => {
+    const { data } = await supabase
+      .from('assets')
       .update({ 
-        instructions,
         updated_at: new Date().toISOString()
       })
       .eq('id', assetId)
@@ -148,22 +140,17 @@ export const digitalAssetActions = {
     
     const stats = {
       totalAssets: assets.length,
-      activeAssets: assets.filter((a: DigitalAssetRow) => a.status === 'active').length,
-      inactiveAssets: assets.filter((a: DigitalAssetRow) => a.status === 'inactive').length,
-      archivedAssets: assets.filter((a: DigitalAssetRow) => a.status === 'archived').length,
-      socialMediaAssets: assets.filter((a: DigitalAssetRow) => a.type === 'social_media').length,
-      emailAssets: assets.filter((a: DigitalAssetRow) => a.type === 'email').length,
-      cloudStorageAssets: assets.filter((a: DigitalAssetRow) => a.type === 'cloud_storage').length,
-      cryptoWalletAssets: assets.filter((a: DigitalAssetRow) => a.type === 'crypto_wallet').length,
-      domainAssets: assets.filter((a: DigitalAssetRow) => a.type === 'domain').length,
-      bankAccountAssets: assets.filter((a: DigitalAssetRow) => a.type === 'bank_account').length,
-      subscriptionAssets: assets.filter((a: DigitalAssetRow) => a.type === 'subscription').length,
-      otherAssets: assets.filter((a: DigitalAssetRow) => a.type === 'other').length,
-      withBeneficiary: assets.filter((a: DigitalAssetRow) => a.beneficiary_id).length,
-      withUsername: assets.filter((a: DigitalAssetRow) => a.username).length,
-      withPassword: assets.filter((a: DigitalAssetRow) => a.encrypted_password).length,
-      withUrl: assets.filter((a: DigitalAssetRow) => a.url).length,
-      withNotes: assets.filter((a: DigitalAssetRow) => a.notes).length
+      realEstateAssets: assets.filter((a: AssetRow) => a.type === 'real_estate').length,
+      vehicleAssets: assets.filter((a: AssetRow) => a.type === 'vehicle').length,
+      bankAccountAssets: assets.filter((a: AssetRow) => a.type === 'bank_account').length,
+      investmentAssets: assets.filter((a: AssetRow) => a.type === 'investment').length,
+      insuranceAssets: assets.filter((a: AssetRow) => a.type === 'insurance').length,
+      personalPropertyAssets: assets.filter((a: AssetRow) => a.type === 'personal_property').length,
+      businessAssets: assets.filter((a: AssetRow) => a.type === 'business').length,
+      otherAssets: assets.filter((a: AssetRow) => a.type === 'other').length,
+      withHeirs: assets.filter((a: AssetRow) => a.heir_ids && a.heir_ids.length > 0).length,
+      withNotes: assets.filter((a: AssetRow) => a.notes).length,
+      withDocuments: assets.filter((a: AssetRow) => a.documents && a.documents.length > 0).length
     }
 
     return stats
@@ -173,10 +160,10 @@ export const digitalAssetActions = {
   searchDigitalAssets: async (userId: string, searchTerm: string) => {
     const assets = await digitalAssetActions.getAllDigitalAssets(userId)
     
-    const filteredAssets = assets.filter((asset: DigitalAssetRow) =>
+    const filteredAssets = assets.filter((asset: AssetRow) =>
       asset.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      asset.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      asset.url?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      asset.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      asset.location?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       asset.notes?.toLowerCase().includes(searchTerm.toLowerCase())
     )
 
@@ -187,27 +174,27 @@ export const digitalAssetActions = {
   getDigitalAssetsByType: async (userId: string, type: string) => {
     const assets = await digitalAssetActions.getAllDigitalAssets(userId)
     
-    return assets.filter((asset: DigitalAssetRow) => asset.type === type)
+    return assets.filter((asset: AssetRow) => asset.type === type)
   },
 
-  // Filter by Status
-  getDigitalAssetsByStatus: async (userId: string, status: string) => {
+  // Filter by Ownership Type
+  getDigitalAssetsByOwnership: async (userId: string, ownershipType: string) => {
     const assets = await digitalAssetActions.getAllDigitalAssets(userId)
     
-    return assets.filter((asset: DigitalAssetRow) => asset.status === status)
+    return assets.filter((asset: AssetRow) => asset.ownership_type === ownershipType)
   },
 
-  // Filter by Beneficiary
-  getDigitalAssetsByBeneficiary: async (userId: string, beneficiaryId: string) => {
+  // Filter by Heir
+  getDigitalAssetsByHeir: async (userId: string, heirId: string) => {
     const assets = await digitalAssetActions.getAllDigitalAssets(userId)
     
-    return assets.filter((asset: DigitalAssetRow) => asset.beneficiary_id === beneficiaryId)
+    return assets.filter((asset: AssetRow) => asset.heir_ids?.includes(heirId))
   },
 
-  // Get Assets Without Beneficiary
-  getAssetsWithoutBeneficiary: async (userId: string) => {
+  // Get Assets Without Heirs
+  getAssetsWithoutHeirs: async (userId: string) => {
     const assets = await digitalAssetActions.getAllDigitalAssets(userId)
     
-    return assets.filter((asset: DigitalAssetRow) => !asset.beneficiary_id)
+    return assets.filter((asset: AssetRow) => !asset.heir_ids || asset.heir_ids.length === 0)
   }
 }

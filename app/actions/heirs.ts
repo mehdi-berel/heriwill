@@ -11,7 +11,6 @@ interface HeirData {
   phone?: string | null
   relationship?: string | null
   heir_type?: string
-  access_level?: string
   invitation_expires_at?: string | null
 }
 
@@ -19,8 +18,8 @@ interface HeirData {
 export const heirActions = {
   // Create Heir
   createHeir: async (heirData: HeirData) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await (supabase.from('heirs') as any)
+    const { data, error } = await supabase
+      .from('heirs')
       .insert({
         user_id: heirData.user_id,
         full_name_encrypted: heirData.full_name,
@@ -28,7 +27,6 @@ export const heirActions = {
         phone_encrypted: heirData.phone || null,
         relationship: heirData.relationship || null,
         heir_type: heirData.heir_type || 'family',
-        access_level: heirData.access_level || 'view',
         invitation_status: 'pending',
         invitation_code: generateInvitationCode(),
         invited_at: new Date().toISOString(),
@@ -46,8 +44,8 @@ export const heirActions = {
 
   // Update Heir
   updateHeir: async (heirId: string, updateData: HeirUpdate) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await (supabase.from('heirs') as any)
+    const { data, error } = await supabase
+      .from('heirs')
       .update(updateData)
       .eq('id', heirId)
       .select()
@@ -93,16 +91,15 @@ export const heirActions = {
 
   // Invitation Management
   resendInvitation: async (heirId: string) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const heir = await heirActions.getHeirById(heirId) as any
+    const heir = await heirActions.getHeirById(heirId)
     if (!heir) throw new Error('Heir not found')
 
     // TODO: Implement email sending service
     // await sendInvitationEmail(heir.email_encrypted, heir.invitation_code)
     
     // Update invitation status
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data } = await (supabase.from('heirs') as any)
+    const { data } = await supabase
+      .from('heirs')
       .update({ invitation_status: 'pending' })
       .eq('id', heirId)
       .select()
@@ -113,8 +110,8 @@ export const heirActions = {
 
   // Revoke Access
   revokeAccess: async (heirId: string) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data } = await (supabase.from('heirs') as any)
+    const { data } = await supabase
+      .from('heirs')
       .update({ invitation_status: 'rejected' })
       .eq('id', heirId)
       .select()
@@ -125,8 +122,8 @@ export const heirActions = {
 
   // Update Verification Status
   updateVerificationStatus: async (heirId: string, status: string) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data } = await (supabase.from('heirs') as any)
+    const { data } = await supabase
+      .from('heirs')
       .update({ notification_status: status }) // mapped verification_status to notification_status or similar if needed, check DB
       .eq('id', heirId)
       .select()
@@ -148,10 +145,10 @@ export const heirActions = {
         return h.invitation_expires_at && new Date(h.invitation_expires_at) < new Date()
       }).length,
       verifiedHeirs: heirs.filter((h: HeirRow) => h.notification_status === 'verified').length,
-      fullAccessHeirs: heirs.filter((h: HeirRow) => h.access_level === 'full').length,
-      partialAccessHeirs: heirs.filter((h: HeirRow) => h.access_level === 'partial').length,
-      viewAccessHeirs: heirs.filter((h: HeirRow) => h.access_level === 'view').length,
-      recentlyActive: 0 // last_activity not in heir table
+      familyHeirs: heirs.filter((h: HeirRow) => h.heir_type === 'family').length,
+      friendHeirs: heirs.filter((h: HeirRow) => h.heir_type === 'friend').length,
+      professionalHeirs: heirs.filter((h: HeirRow) => h.heir_type === 'professional').length,
+      organizationHeirs: heirs.filter((h: HeirRow) => h.heir_type === 'organization').length
     }
 
     return stats
@@ -177,11 +174,11 @@ export const heirActions = {
     return heirs.filter((heir: HeirRow) => heir.invitation_status === status)
   },
 
-  // Filter by Access Level
-  getHeirsByAccessLevel: async (userId: string, accessLevel: string) => {
+  // Filter by Heir Type
+  getHeirsByType: async (userId: string, heirType: string) => {
     const heirs = await heirActions.getAllHeirs(userId)
     
-    return heirs.filter((heir: HeirRow) => heir.access_level === accessLevel)
+    return heirs.filter((heir: HeirRow) => heir.heir_type === heirType)
   }
 }
 

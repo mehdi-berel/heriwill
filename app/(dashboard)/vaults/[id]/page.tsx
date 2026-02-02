@@ -11,14 +11,13 @@ import { ArrowLeft, Edit, Trash2, Users, Scale } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { vaultItemActions } from "@/app/actions/vaults"
 import { User } from "@supabase/supabase-js"
-import { toast } from "sonner"
+import { toast } from "@/lib/utils/toast"
+import { logger } from "@/lib/utils/logger"
 
 interface VaultFormData {
   name: string
   description: string
   category: string
-  is_encrypted: boolean
-  tags: string[]
 }
 
 interface ItemData {
@@ -34,11 +33,8 @@ interface Vault {
   name: string
   description: string
   category: 'share' | 'delete' | 'pro'
-  is_encrypted: boolean
   is_locked: boolean
-  is_favorite: boolean
   is_shared: boolean
-  tags: string[]
   item_count: number
   created_at: string
   last_accessed?: string
@@ -53,6 +49,7 @@ interface Vault {
     triggerAfterDays: number
     instructions: string
   }
+  is_inherited?: boolean
 }
 
 type VaultItemType = 'password' | 'document' | 'video' | 'image' | 'note' | 'crypto' | 'bank' | 'other' | 'legal' | 'assets'
@@ -98,17 +95,57 @@ export default function VaultDetailPage() {
   const params = useParams()
   const vaultId = params.id as string
 
-  const loadVault = useCallback(async (id: string) => {
+  const loadVault = useCallback(async (id: string, userId: string) => {
     try {
-      const { data } = await supabase
+      // First try to load as owned vault
+      const { data: ownedVault } = await supabase
         .from('vaults')
         .select('*')
         .eq('id', id)
+        .eq('user_id', userId)
         .single()
 
-      setVault(data)
+      if (ownedVault) {
+        setVault({ ...ownedVault, item_count: 0 } as unknown as Vault)
+        return
+      }
+
+      // If not owned, check if it's shared with user
+      const { data: sharedVault } = await supabase
+        .from('shared_vaults')
+        .select(`
+          owner_id,
+          vaults (*)
+        `)
+        .eq('vault_id', id)
+        .eq('shared_with_user_id', userId)
+        .eq('is_active', true)
+        .eq('accepted', true)
+        .single()
+
+      if (sharedVault) {
+        const typedSharedVault = sharedVault as {
+          owner_id: string
+          vaults: Record<string, unknown>
+        }
+        
+        if (typedSharedVault.vaults) {
+          // User has access via shared_vaults (inherited)
+          setVault({
+            ...typedSharedVault.vaults,
+            is_inherited: true
+          } as Vault)
+          return
+        }
+      }
+
+      // No access
+      logger.error('No access to vault', null, { vaultId: id, userId })
+      toast.error('You do not have access to this vault')
+      router.push("/vaults")
     } catch (error) {
-      console.error('Error loading vault:', error)
+      logger.error('Error loading vault', error, { vaultId: id, userId })
+      toast.error('Failed to load vault', 'Please try again')
       router.push("/vaults")
     }
   }, [router])
@@ -121,17 +158,17 @@ export default function VaultDetailPage() {
         id: string
         title_encrypted?: string
         item_type: string
-        file_size?: number
+        file_size?: number | null
         created_at: string
         updated_at: string
-        tags?: string[]
-        metadata?: Record<string, unknown>
+        tags?: string[] | null
+        metadata?: Record<string, unknown> | null
       }
       
       // Valid item types
       const validTypes: VaultItemType[] = ['password', 'document', 'video', 'image', 'note', 'crypto', 'bank', 'other', 'legal', 'assets']
       
-      const mappedItems: VaultItem[] = items.map((item: VaultItemRaw) => {
+      const mappedItems: VaultItem[] = (items as VaultItemRaw[]).map((item: VaultItemRaw) => {
         // Ensure item_type is valid, default to 'other' if not
         const itemType = validTypes.includes(item.item_type as VaultItemType) 
           ? (item.item_type as VaultItemType)
@@ -153,7 +190,7 @@ export default function VaultDetailPage() {
       
       setVaultItems(mappedItems)
     } catch (error) {
-      console.error('Error loading vault items:', error)
+      logger.error('Error loading vault items', error, { vaultId })
       setVaultItems([])
     }
   }, [])
@@ -174,7 +211,7 @@ export default function VaultDetailPage() {
       
       // Load vault data
       await Promise.all([
-        loadVault(vaultId),
+        loadVault(vaultId, user.id),
         loadVaultItems(vaultId)
       ])
     }
@@ -187,7 +224,7 @@ export default function VaultDetailPage() {
       } else {
         setUser(session.user)
         if (vaultId) {
-          loadVault(vaultId)
+          loadVault(vaultId, session.user.id)
           loadVaultItems(vaultId)
         }
       }
@@ -204,15 +241,17 @@ export default function VaultDetailPage() {
 
   const handleEditSubmit = async (formData: VaultFormData) => {
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (supabase.from('vaults') as any)
+      await supabase
+        .from('vaults')
         .update(formData)
         .eq('id', vaultId)
       
-      await loadVault(vaultId)
+      if (user) {
+        await loadVault(vaultId, user.id)
+      }
       setShowEditModal(false)
     } catch (error) {
-      console.error('Error updating vault:', error)
+      logger.error('Error updating vault', error, { vaultId: vault?.id })
       toast.error('Failed to update vault. Please try again.')
     }
   }
@@ -225,7 +264,7 @@ export default function VaultDetailPage() {
       toast.success('Vault deleted successfully')
       router.push("/vaults")
     } catch (error) {
-      console.error('Error deleting vault:', error)
+      logger.error('Error deleting vault', error, { vaultId })
       toast.error('Failed to delete vault. Please try again.')
     }
   }
@@ -239,8 +278,8 @@ export default function VaultDetailPage() {
 
     try {
       // Update vault with assigned heir IDs
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (supabase.from('vaults') as any)
+      await supabase
+        .from('vaults')
         .update({ 
           access_control: {
             ...vault.access_control,
@@ -249,11 +288,13 @@ export default function VaultDetailPage() {
         })
         .eq('id', vaultId)
       
-      await loadVault(vaultId)
+      if (user) {
+        await loadVault(vaultId, user.id)
+      }
       toast.success('Heirs assigned successfully')
       setShowAssignModal(false)
     } catch (error) {
-      console.error('Error assigning heirs:', error)
+      logger.error('Error assigning heirs', error, { vaultId })
       toast.error('Failed to assign heirs. Please try again.')
     }
   }
@@ -270,7 +311,7 @@ export default function VaultDetailPage() {
         // Update existing item
         await vaultItemActions.updateVaultItem(itemData.id, {
           title_encrypted: itemData.title,
-          item_type: itemData.type,
+          item_type: itemData.type as 'password' | 'document' | 'video' | 'image' | 'note' | 'crypto' | 'bank' | 'other' | 'legal' | 'assets',
           tags: itemData.tags,
           metadata: JSON.parse(JSON.stringify(metadata))
         })
@@ -300,7 +341,8 @@ export default function VaultDetailPage() {
       // Reload items
       await loadVaultItems(vaultId)
     } catch (error) {
-      console.error('Error saving item:', error)
+      logger.error('Error saving item', error, { vaultId, itemId: itemData.id })
+      toast.error('Failed to save item', 'Please try again')
     }
   }
 
@@ -319,7 +361,7 @@ export default function VaultDetailPage() {
           .download(item.storage_path)
         
         if (error) {
-          console.error('Download error:', error)
+          logger.error('Download error', error, { itemId: item.id, storagePath: item.storage_path })
           toast.error('Failed to download file')
           return
         }
@@ -351,7 +393,7 @@ export default function VaultDetailPage() {
         toast.success('Item exported successfully')
       }
     } catch (error) {
-      console.error('Error downloading item:', error)
+      logger.error('Error downloading item', error, { itemId })
       toast.error('Failed to download item')
     }
   }
@@ -362,7 +404,7 @@ export default function VaultDetailPage() {
       await loadVaultItems(vaultId)
       toast.success('Item deleted successfully')
     } catch (error) {
-      console.error('Error deleting item:', error)
+      logger.error('Error deleting item', error, { itemId })
       toast.error('Failed to delete item')
     }
   }
@@ -438,9 +480,7 @@ export default function VaultDetailPage() {
             initialData={{
               name: vault.name,
               description: vault.description,
-              category: vault.category,
-              is_encrypted: vault.is_encrypted,
-              tags: vault.tags
+              category: vault.category
             }}
             onSubmit={handleEditSubmit}
             onCancel={() => setShowEditModal(false)}

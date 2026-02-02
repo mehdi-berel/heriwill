@@ -8,8 +8,9 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { ArrowLeft, Edit, Trash2 } from "lucide-react"
 import { supabase } from "@/lib/supabase"
-import { physicalAssetActions } from "@/app/actions/physical-assets"
-import { toast } from "sonner"
+import { digitalAssetActions as physicalAssetActions } from "@/app/actions/assets"
+import { toast } from "@/lib/utils/toast"
+import { logger } from "@/lib/utils/logger"
 
 interface AssetFormData {
   name: string
@@ -77,10 +78,11 @@ export default function AssetDetailPage() {
 
   const loadAsset = useCallback(async (id: string) => {
     try {
-      const data = await physicalAssetActions.getAssetById(id)
-      setAsset(data)
+      const data = await physicalAssetActions.getDigitalAssetById(id)
+      setAsset(data as Asset)
     } catch (error) {
-      console.error('Error loading asset:', error)
+      logger.error('Error loading asset', error, { assetId: id })
+      toast.error('Failed to load asset', 'Please try again')
       router.push("/assets")
     }
   }, [router])
@@ -94,13 +96,13 @@ export default function AssetDetailPage() {
         .order('name', { ascending: true })
 
       if (error) {
-        console.error('Error loading vaults:', error)
+        logger.error('Error loading vaults', error)
         return
       }
 
       setVaults(data || [])
     } catch (error) {
-      console.error('Error loading vaults:', error)
+      logger.error('Error loading vaults', error)
     }
   }, [])
 
@@ -114,13 +116,13 @@ export default function AssetDetailPage() {
         .order('full_name_encrypted', { ascending: true })
 
       if (error) {
-        console.error('Error loading heirs:', error)
+        logger.error('Error loading heirs', error)
         return
       }
 
-      setHeirs(data || [])
+      setHeirs((data || []) as Heir[])
     } catch (error) {
-      console.error('Error loading heirs:', error)
+      logger.error('Error loading heirs', error)
     }
   }, [])
 
@@ -161,12 +163,12 @@ export default function AssetDetailPage() {
     if (!asset) return
 
     try {
-      const updatedAsset = await physicalAssetActions.updateAsset(asset.id, assetData)
-      setAsset(updatedAsset)
+      const updatedAsset = await physicalAssetActions.updateDigitalAsset(asset.id, assetData as unknown as Record<string, unknown>)
+      setAsset(updatedAsset as unknown as Asset)
       setShowEditModal(false)
       toast.success('Asset updated successfully')
     } catch (error) {
-      console.error('Error updating asset:', error)
+      logger.error('Error updating asset', error, { assetId: asset?.id })
       toast.error('Failed to update asset. Please try again.')
     }
   }
@@ -175,11 +177,11 @@ export default function AssetDetailPage() {
     if (!asset) return
 
     try {
-      await physicalAssetActions.deleteAsset(asset.id)
+      await physicalAssetActions.deleteDigitalAsset(asset.id)
       toast.success('Asset deleted successfully')
       router.push("/assets")
     } catch (error) {
-      console.error('Error deleting asset:', error)
+      logger.error('Error deleting asset', error, { assetId })
       toast.error('Failed to delete asset. Please try again.')
     }
   }
@@ -199,19 +201,21 @@ export default function AssetDetailPage() {
           .upload(filePath, file)
 
         if (uploadError) {
-          console.error('Error uploading file:', uploadError)
+          logger.error('Error uploading file', uploadError, { fileName: file.name })
           continue
         }
 
         // Add document reference to asset
-        await physicalAssetActions.addDocument(asset.id, filePath)
+        // Update asset with new document path
+        const currentDocs = asset.documents || []
+        await physicalAssetActions.updateDigitalAsset(asset.id, { documents: [...currentDocs, filePath] })
       }
 
       // Reload asset to get updated documents
       await loadAsset(asset.id)
       toast.success('Documents uploaded successfully')
     } catch (error) {
-      console.error('Error uploading documents:', error)
+      logger.error('Error uploading documents', error, { assetId: asset.id })
       toast.error('Failed to upload documents. Please try again.')
     }
   }
@@ -223,7 +227,8 @@ export default function AssetDetailPage() {
         .download(docPath)
 
       if (error) {
-        console.error('Error downloading document:', error)
+        logger.error('Error downloading document', error, { docPath })
+        toast.error('Failed to download document')
         return
       }
 
@@ -237,7 +242,8 @@ export default function AssetDetailPage() {
       document.body.removeChild(a)
       URL.revokeObjectURL(url)
     } catch (error) {
-      console.error('Error downloading document:', error)
+      logger.error('Error downloading document', error, { docPath })
+      toast.error('Failed to download document')
     }
   }
 
@@ -251,17 +257,19 @@ export default function AssetDetailPage() {
         .remove([docPath])
 
       if (deleteError) {
-        console.error('Error deleting document:', deleteError)
+        logger.error('Error deleting document', deleteError, { docPath })
       }
 
       // Remove reference from asset
-      await physicalAssetActions.removeDocument(asset.id, docPath)
+      // Remove document from asset
+      const currentDocs = asset.documents || []
+      await physicalAssetActions.updateDigitalAsset(asset.id, { documents: currentDocs.filter(d => d !== docPath) })
 
       // Reload asset
       await loadAsset(asset.id)
       toast.success('Document deleted successfully')
     } catch (error) {
-      console.error('Error deleting document:', error)
+      logger.error('Error deleting document', error, { docPath })
       toast.error('Failed to delete document. Please try again.')
     }
   }

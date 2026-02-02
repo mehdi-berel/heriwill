@@ -1,17 +1,23 @@
+/**
+ * @deprecated This file is OBSOLETE and should not be used.
+ * The inheritance_plans table has been removed from the database.
+ * Inheritance logic is now handled via users.global_trigger_* fields.
+ * 
+ * Use these instead:
+ * - /lib/services/globalTriggerService.ts for trigger management
+ * - /api/trigger-inheritance for manual triggering
+ * - users table for inheritance configuration
+ * 
+ * TODO: Remove this file after confirming no active usage
+ */
+
 import { supabase } from '../../lib/supabase'
 import type { Database } from '../../lib/database.types'
 
+// @ts-expect-error - inheritance_plans table no longer exists
 type PlanRow = Database['public']['Tables']['inheritance_plans']['Row']
-type PlanUpdate = Database['public']['Tables']['inheritance_plans']['Update']
 type TriggerRow = Database['public']['Tables']['inheritance_triggers']['Row']
 type TriggerUpdate = Database['public']['Tables']['inheritance_triggers']['Update']
-
-interface InheritancePlanData {
-  user_id: string
-  plan_name: string
-  plan_type?: string
-  instructions_encrypted?: string
-}
 
 interface TriggerData {
   user_id: string
@@ -24,89 +30,101 @@ interface TriggerData {
 // Inheritance Plan Actions
 export const inheritanceActions = {
   // Create Inheritance Plan
-  createPlan: async (planData: InheritancePlanData) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await (supabase.from('inheritance_plans') as any)
-      .insert({
-        user_id: planData.user_id,
-        plan_name: planData.plan_name,
-        plan_type: planData.plan_type || 'standard',
-        instructions_encrypted: planData.instructions_encrypted || null
-      })
-      .select()
-      .single()
+  // @deprecated - inheritance_plans table no longer exists
+  createPlan: async () => {
+    console.warn('createPlan is deprecated - use globalTriggerService')
+    return null
+    // const { data, error } = await (supabase.from('inheritance_plans') as any)
+    //   .insert({
+    //     user_id: planData.user_id,
+    //     plan_name: planData.plan_name,
+    //     plan_type: planData.plan_type || 'standard',
+    //     instructions_encrypted: planData.instructions_encrypted || null
+    //   })
+    //   .select()
+    //   .single()
 
-    if (error) throw new Error(error.message)
-    return data
+    // if (error) throw new Error(error.message)
+    // return data
   },
 
   // Update Inheritance Plan
-  updatePlan: async (planId: string, updateData: PlanUpdate) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await (supabase.from('inheritance_plans') as any)
-      .update(updateData)
-      .eq('id', planId)
-      .select()
-      .single()
+  // @deprecated - inheritance_plans table no longer exists
+  updatePlan: async () => {
+    console.warn('updatePlan is deprecated - use globalTriggerService')
+    return null
+    // const { data, error } = await (supabase.from('inheritance_plans') as any)
+    //   .update(updateData)
+    //   .eq('id', planId)
+    //   .select()
+    //   .single()
 
-    if (error) throw new Error(error.message)
-    return data
+    // if (error) throw new Error(error.message)
+    // return data
   },
 
   // Delete Inheritance Plan
-  deletePlan: async (planId: string) => {
-    const { error } = await supabase
-      .from('inheritance_plans')
-      .delete()
-      .eq('id', planId)
+  // @deprecated - inheritance_plans table no longer exists
+  deletePlan: async () => {
+    console.warn('deletePlan is deprecated - use globalTriggerService')
+    return null
+    // const { error } = await supabase
+    //   .from('inheritance_plans')
+    //   .delete()
+    //   .eq('id', planId)
 
-    if (error) throw new Error(error.message)
+    // if (error) throw new Error(error.message)
   },
 
   // Get Plan by ID
-  getPlanById: async (planId: string) => {
-    const { data, error } = await supabase
-      .from('inheritance_plans')
-      .select('*')
-      .eq('id', planId)
-      .single()
+  // @deprecated - inheritance_plans table no longer exists
+  getPlanById: async () => {
+    console.warn('getPlanById is deprecated - use globalTriggerService')
+    return null
+    // const { data, error } = await supabase
+    //   .from('inheritance_plans')
+    //   .select('*')
+    //   .eq('id', planId)
+    //   .single()
 
-    if (error) throw new Error(error.message)
-    return data
+    // if (error) throw new Error(error.message)
+    // return data
   },
 
   // Get All Plans for User
-  getAllPlans: async (userId: string): Promise<PlanRow[]> => {
-    const { data, error } = await supabase
-      .from('inheritance_plans')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
+  // @deprecated - inheritance_plans table no longer exists
+  getAllPlans: async (): Promise<PlanRow[]> => {
+    console.warn('getAllPlans is deprecated - use globalTriggerService')
+    return []
+    // const { data, error } = await supabase
+    //   .from('inheritance_plans')
+    //   .select('*')
+    //   .eq('user_id', userId)
+    //   .order('created_at', { ascending: false })
 
-    if (error) throw new Error(error.message)
-    return data || []
+    // if (error) throw new Error(error.message)
+    // return data || []
   },
 
   // Update Plan Status
-  updatePlanStatus: async (planId: string, status: string) => {
-    // Check if status is a valid boolean for is_active, or if it maps to is_active
-    // The DB has is_active (boolean) and is_triggered (boolean). No 'status' string column.
-    // Assuming status='active' maps to is_active=true
-    const isActive = status === 'active'
-    
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data } = await (supabase.from('inheritance_plans') as any)
-      .update({ is_active: isActive })
-      .eq('id', planId)
-      .select()
-      .single()
+  // @deprecated - inheritance_plans table no longer exists
+  updatePlanStatus: async () => {
+    // This function is obsolete - inheritance_plans table removed
+    // Use globalTriggerService instead
+    console.warn('updatePlanStatus is deprecated - use globalTriggerService')
+    return null
+    // const { data } = await (supabase.from('inheritance_plans') as any)
+    //   .update({ is_active: isActive })
+    //   .eq('id', planId)
+    //   .select()
+    //   .single()
 
-    return data
+    // return data
   },
 
   // Get Plan Statistics
-  getPlanStats: async (userId: string) => {
-    const plans = await inheritanceActions.getAllPlans(userId)
+  getPlanStats: async () => {
+    const plans = await inheritanceActions.getAllPlans()
     
     const stats = {
       totalPlans: plans.length,

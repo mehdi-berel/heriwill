@@ -38,11 +38,10 @@ export async function POST(request: NextRequest) {
     
     // Get expiration date from first active entitlement
     let expirationDate = null
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const entitlements = customerInfo.entitlements as any
+    const entitlements = customerInfo.entitlements as unknown as Record<string, unknown>
     const entitlementKeys = Object.keys(entitlements)
     if (entitlementKeys.length > 0) {
-      const firstEntitlement = entitlements[entitlementKeys[0]]
+      const firstEntitlement = entitlements[entitlementKeys[0]] as { expirationDate?: string }
       expirationDate = firstEntitlement.expirationDate || null
     }
 
