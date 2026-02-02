@@ -9,6 +9,7 @@ import { supabase } from "@/lib/supabase"
 import { User } from "@supabase/supabase-js"
 import { toast } from "@/lib/utils/toast"
 import { logger } from "@/lib/utils/logger"
+import { notaryActions } from "@/app/actions/notaries"
 
 interface Notary {
   id: string
@@ -91,7 +92,7 @@ export default function NotaryDetailPage() {
 
     if (confirm('Are you sure you want to delete this notary?')) {
       try {
-        await supabase.from('notaries').delete().eq('id', notaryId)
+        await notaryActions.deleteNotary(notaryId)
         toast.success('Notary deleted successfully')
         router.push("/notary")
       } catch (error) {
@@ -105,24 +106,12 @@ export default function NotaryDetailPage() {
     if (!user || !notary) return
 
     try {
-      // First, set all notaries to non-primary
-      await supabase
-        .from('notaries')
-        .update({ is_primary: false })
-        .eq('user_id', user.id)
-
-      // Then set the selected notary as primary
-      const { error } = await supabase
-        .from('notaries')
-        .update({ is_primary: true })
-        .eq('id', notary.id)
-
-      if (error) throw error
-
-      await loadNotary(notary.id)
+      await notaryActions.setPrimaryNotary(user.id, notaryId)
+      await loadNotary(notaryId)
+      toast.success('Primary notary updated')
     } catch (error) {
-      logger.error('Error setting primary notary', error, { notaryId: notary.id })
-      toast.error('Failed to set primary notary', 'Please try again')
+      logger.error('Error setting primary notary', error, { notaryId })
+      toast.error('Failed to set primary notary')
     }
   }
 

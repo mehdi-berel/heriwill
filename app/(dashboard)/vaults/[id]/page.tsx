@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { ArrowLeft, Edit, Trash2, Users, Scale } from "lucide-react"
 import { supabase } from "@/lib/supabase"
-import { vaultItemActions } from "@/app/actions/vaults"
+import { vaultItemActions, vaultActions } from "@/app/actions/vaults"
 import { User } from "@supabase/supabase-js"
 import { toast } from "@/lib/utils/toast"
 import { logger } from "@/lib/utils/logger"
@@ -241,15 +241,13 @@ export default function VaultDetailPage() {
 
   const handleEditSubmit = async (formData: VaultFormData) => {
     try {
-      await supabase
-        .from('vaults')
-        .update(formData)
-        .eq('id', vaultId)
+      await vaultActions.updateVault(vaultId, formData)
       
       if (user) {
         await loadVault(vaultId, user.id)
       }
       setShowEditModal(false)
+      toast.success('Vault updated successfully')
     } catch (error) {
       logger.error('Error updating vault', error, { vaultId: vault?.id })
       toast.error('Failed to update vault. Please try again.')
@@ -260,7 +258,7 @@ export default function VaultDetailPage() {
     if (!vault) return
 
     try {
-      await supabase.from('vaults').delete().eq('id', vault.id)
+      await vaultActions.deleteVault(vault.id)
       toast.success('Vault deleted successfully')
       router.push("/vaults")
     } catch (error) {
@@ -277,22 +275,23 @@ export default function VaultDetailPage() {
     if (!vault) return
 
     try {
-      // Update vault with assigned heir IDs
-      await supabase
-        .from('vaults')
-        .update({ 
-          access_control: {
-            ...vault.access_control,
-            allowedHeirs: heirIds
-          }
-        })
-        .eq('id', vaultId)
-      
-      if (user) {
-        await loadVault(vaultId, user.id)
-      }
-      toast.success('Heirs assigned successfully')
+      // Update vault with assigned heir IDs using server action
+      await vaultActions.updateVault(vault.id, {
+        access_control: {
+          allowedHeirs: heirIds,
+          requireApproval: vault.access_control?.requireApproval || false
+        } as never
+      })
+
+      setVault({
+        ...vault,
+        access_control: {
+          allowedHeirs: heirIds,
+          requireApproval: vault.access_control?.requireApproval || false
+        }
+      })
       setShowAssignModal(false)
+      toast.success('Heirs assigned successfully')
     } catch (error) {
       logger.error('Error assigning heirs', error, { vaultId })
       toast.error('Failed to assign heirs. Please try again.')

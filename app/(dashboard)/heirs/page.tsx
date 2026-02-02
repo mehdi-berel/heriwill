@@ -23,6 +23,7 @@ import {
   acceptHeirInvitation, 
   rejectHeirInvitation 
 } from "@/app/actions/heirInvitations"
+import { heirActions } from "@/app/actions/heirs"
 
 interface Heir {
   id: string
@@ -187,26 +188,15 @@ export default function HeirsPage() {
     if (!editingHeir) return
 
     try {
-      const { error } = await supabase
-        .from('heirs')
-        .update({
-          full_name_encrypted: formData.full_name,
-          email_encrypted: formData.email,
-          phone_encrypted: formData.phone || null,
-          relationship: formData.relationship || null,
-          heir_type: formData.heir_type || 'family',
-          notification_delay_days: formData.notification_delay_days || 0,
-          is_active: formData.is_active !== undefined ? formData.is_active : true
-        })
-        .eq('id', editingHeir.id)
-        .select()
-        .single()
-
-      if (error) {
-        logger.error('Error updating heir', error, { heirId: editingHeir.id })
-        toast.error('Failed to update heir', 'Please try again')
-        return
-      }
+      await heirActions.updateHeir(editingHeir.id, {
+        full_name_encrypted: formData.full_name,
+        email_encrypted: formData.email,
+        phone_encrypted: formData.phone || null,
+        relationship: formData.relationship || null,
+        heir_type: formData.heir_type || 'family',
+        notification_delay_days: formData.notification_delay_days || 0,
+        is_active: formData.is_active !== undefined ? formData.is_active : true
+      })
 
       if (user) {
         await loadHeirs(user.id)
@@ -229,23 +219,14 @@ export default function HeirsPage() {
     if (!heirToDelete) return
 
     try {
-      const { error } = await supabase
-        .from('heirs')
-        .delete()
-        .eq('id', heirToDelete)
-      
-      if (error) {
-        logger.error('Error deleting heir', error, { heirId: heirToDelete })
-        toast.error('Failed to delete heir', 'Please try again')
-        return
-      }
-      
+      await heirActions.deleteHeir(heirToDelete)
+
       if (user) {
         await loadHeirs(user.id)
+        setShowDeleteModal(false)
+        setHeirToDelete(null)
+        toast.success('Heir deleted successfully')
       }
-      setShowDeleteModal(false)
-      setHeirToDelete(null)
-      toast.success('Heir deleted successfully')
     } catch (error) {
       logger.error('Error deleting heir', error, { heirId: heirToDelete })
       toast.error('Failed to delete heir', 'Please try again')

@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { AlertCircle, CheckCircle, Loader2, UserPlus, Gavel } from "lucide-react"
 import { logger } from "@/lib/utils/logger"
 import { validateEmail, validatePassword, validateFullName, sanitizeText } from "@/lib/utils/validation"
+import { acceptHeirInvitation, rejectHeirInvitation } from "@/app/actions/heirInvitations"
 
 type InviteType = 'heir' | 'notary'
 
@@ -204,20 +205,11 @@ function InvitePageContent() {
       if (profileError) throw profileError
 
       if (inviteData.type === 'heir') {
-        // Update heir record with user_id and mark as accepted
-        const { error: heirUpdateError } = await (supabase
-          .from('heirs') as unknown as {
-            update: (data: unknown) => { eq: (column: string, value: string) => Promise<{ error: unknown }> }
-          })
-          .update({
-            heir_user_id: authData.user.id,
-            invitation_status: 'accepted',
-            accepted_at: new Date().toISOString(),
-            has_accepted: true
-          })
-          .eq('id', inviteData.heirId!)
-
-        if (heirUpdateError) throw heirUpdateError
+        // Accept heir invitation using server action
+        const code = searchParams.get('code')
+        if (!code) throw new Error('Invitation code missing')
+        
+        await acceptHeirInvitation(code)
 
         logger.info('Heir invitation accepted', { 
           heirId: inviteData.heirId, 
@@ -248,18 +240,10 @@ function InvitePageContent() {
     setProcessing(true)
     try {
       if (inviteData.type === 'heir') {
-        const { error } = await (supabase
-          .from('heirs') as unknown as {
-            update: (data: unknown) => { eq: (column: string, value: string) => Promise<{ error: unknown }> }
-          })
-          .update({
-            invitation_status: 'rejected',
-            rejected_at: new Date().toISOString()
-          })
-          .eq('id', inviteData.heirId!)
-
-        if (error) throw error
-
+        const code = searchParams.get('code')
+        if (!code) throw new Error('Invitation code missing')
+        
+        await rejectHeirInvitation(code)
         logger.info('Heir invitation rejected', { heirId: inviteData.heirId })
       }
 

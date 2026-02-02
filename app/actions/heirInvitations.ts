@@ -96,6 +96,28 @@ export async function createHeirInvitation(data: {
     throw error
   }
 
+  // Create notification for the user who created the heir
+  try {
+    const { createNotification } = await import('@/lib/services/notificationService')
+    await createNotification({
+      userId: user.id,
+      type: 'heir_invitation',
+      title: 'Heir invitation created',
+      message: `You have successfully invited ${sanitizedFullName} (${sanitizedEmail}) as an heir. Invitation code: ${invitationCode}`,
+      actionUrl: '/heirs',
+      actionLabel: 'View Heirs',
+      priority: 'normal',
+      metadata: {
+        heirId: heir.id,
+        invitationCode,
+        heirEmail: sanitizedEmail
+      }
+    })
+  } catch (notifError) {
+    // Don't fail the heir creation if notification fails
+    logger.error('Failed to create notification for heir invitation', notifError)
+  }
+
   return {
     heir,
     invitationCode,
