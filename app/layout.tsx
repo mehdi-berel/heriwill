@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { RevenueCatProvider } from "@/contexts/RevenueCatContext";
 import { Toaster } from "sonner";
+import { GoogleAnalytics } from "@/components/analytics/GoogleAnalytics";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -24,6 +25,7 @@ export default function RootLayout({
       <body
         className={`${inter.variable} antialiased`}
       >
+        <GoogleAnalytics />
         <RevenueCatProvider>
           {children}
         </RevenueCatProvider>
