@@ -23,7 +23,7 @@ import {
   acceptHeirInvitation, 
   rejectHeirInvitation 
 } from "@/app/actions/heirInvitations"
-import { heirActions } from "@/app/actions/heirs"
+import { updateHeir, deleteHeir } from "@/app/actions/heirs"
 
 interface Heir {
   id: string
@@ -160,9 +160,16 @@ export default function HeirsPage() {
   }, [router, loadHeirs, loadReceivedInvitations])
 
   const handleAddHeir = async (formData: HeirFormData) => {
-    if (!user) return
+    if (!user) {
+      console.error('[HEIR] No user found')
+      toast.error('Not authenticated', 'Please log in again')
+      return
+    }
+
+    console.log('[HEIR] Starting heir creation', { formData, userId: user.id })
 
     try {
+      console.log('[HEIR] Calling createHeirInvitation server action...')
       const result = await createHeirInvitation({
         full_name: formData.full_name,
         email: formData.email,
@@ -172,15 +179,26 @@ export default function HeirsPage() {
         code_validity_days: 7
       })
 
+      console.log('[HEIR] Server action returned:', result)
+
       if (result.heir) {
         setHeirs([result.heir as Heir, ...heirs])
         setNewlyCreatedHeir(result.heir as Heir)
         setShowForm(false)
         setShowInvitationModal(true)
+        toast.success('Heir invitation created successfully')
       }
     } catch (error) {
+      console.error('[HEIR] Error in handleAddHeir:', error)
+      console.error('[HEIR] Error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        error
+      })
       logger.error('Error adding heir', error, { userId: user?.id })
-      toast.error('Failed to add heir', 'Please try again')
+      
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
+      toast.error('Failed to add heir', errorMessage)
     }
   }
 
@@ -188,7 +206,7 @@ export default function HeirsPage() {
     if (!editingHeir) return
 
     try {
-      await heirActions.updateHeir(editingHeir.id, {
+      await updateHeir(editingHeir.id, {
         full_name_encrypted: formData.full_name,
         email_encrypted: formData.email,
         phone_encrypted: formData.phone || null,
@@ -219,7 +237,7 @@ export default function HeirsPage() {
     if (!heirToDelete) return
 
     try {
-      await heirActions.deleteHeir(heirToDelete)
+      await deleteHeir(heirToDelete)
 
       if (user) {
         await loadHeirs(user.id)
@@ -481,7 +499,7 @@ export default function HeirsPage() {
                 heirName={newlyCreatedHeir.full_name_encrypted || ''}
                 heirEmail={newlyCreatedHeir.email_encrypted || ''}
                 invitationCode={newlyCreatedHeir.invitation_code || ''}
-                invitationLink={`${typeof window !== 'undefined' ? window.location.origin : 'https://app.heriwill.com'}/invite?code=${newlyCreatedHeir.invitation_code}&type=heir`}
+                invitationLink={`${process.env.NEXT_PUBLIC_APP_URL || 'https://app.heriwill.com'}/invite?code=${newlyCreatedHeir.invitation_code}&type=heir`}
                 onClose={() => {
                   setShowInvitationModal(false)
                   setNewlyCreatedHeir(null)

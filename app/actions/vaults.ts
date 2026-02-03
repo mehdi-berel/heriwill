@@ -1,4 +1,6 @@
-import { supabase } from '../../lib/supabase'
+"use server"
+
+import { createServerSupabaseClient } from '../../lib/supabase'
 import type { Database } from '../../lib/database.types'
 import { checkStorageLimit, checkVaultLimit } from '../../lib/subscription-limits'
 
@@ -52,6 +54,7 @@ export const vaultActions = {
       }
     }
 
+    const supabase = await createServerSupabaseClient()
     const { data, error } = await supabase
       .from('vaults')
       .insert(vaultData)
@@ -64,6 +67,7 @@ export const vaultActions = {
 
   // Update Vault
   updateVault: async (vaultId: string, updateData: VaultUpdate) => {
+    const supabase = await createServerSupabaseClient()
     const { data, error } = await supabase
       .from('vaults')
       .update(updateData)
@@ -77,6 +81,7 @@ export const vaultActions = {
 
   // Delete Vault
   deleteVault: async (vaultId: string) => {
+    const supabase = await createServerSupabaseClient()
     const { error } = await supabase
       .from('vaults')
       .delete()
@@ -87,6 +92,7 @@ export const vaultActions = {
 
   // Get Vault by ID
   getVaultById: async (vaultId: string) => {
+    const supabase = await createServerSupabaseClient()
     const { data, error } = await supabase
       .from('vaults')
       .select('*')
@@ -99,6 +105,7 @@ export const vaultActions = {
 
   // Get All Vaults for User
   getAllVaults: async (userId: string) => {
+    const supabase = await createServerSupabaseClient()
     const { data, error } = await supabase
       .from('vaults')
       .select('*')
@@ -111,6 +118,7 @@ export const vaultActions = {
 
   // Update Last Accessed
   updateLastAccessed: async (vaultId: string) => {
+    const supabase = await createServerSupabaseClient()
     const { data } = await supabase
       .from('vaults')
       .update({ last_accessed: new Date().toISOString() })
@@ -130,6 +138,7 @@ export const vaultActions = {
 
   // Lock/Unlock Vault
   toggleLock: async (vaultId: string, isLocked: boolean) => {
+    const supabase = await createServerSupabaseClient()
     const { data } = await supabase
       .from('vaults')
       .update({ is_locked: isLocked })
@@ -142,6 +151,7 @@ export const vaultActions = {
 
   // Share/Unshare Vault
   toggleShare: async (vaultId: string, isShared: boolean) => {
+    const supabase = await createServerSupabaseClient()
     const { data } = await supabase
       .from('vaults')
       .update({ is_shared: isShared })
@@ -205,6 +215,7 @@ export const vaultItemActions = {
     const randomId = Math.random().toString(36).substring(2, 15)
     const storagePath = itemData.storage_path || `${itemData.user_id}/${itemData.vault_id}/${timestamp}-${randomId}`
     
+    const supabase = await createServerSupabaseClient()
     const { data, error } = await supabase
       .from('vault_items')
       .insert({
@@ -241,6 +252,7 @@ export const vaultItemActions = {
     if (updateData.password_last_changed) updatePayload.password_last_changed = updateData.password_last_changed
     if (updateData.requires_password_change !== undefined) updatePayload.requires_password_change = updateData.requires_password_change
 
+    const supabase = await createServerSupabaseClient()
     const { data, error } = await supabase
       .from('vault_items')
       .update(updatePayload)
@@ -254,6 +266,7 @@ export const vaultItemActions = {
 
   // Delete Vault Item
   deleteVaultItem: async (itemId: string) => {
+    const supabase = await createServerSupabaseClient()
     const { error } = await supabase
       .from('vault_items')
       .delete()
@@ -264,6 +277,7 @@ export const vaultItemActions = {
 
   // Get Vault Items
   getVaultItems: async (vaultId: string) => {
+    const supabase = await createServerSupabaseClient()
     const { data, error } = await supabase
       .from('vault_items')
       .select('*')
@@ -276,6 +290,7 @@ export const vaultItemActions = {
 
   // Get Vault Item by ID
   getVaultItemById: async (itemId: string) => {
+    const supabase = await createServerSupabaseClient()
     const { data, error } = await supabase
       .from('vault_items')
       .select('*')

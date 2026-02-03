@@ -17,9 +17,9 @@ interface HeirData {
 }
 
 // Heir Management Actions
-export const heirActions = {
-  // Create Heir
-  createHeir: async (heirData: HeirData) => {
+
+// Create Heir
+export async function createHeir(heirData: HeirData) {
     const supabase = await createServerSupabaseClient()
     const { data, error } = await supabase
       .from('heirs')
@@ -41,12 +41,12 @@ export const heirActions = {
       .select()
       .single()
 
-    if (error) throw new Error(error.message)
-    return data
-  },
+  if (error) throw new Error(error.message)
+  return data
+}
 
-  // Update Heir
-  updateHeir: async (heirId: string, updateData: HeirUpdate) => {
+// Update Heir
+export async function updateHeir(heirId: string, updateData: HeirUpdate) {
     const supabase = await createServerSupabaseClient()
     const { data, error } = await supabase
       .from('heirs')
@@ -55,23 +55,23 @@ export const heirActions = {
       .select()
       .single()
 
-    if (error) throw new Error(error.message)
-    return data
-  },
+  if (error) throw new Error(error.message)
+  return data
+}
 
-  // Delete Heir
-  deleteHeir: async (heirId: string) => {
+// Delete Heir
+export async function deleteHeir(heirId: string) {
     const supabase = await createServerSupabaseClient()
     const { error } = await supabase
       .from('heirs')
       .delete()
       .eq('id', heirId)
 
-    if (error) throw new Error(error.message)
-  },
+  if (error) throw new Error(error.message)
+}
 
-  // Get Heir by ID
-  getHeirById: async (heirId: string) => {
+// Get Heir by ID
+export async function getHeirById(heirId: string) {
     const supabase = await createServerSupabaseClient()
     const { data, error } = await supabase
       .from('heirs')
@@ -79,12 +79,12 @@ export const heirActions = {
       .eq('id', heirId)
       .single()
 
-    if (error) throw new Error(error.message)
-    return data
-  },
+  if (error) throw new Error(error.message)
+  return data
+}
 
-  // Get All Heirs for User
-  getAllHeirs: async (userId: string): Promise<HeirRow[]> => {
+// Get All Heirs for User
+export async function getAllHeirs(userId: string): Promise<HeirRow[]> {
     const supabase = await createServerSupabaseClient()
     const { data, error } = await supabase
       .from('heirs')
@@ -92,13 +92,13 @@ export const heirActions = {
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
 
-    if (error) throw new Error(error.message)
-    return data || []
-  },
+  if (error) throw new Error(error.message)
+  return data || []
+}
 
-  // Invitation Management
-  resendInvitation: async (heirId: string) => {
-    const heir = await heirActions.getHeirById(heirId)
+// Invitation Management
+export async function resendInvitation(heirId: string) {
+  const heir = await getHeirById(heirId)
     if (!heir) throw new Error('Heir not found')
 
     // TODO: Implement email sending service
@@ -113,11 +113,11 @@ export const heirActions = {
       .select()
       .single()
 
-    return data
-  },
+  return data
+}
 
-  // Revoke Access
-  revokeAccess: async (heirId: string) => {
+// Revoke Access
+export async function revokeAccess(heirId: string) {
     const supabase = await createServerSupabaseClient()
     const { data } = await supabase
       .from('heirs')
@@ -126,11 +126,11 @@ export const heirActions = {
       .select()
       .single()
 
-    return data
-  },
+  return data
+}
 
-  // Update Verification Status
-  updateVerificationStatus: async (heirId: string, status: string) => {
+// Update Verification Status
+export async function updateVerificationStatus(heirId: string, status: string) {
     const supabase = await createServerSupabaseClient()
     const { data } = await supabase
       .from('heirs')
@@ -139,12 +139,12 @@ export const heirActions = {
       .select()
       .single()
 
-    return data
-  },
+  return data
+}
 
-  // Get Heir Statistics
-  getHeirStats: async (userId: string) => {
-    const heirs = await heirActions.getAllHeirs(userId)
+// Get Heir Statistics
+export async function getHeirStats(userId: string) {
+  const heirs = await getAllHeirs(userId)
     
     const stats = {
       totalHeirs: heirs.length,
@@ -161,12 +161,12 @@ export const heirActions = {
       organizationHeirs: heirs.filter((h: HeirRow) => h.heir_type === 'organization').length
     }
 
-    return stats
-  },
+  return stats
+}
 
-  // Search and Filter
-  searchHeirs: async (userId: string, searchTerm: string) => {
-    const heirs = await heirActions.getAllHeirs(userId)
+// Search and Filter
+export async function searchHeirs(userId: string, searchTerm: string) {
+  const heirs = await getAllHeirs(userId)
     
     const filteredHeirs = heirs.filter((heir: HeirRow) =>
       heir.full_name_encrypted?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -174,22 +174,21 @@ export const heirActions = {
       heir.relationship?.toLowerCase().includes(searchTerm.toLowerCase())
     )
 
-    return filteredHeirs
-  },
+  return filteredHeirs
+}
 
-  // Filter by Status
-  getHeirsByStatus: async (userId: string, status: string) => {
-    const heirs = await heirActions.getAllHeirs(userId)
+// Filter by Status
+export async function getHeirsByStatus(userId: string, status: string) {
+  const heirs = await getAllHeirs(userId)
     
-    return heirs.filter((heir: HeirRow) => heir.invitation_status === status)
-  },
+  return heirs.filter((heir: HeirRow) => heir.invitation_status === status)
+}
 
-  // Filter by Heir Type
-  getHeirsByType: async (userId: string, heirType: string) => {
-    const heirs = await heirActions.getAllHeirs(userId)
-    
-    return heirs.filter((heir: HeirRow) => heir.heir_type === heirType)
-  }
+// Filter by Heir Type
+export async function getHeirsByType(userId: string, heirType: string) {
+  const heirs = await getAllHeirs(userId)
+  
+  return heirs.filter((heir: HeirRow) => heir.heir_type === heirType)
 }
 
 // Helper Functions

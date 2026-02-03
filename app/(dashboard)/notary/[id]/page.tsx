@@ -9,7 +9,7 @@ import { supabase } from "@/lib/supabase"
 import { User } from "@supabase/supabase-js"
 import { toast } from "@/lib/utils/toast"
 import { logger } from "@/lib/utils/logger"
-import { notaryActions } from "@/app/actions/notaries"
+import { deleteNotary, setPrimaryNotary } from "@/app/actions/notaries"
 
 interface Notary {
   id: string
@@ -92,7 +92,7 @@ export default function NotaryDetailPage() {
 
     if (confirm('Are you sure you want to delete this notary?')) {
       try {
-        await notaryActions.deleteNotary(notaryId)
+        await deleteNotary(notaryId)
         toast.success('Notary deleted successfully')
         router.push("/notary")
       } catch (error) {
@@ -106,7 +106,7 @@ export default function NotaryDetailPage() {
     if (!user || !notary) return
 
     try {
-      await notaryActions.setPrimaryNotary(user.id, notaryId)
+      await setPrimaryNotary(user.id, notaryId)
       await loadNotary(notaryId)
       toast.success('Primary notary updated')
     } catch (error) {
