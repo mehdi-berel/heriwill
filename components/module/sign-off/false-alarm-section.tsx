@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
 import { Card, CardContent } from "@/components/ui/card"
 import { AlertTriangle, RefreshCcw, CheckCircle } from "lucide-react"
 import { logger } from "@/lib/utils/logger"
@@ -14,7 +13,6 @@ interface FalseAlarmSectionProps {
 export function FalseAlarmSection({ userId }: FalseAlarmSectionProps) {
   const [showModal, setShowModal] = useState(false)
   const [saving, setSaving] = useState(false)
-  const router = useRouter()
 
   const handleFalseAlarm = async () => {
     setSaving(true)
@@ -29,8 +27,9 @@ export function FalseAlarmSection({ userId }: FalseAlarmSectionProps) {
       
       if (response.ok) {
         setShowModal(false)
-        alert('False alarm declared successfully. Your account has been restored.')
-        router.refresh()
+        toast.success('False alarm declared successfully', 'Your account has been restored and heirs have been notified')
+        // Reload the page data without navigation
+        window.location.reload()
       } else {
         const errorMsg = data.error || 'Failed to declare false alarm'
         logger.error('API Error declaring false alarm', { data })

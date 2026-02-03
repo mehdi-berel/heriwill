@@ -1,14 +1,14 @@
 "use client"
 
 import Link from "next/link"
+import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { FeedbackButton } from "@/components/module/feedback/feedback-button"
-import { NotificationsBell } from "@/components/ui/notifications-bell"
 import { useRevenueCat } from "@/contexts/RevenueCatContext"
 import { supabase } from "@/lib/supabase"
-import { Crown, Zap, CheckCircle, LogOut, HelpCircle } from "lucide-react"
+import { Crown, Zap, CheckCircle, LogOut } from "lucide-react"
 
 export function Header() {
   const { entitlements, loading } = useRevenueCat()
@@ -56,8 +56,14 @@ export function Header() {
         {/* Left side - Logo/Brand (mobile only) */}
         <div className="flex items-center md:hidden">
           <Link href="/" className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center shadow-lg">
-              <span className="text-white font-bold text-sm">H</span>
+            <div className="h-8 w-8 flex items-center justify-center">
+              <Image 
+                src="/heriwill-transparent.png" 
+                alt="Heriwill Logo" 
+                width={32} 
+                height={32}
+                className="object-contain"
+              />
             </div>
             <span className="text-base font-bold text-text-primary">Heriwill</span>
           </Link>
@@ -75,22 +81,6 @@ export function Header() {
             </Link>
           )}
 
-          {/* Notifications Bell */}
-          <NotificationsBell />
-
-          {/* Help Button - Mobile icon only */}
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-9 w-9 p-0 flex items-center justify-center md:hidden text-text-secondary hover:text-text-primary"
-            asChild
-            title="Help"
-          >
-            <Link href="/help">
-              <HelpCircle className="h-4 w-4" />
-            </Link>
-          </Button>
-
           {/* Feedback Button */}
           <FeedbackButton />
 
@@ -103,16 +93,6 @@ export function Header() {
             title="Sign Out"
           >
             <LogOut className="h-4 w-4" />
-          </Button>
-
-          {/* Help Link - Desktop only */}
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-text-secondary hover:text-text-primary hidden md:flex text-sm px-3"
-            asChild
-          >
-            <Link href="/help">Help</Link>
           </Button>
 
           {/* Inheritance Link - Desktop only */}

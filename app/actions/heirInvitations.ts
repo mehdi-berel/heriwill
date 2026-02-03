@@ -267,47 +267,85 @@ export async function acceptHeirInvitation(invitationCode: string) {
 
 /**
  * Reject heir invitation
+ * Note: This now directly updates the database since server actions can't reliably call API routes
  */
 export async function rejectHeirInvitation(invitationCode: string) {
   const supabase = await createServerSupabaseClient()
   const { data: { user } } = await supabase.auth.getUser()
+  
   if (!user) {
+    logger.error('No user found in rejectHeirInvitation')
     throw new Error('Not authenticated')
   }
 
-  // Validate code first
-  const validation = await validateInvitationCode(invitationCode)
-  if (!validation.valid || !validation.heir) {
-    throw new Error(validation.error || 'Code invalide')
-  }
+  logger.info('Rejecting heir invitation', { invitationCode, userId: user.id })
 
-  // Reject invitation
-  const { data: heir, error } = await supabase
-    .from('heirs')
-    .update({
-      invitation_status: 'rejected',
-      rejected_at: new Date().toISOString(),
-      is_active: false,
+  try {
+    // First, verify the invitation exists and is pending
+    const { data: existingHeir, error: fetchError } = await supabase
+      .from('heirs')
+      .select('*')
+      .eq('invitation_code', invitationCode)
+      .eq('invitation_status', 'pending')
+      .single()
+
+    if (fetchError || !existingHeir) {
+      logger.error('Invitation not found or already processed', fetchError)
+      throw new Error('Invitation not found or already processed')
+    }
+
+    // Check if invitation has expired
+    if (existingHeir.invitation_expires_at && new Date(existingHeir.invitation_expires_at) < new Date()) {
+      // Mark as expired
+      await supabase
+        .from('heirs')
+        .update({ invitation_status: 'expired' })
+        .eq('id', existingHeir.id)
+
+      throw new Error('This invitation has expired')
+    }
+
+    // Update the invitation status to rejected
+    // This works because we're updating by ID, not by user_id
+    const { data: updatedHeir, error: updateError } = await supabase
+      .from('heirs')
+      .update({
+        invitation_status: 'rejected',
+        rejected_at: new Date().toISOString(),
+        is_active: false,
+      })
+      .eq('id', existingHeir.id)
+      .select()
+      .single()
+
+    if (updateError) {
+      logger.error('Error updating heir invitation status', updateError, {
+        heirId: existingHeir.id,
+        errorCode: updateError.code,
+        errorMessage: updateError.message
+      })
+      throw new Error('Failed to reject invitation: ' + updateError.message)
+    }
+
+    logger.info('Heir invitation rejected successfully', { heirId: updatedHeir.id })
+
+    // Notify the owner that heir rejected
+    try {
+      const heirName = user.user_metadata?.full_name || user.email || 'An heir'
+      await notifyHeirRejected(existingHeir.user_id, heirName)
+    } catch (notificationError) {
+      logger.error('Error creating heir rejected notification', notificationError)
+      // Don't fail the request if notification fails
+    }
+
+    return updatedHeir
+  } catch (error) {
+    logger.error('Error in rejectHeirInvitation', error, {
+      errorName: (error as Error).name,
+      errorMessage: (error as Error).message
     })
-    .eq('invitation_code', invitationCode)
-    .eq('invitation_status', 'pending')
-    .select()
-    .single()
-
-  if (error) {
-    logger.error('Error rejecting invitation', error)
     throw error
   }
-
-  // Notify the owner that heir rejected
-  try {
-    const heirName = user.user_metadata?.full_name || user.email || 'An heir'
-    await notifyHeirRejected(heir.user_id, heirName)
-  } catch (notificationError) {
-    logger.error('Error creating heir rejected notification', notificationError)
-  }
-
-  return heir
 }
 
 /**

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Image from "next/image"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Card, CardContent } from "@/components/ui/card"
@@ -55,6 +55,7 @@ interface VaultItem {
   tags: string[]
   createdAt?: string
   updatedAt?: string
+  storage_path?: string
 }
 
 interface ItemDetailsProps {
@@ -92,21 +93,65 @@ const formatDate = (dateString?: string) => {
 
 export function ItemDetails({ item, isOpen, onClose, onEdit, onDelete }: ItemDetailsProps) {
   const [showSensitive, setShowSensitive] = useState(false)
+  const [fileUrl, setFileUrl] = useState<string | null>(null)
+  
+  // Generate file URL from storage_path if needed
+  useEffect(() => {
+    if (!item) return
+    
+    const generateFileUrl = async () => {
+      if (item.storage_path && !item.metadata.fileUrl) {
+        const { supabase } = await import('@/lib/supabase')
+        const { data: { publicUrl } } = supabase.storage
+          .from('vault-files')
+          .getPublicUrl(item.storage_path)
+        setFileUrl(publicUrl)
+      } else if (item.metadata.fileUrl) {
+        setFileUrl(item.metadata.fileUrl)
+      }
+    }
+    
+    if (item.type === 'image' || item.type === 'video' || item.type === 'document') {
+      generateFileUrl()
+    }
+  }, [item])
   
   if (!item) return null
   
   const typeConfig = ITEM_TYPE_CONFIG[item.type] || ITEM_TYPE_CONFIG.other
   const TypeIcon = typeConfig.icon
 
-  const handleDownload = () => {
-    if (item.metadata.fileUrl) {
-      const link = document.createElement('a')
-      link.href = item.metadata.fileUrl
-      link.download = item.metadata.fileName || 'download'
-      link.target = '_blank'
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
+  const handleDownload = async () => {
+    try {
+      if (item.storage_path) {
+        // Download from Supabase Storage
+        const { supabase } = await import('@/lib/supabase')
+        const { data, error } = await supabase.storage
+          .from('vault-files')
+          .download(item.storage_path)
+        
+        if (error) throw error
+        
+        const url = URL.createObjectURL(data)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = item.metadata.fileName || item.title || 'download'
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        URL.revokeObjectURL(url)
+      } else if (item.metadata.fileUrl) {
+        // Fallback to direct URL download
+        const link = document.createElement('a')
+        link.href = item.metadata.fileUrl
+        link.download = item.metadata.fileName || 'download'
+        link.target = '_blank'
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+      }
+    } catch (error) {
+      console.error('Download error:', error)
     }
   }
 
@@ -223,13 +268,13 @@ export function ItemDetails({ item, isOpen, onClose, onEdit, onDelete }: ItemDet
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-text-primary">File Details</h3>
             
-            {item.metadata.fileUrl && (
+            {(fileUrl || item.metadata.fileUrl) && (
               <Card>
                 <CardContent className="p-4">
                   {item.type === 'image' && (
                     <div className="mb-4 relative w-full" style={{ minHeight: '200px' }}>
                       <Image 
-                        src={item.metadata.fileUrl}
+                        src={fileUrl || item.metadata.fileUrl || ''}
                         alt={item.metadata.fileName || 'Image'}
                         width={800}
                         height={600}
@@ -241,7 +286,7 @@ export function ItemDetails({ item, isOpen, onClose, onEdit, onDelete }: ItemDet
                   {item.type === 'video' && (
                     <div className="mb-4">
                       <video 
-                        src={item.metadata.fileUrl}
+                        src={fileUrl || item.metadata.fileUrl || ''}
                         controls
                         className="w-full max-h-96 rounded-lg"
                       />

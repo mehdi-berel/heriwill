@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Bell, Mail, Smartphone, CheckCircle } from "lucide-react"
+import { Bell, CheckCircle } from "lucide-react"
 import { logger } from "@/lib/utils/logger"
 import { toast } from "@/lib/utils/toast"
 
@@ -55,22 +55,10 @@ export function NotificationSettings() {
   }
   const notificationTypes = [
     {
-      id: 'email',
-      icon: Mail,
-      title: 'Email Notifications',
-      description: 'Receive notifications via email'
-    },
-    {
       id: 'push',
       icon: Bell,
       title: 'Push Notifications',
       description: 'Receive push notifications in your browser'
-    },
-    {
-      id: 'sms',
-      icon: Smartphone,
-      title: 'SMS Notifications',
-      description: 'Receive text messages for important updates'
     }
   ]
 

@@ -58,7 +58,7 @@ function LegalPageContent() {
       const { data: legalDocs, error } = await supabase
         .from('legal')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('created_by', user.id)
         .order('created_at', { ascending: false })
 
       if (error) {
@@ -120,7 +120,7 @@ function LegalPageContent() {
       const { data: legalDoc, error: legalError } = await supabase
         .from('legal')
         .insert({
-          user_id: user.id,
+          created_by: user.id,
           name: templateNames[documentType] || 'Legal Document',
           document_type: documentType,
           description: templateDescriptions[documentType] || '',

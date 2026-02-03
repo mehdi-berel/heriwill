@@ -199,6 +199,7 @@ export function SignOffSettingsModal({
 
       await saveGlobalTrigger(userId, settingsToSave as Parameters<typeof saveGlobalTrigger>[1])
 
+      toast.success('Sign-off settings saved successfully', `${methodTitle} has been configured`)
       onSave()
       onClose()
     } catch (error) {

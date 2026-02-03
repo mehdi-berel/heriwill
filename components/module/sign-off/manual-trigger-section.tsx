@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
 import { Card, CardContent } from "@/components/ui/card"
 import { Power, AlertCircle, CheckCircle } from "lucide-react"
 import { logger } from "@/lib/utils/logger"
@@ -14,7 +13,6 @@ interface ManualTriggerSectionProps{
 export function ManualTriggerSection({ userId }: ManualTriggerSectionProps) {
   const [showModal, setShowModal] = useState(false)
   const [saving, setSaving] = useState(false)
-  const router = useRouter()
 
   const handleTrigger = async () => {
     setSaving(true)
@@ -29,8 +27,9 @@ export function ManualTriggerSection({ userId }: ManualTriggerSectionProps) {
       
       if (response.ok) {
         setShowModal(false)
-        alert('Inheritance plan triggered successfully. Your heirs have been notified.')
-        router.push('/')
+        toast.success('Inheritance plan triggered successfully', 'Your heirs have been notified and granted access to your vaults')
+        // Reload the page data without navigation
+        window.location.reload()
       } else {
         const errorMsg = data.error || 'Failed to trigger inheritance plan'
         logger.error('API Error triggering inheritance', { data })

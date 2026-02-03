@@ -18,7 +18,6 @@ import { getUserTier } from "@/lib/middleware/tierEnforcement"
 import { logger } from "@/lib/utils/logger"
 import { toast } from "@/lib/utils/toast"
 import { 
-  createHeirInvitation, 
   getPendingInvitations, 
   acceptHeirInvitation, 
   rejectHeirInvitation 
@@ -167,29 +166,72 @@ export default function HeirsPage() {
     }
 
     try {
-      const result = await createHeirInvitation({
-        full_name: formData.full_name,
-        email: formData.email,
-        phone: formData.phone,
-        relationship: formData.relationship,
-        heir_type: formData.heir_type,
-        code_validity_days: 7
-      })
-
-      if (result.heir) {
-        setHeirs([result.heir as Heir, ...heirs])
-        setNewlyCreatedHeir(result.heir as Heir)
-        setShowForm(false)
-        setShowInvitationModal(true)
-        toast.success('Heir invitation created successfully')
+      logger.info('Starting heir creation', { userId: user.id, email: formData.email })
+      
+      // Generate unique invitation code
+      const generateCode = () => {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+        let code = ''
+        for (let i = 0; i < 8; i++) {
+          if (i === 4) code += '-'
+          else code += chars.charAt(Math.floor(Math.random() * chars.length))
+        }
+        return code
       }
+      
+      const invitationCode = generateCode()
+      const expirationDate = new Date()
+      expirationDate.setDate(expirationDate.getDate() + 7)
+      
+      // Direct insert like vaults do
+      const { data: newHeir, error } = await supabase
+        .from('heirs')
+        .insert({
+          user_id: user.id,
+          full_name_encrypted: formData.full_name,
+          email_encrypted: formData.email.toLowerCase().trim(),
+          phone_encrypted: formData.phone || null,
+          relationship: formData.relationship || null,
+          heir_type: formData.heir_type || 'family',
+          invitation_code: invitationCode,
+          invitation_status: 'pending',
+          invitation_expires_at: expirationDate.toISOString(),
+          invited_at: new Date().toISOString(),
+          is_active: false,
+          has_accepted: false,
+          notify_on_activation: true,
+          notification_delay_days: 0,
+        })
+        .select()
+        .single()
+
+      if (error) {
+        logger.error('Database error creating heir', error, {
+          errorCode: error.code,
+          errorMessage: error.message,
+          errorDetails: error.details,
+          userId: user.id
+        })
+        throw new Error(`Failed to create heir: ${error.message}`)
+      }
+
+      logger.info('Heir created successfully', { heirId: newHeir.id })
+      
+      setHeirs([newHeir as Heir, ...heirs])
+      setNewlyCreatedHeir(newHeir as Heir)
+      setShowForm(false)
+      setShowInvitationModal(true)
+      toast.success('Heir invitation created successfully')
+      
     } catch (error) {
       setShowForm(false)
       logger.error('Error adding heir', error, {
         formData: { full_name: formData.full_name, email: formData.email },
-        userId: user.id
+        userId: user.id,
+        errorName: (error as Error).name,
+        errorMessage: (error as Error).message,
+        errorStack: (error as Error).stack
       })
-      logger.error('Error adding heir', error, { userId: user?.id })
       
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
       toast.error('Failed to add heir', errorMessage)
