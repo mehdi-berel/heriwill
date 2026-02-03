@@ -12,11 +12,17 @@ import DOMPurify from 'isomorphic-dompurify'
 export function sanitizeInput(input: string | null | undefined): string {
   if (!input) return ''
   
-  return DOMPurify.sanitize(input, {
-    ALLOWED_TAGS: [], // No HTML tags allowed
-    ALLOWED_ATTR: [],
-    KEEP_CONTENT: true // Keep text content, remove tags
-  }).trim()
+  try {
+    return DOMPurify.sanitize(input, {
+      ALLOWED_TAGS: [], // No HTML tags allowed
+      ALLOWED_ATTR: [],
+      KEEP_CONTENT: true // Keep text content, remove tags
+    }).trim()
+  } catch (error) {
+    console.error('Error sanitizing input:', error)
+    // Fallback: basic sanitization
+    return input.replace(/<[^>]*>/g, '').trim()
+  }
 }
 
 /**
@@ -58,13 +64,19 @@ export function sanitizeUrl(url: string | null | undefined): string {
 export function sanitizeEmail(email: string | null | undefined): string {
   if (!email) return ''
   
-  // Remove any HTML and trim
-  const cleaned = DOMPurify.sanitize(email, {
-    ALLOWED_TAGS: [],
-    ALLOWED_ATTR: []
-  }).trim().toLowerCase()
-  
-  return cleaned
+  try {
+    // Remove any HTML and trim
+    const cleaned = DOMPurify.sanitize(email, {
+      ALLOWED_TAGS: [],
+      ALLOWED_ATTR: []
+    }).trim().toLowerCase()
+    
+    return cleaned
+  } catch (error) {
+    console.error('Error sanitizing email:', error)
+    // Fallback: basic sanitization
+    return email.replace(/<[^>]*>/g, '').trim().toLowerCase()
+  }
 }
 
 /**

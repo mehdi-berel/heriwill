@@ -30,11 +30,23 @@ export async function createHeirInvitation(data: {
   heir_type?: 'family' | 'friend' | 'professional' | 'organization'
   code_validity_days?: number
 }) {
-  const supabase = await createServerSupabaseClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
-    throw new Error('Not authenticated')
-  }
+  try {
+    logger.info('Creating heir invitation', { email: data.email, heir_type: data.heir_type })
+    
+    const supabase = await createServerSupabaseClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    
+    if (authError) {
+      logger.error('Auth error in createHeirInvitation', authError)
+      throw new Error('Authentication failed: ' + authError.message)
+    }
+    
+    if (!user) {
+      logger.error('No user found in createHeirInvitation')
+      throw new Error('Not authenticated')
+    }
+    
+    logger.info('User authenticated', { userId: user.id })
 
   // Generate unique invitation code
   let invitationCode = generateInvitationCode()
@@ -64,37 +76,57 @@ export async function createHeirInvitation(data: {
   expirationDate.setTime(expirationDate.getTime() + (codeValidityDays * 24 * 60 * 60 * 1000))
 
   // Sanitize inputs before storing
-  const sanitizedFullName = sanitizeInput(data.full_name)
-  const sanitizedEmail = sanitizeEmail(data.email)
-  const sanitizedPhone = data.phone ? sanitizePhone(data.phone) : null
-  const sanitizedRelationship = data.relationship ? sanitizeInput(data.relationship) : null
+  logger.info('Sanitizing inputs')
+  let sanitizedFullName, sanitizedEmail, sanitizedPhone, sanitizedRelationship
+  
+  try {
+    sanitizedFullName = sanitizeInput(data.full_name)
+    sanitizedEmail = sanitizeEmail(data.email)
+    sanitizedPhone = data.phone ? sanitizePhone(data.phone) : null
+    sanitizedRelationship = data.relationship ? sanitizeInput(data.relationship) : null
+    logger.info('Inputs sanitized successfully')
+  } catch (sanitizeError) {
+    logger.error('Error sanitizing inputs', sanitizeError, { data })
+    throw new Error('Failed to sanitize input data: ' + (sanitizeError as Error).message)
+  }
 
   // Create heir with invitation
+  logger.info('Inserting heir into database', { invitationCode })
+  
+  const insertData = {
+    user_id: user.id,
+    full_name_encrypted: sanitizedFullName,
+    email_encrypted: sanitizedEmail,
+    phone_encrypted: sanitizedPhone,
+    relationship: sanitizedRelationship,
+    heir_type: data.heir_type || 'family',
+    invitation_code: invitationCode,
+    invitation_status: 'pending',
+    invitation_expires_at: expirationDate.toISOString(),
+    invited_at: new Date().toISOString(),
+    is_active: false,
+    has_accepted: false,
+    notify_on_activation: true,
+    notification_delay_days: 0,
+  }
+  
   const { data: heir, error } = await supabase
     .from('heirs')
-    .insert({
-      user_id: user.id,
-      full_name_encrypted: sanitizedFullName,
-      email_encrypted: sanitizedEmail,
-      phone_encrypted: sanitizedPhone,
-      relationship: sanitizedRelationship,
-      heir_type: data.heir_type || 'family',
-      invitation_code: invitationCode,
-      invitation_status: 'pending',
-      invitation_expires_at: expirationDate.toISOString(),
-      invited_at: new Date().toISOString(),
-      is_active: false,
-      has_accepted: false,
-      notify_on_activation: true,
-      notification_delay_days: 0,
-    })
+    .insert(insertData)
     .select()
     .single()
 
   if (error) {
-    logger.error('Error creating heir invitation', error)
-    throw error
+    logger.error('Database error creating heir invitation', error, { 
+      errorCode: error.code,
+      errorMessage: error.message,
+      errorDetails: error.details,
+      insertData: { ...insertData, full_name_encrypted: '[REDACTED]', email_encrypted: '[REDACTED]' }
+    })
+    throw new Error('Failed to create heir invitation: ' + error.message)
   }
+  
+  logger.info('Heir created successfully', { heirId: heir.id })
 
   // Create notification for the user who created the heir
   try {
@@ -118,10 +150,20 @@ export async function createHeirInvitation(data: {
     logger.error('Failed to create notification for heir invitation', notifError)
   }
 
-  return {
-    heir,
-    invitationCode,
-    expiresAt: expirationDate.toISOString()
+    logger.info('Heir invitation created successfully', { heirId: heir.id })
+    
+    return {
+      heir,
+      invitationCode,
+      expiresAt: expirationDate.toISOString()
+    }
+  } catch (error) {
+    logger.error('Unexpected error in createHeirInvitation', error, {
+      errorName: (error as Error).name,
+      errorMessage: (error as Error).message,
+      errorStack: (error as Error).stack
+    })
+    throw error
   }
 }
 
@@ -275,20 +317,33 @@ export async function getPendingInvitations() {
   const supabase = await createServerSupabaseClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {
+    logger.info('No user found in getPendingInvitations')
     return []
   }
+
+  logger.info('Fetching pending invitations for user', { userId: user.id, email: user.email })
+
+  // Sanitize user email to match how it's stored in database
+  const sanitizedUserEmail = sanitizeEmail(user.email || '')
+  
+  logger.info('Sanitized email for comparison', { original: user.email, sanitized: sanitizedUserEmail })
 
   // Get invitations where user's email matches (pending) OR where heir_user_id matches (accepted)
   const { data: heirs, error } = await supabase
     .from('heirs')
     .select('*, users!heirs_user_id_fkey(full_name, email)')
-    .or(`and(email_encrypted.eq.${user.email},invitation_status.eq.pending),and(heir_user_id.eq.${user.id},invitation_status.eq.accepted)`)
+    .or(`and(email_encrypted.eq.${sanitizedUserEmail},invitation_status.eq.pending),and(heir_user_id.eq.${user.id},invitation_status.eq.accepted)`)
     .order('created_at', { ascending: false })
 
   if (error) {
-    logger.error('Error fetching invitations', error)
+    logger.error('Error fetching invitations', error, { 
+      errorCode: error.code,
+      errorMessage: error.message 
+    })
     return []
   }
+
+  logger.info('Invitations fetched', { count: heirs?.length || 0 })
 
   return heirs || []
 }
