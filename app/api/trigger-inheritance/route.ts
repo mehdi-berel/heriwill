@@ -150,8 +150,7 @@ export async function POST(request: NextRequest) {
     const triggerError = triggerResult.error
 
     if (triggerError || !trigger) {
-      logger.error('Error creating trigger', triggerError)
-      console.error('[TRIGGER-INHERITANCE] Full error details:', JSON.stringify(triggerError, null, 2))
+      logger.error('Error creating trigger', triggerError, { fullDetails: triggerError })
       return NextResponse.json({ 
         error: 'Failed to create trigger',
         details: triggerError 

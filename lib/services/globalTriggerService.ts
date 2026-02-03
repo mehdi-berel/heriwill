@@ -195,11 +195,11 @@ export async function updateLastActivity(userId: string): Promise<void> {
       .eq('id', userId);
 
     if (error) {
-      console.error('Error updating last activity:', error);
+      logger.error('Error updating last activity', error, { userId });
       throw error;
     }
   } catch (error) {
-    console.error('Error in updateLastActivity:', error);
+    logger.error('Error in updateLastActivity', error, { userId });
     throw error;
   }
 }
@@ -226,17 +226,22 @@ export async function recordHeirDeathConfirmation(
       confirmedHeirIds.push(heirId);
     }
 
-    // Get total number of heirs
+    // Get total number of active heirs who have accepted
     const { data: heirsData } = await supabase
       .from('heirs')
       .select('id')
       .eq('user_id', userId)
-      .eq('is_active', true);
+      .eq('is_active', true)
+      .eq('has_accepted', true);
 
     const totalHeirs = heirsData?.length || 0;
     const confirmationProgress = totalHeirs > 0 ? (confirmedHeirIds.length / totalHeirs) * 100 : 0;
-    const threshold = global_trigger_settings.heir_verification_threshold || 75;
-    const triggered = confirmationProgress >= threshold;
+    
+    // If only 1 heir: 1 confirmation triggers inheritance
+    // If multiple heirs: ALL confirmations required (100%)
+    const triggered = totalHeirs === 1 
+      ? confirmedHeirIds.length >= 1 
+      : confirmationProgress >= 100;
 
     // Update the settings
     await saveGlobalTrigger(userId, {
@@ -252,7 +257,7 @@ export async function recordHeirDeathConfirmation(
       confirmationProgress,
     };
   } catch (error) {
-    console.error('Error recording heir confirmation:', error);
+    logger.error('Error recording heir confirmation', error);
     throw error;
   }
 }
@@ -294,7 +299,7 @@ export async function confirmTrustedContactDeath(
       message: 'Death confirmed by trusted contact',
     };
   } catch (error) {
-    console.error('Error confirming trusted contact death:', error);
+    logger.error('Error confirming trusted contact death', error);
     throw error;
   }
 }

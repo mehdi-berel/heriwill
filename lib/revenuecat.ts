@@ -82,7 +82,7 @@ export const getOfferings = async () => {
     // Silently fail - this is expected when RevenueCat is not configured or network issues occur
     // Only log in development for debugging
     if (process.env.NODE_ENV === 'development') {
-      console.debug('RevenueCat offerings not available:', error)
+      logger.debug('RevenueCat offerings not available', { error })
     }
     return null
   }

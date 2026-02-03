@@ -5,6 +5,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { supabase } from "@/lib/supabase"
+import { logger } from "@/lib/utils/logger"
 import {
   Home,
   Users,
@@ -63,7 +64,7 @@ export function MobileNav() {
         }
         setIsProUser((profile as ProfileData | null)?.subscription_tier === 'pro')
       } catch (error) {
-        console.error('Error checking pro status:', error)
+        logger.error('Error checking pro status', error)
       }
     }
 

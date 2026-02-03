@@ -11,6 +11,7 @@ import {
 import { NotificationList } from './notification-list'
 import { getUnreadCount } from '@/lib/services/notificationService'
 import { supabase } from '@/lib/supabase'
+import { logger } from '@/lib/utils/logger'
 
 export function NotificationsBell() {
   const [unreadCount, setUnreadCount] = useState(0)
@@ -18,7 +19,9 @@ export function NotificationsBell() {
 
   // Initial load on mount
   useEffect(() => {
-    getUnreadCount().then(setUnreadCount).catch(console.error)
+    getUnreadCount().then(setUnreadCount).catch((error) => {
+      logger.error('Error loading unread count', error)
+    })
   }, [])
 
   // Load unread count - memoized to prevent recreating on every render

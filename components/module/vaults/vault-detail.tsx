@@ -1,6 +1,8 @@
 "use client"
 
 import { useState } from "react"
+import { logger } from "@/lib/utils/logger"
+import { toast } from "@/lib/utils/toast"
 import { ItemForm } from "./item-form"
 import { ItemDetails } from "./item-details"
 import { ItemList } from "./item-list"
@@ -69,8 +71,8 @@ export function VaultDetail({
       setIsItemFormOpen(false)
       setSelectedItemForEdit(null)
     } catch (error) {
-      console.error('Error saving item:', error)
-      alert('Failed to save item. Please try again.')
+      logger.error('Error saving item', error)
+      toast.error('Failed to save item', 'Please try again')
     }
   }
 

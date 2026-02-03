@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import { logger } from '@/lib/utils/logger'
 
 /**
  * Subscription Tier Enforcement Middleware
@@ -73,7 +74,7 @@ export async function getUserTier(userId: string): Promise<'free' | 'premium' | 
     const tier = (data as Record<string, unknown>).subscription_tier as string
     return (tier === 'premium' || tier === 'pro') ? tier : 'free'
   } catch (error) {
-    console.error('Error getting user tier:', error)
+    logger.error('Error getting user tier', error, { userId })
     return 'free'
   }
 }
@@ -92,7 +93,7 @@ export async function canCreateVault(userId: string): Promise<{ allowed: boolean
     .eq('user_id', userId)
 
   if (error) {
-    console.error('Error counting vaults:', error)
+    logger.error('Error counting vaults', error, { userId })
     return { allowed: false, limit: limits.vaults, current: 0 }
   }
 
@@ -121,7 +122,7 @@ export async function canCreateHeir(userId: string): Promise<{ allowed: boolean;
     .eq('is_active', true)
 
   if (error) {
-    console.error('Error counting heirs:', error)
+    logger.error('Error counting heirs', error, { userId })
     return { allowed: false, limit: limits.heirs, current: 0 }
   }
 
@@ -164,7 +165,7 @@ export async function checkStorageLimit(
     .eq('user_id', userId)
 
   if (error) {
-    console.error('Error calculating storage:', error)
+    logger.error('Error calculating storage', error, { userId })
     return {
       allowed: false,
       limit: limits.storage,
@@ -268,7 +269,7 @@ export async function enforceTierLimit(
     // All checks passed
     return null
   } catch (error) {
-    console.error('Error enforcing tier limit:', error)
+    logger.error('Error enforcing tier limit', error)
     return NextResponse.json(
       { error: 'Failed to validate subscription' },
       { status: 500 }

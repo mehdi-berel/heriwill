@@ -161,15 +161,12 @@ export default function HeirsPage() {
 
   const handleAddHeir = async (formData: HeirFormData) => {
     if (!user) {
-      console.error('[HEIR] No user found')
+      logger.error('No user found when adding heir')
       toast.error('Not authenticated', 'Please log in again')
       return
     }
 
-    console.log('[HEIR] Starting heir creation', { formData, userId: user.id })
-
     try {
-      console.log('[HEIR] Calling createHeirInvitation server action...')
       const result = await createHeirInvitation({
         full_name: formData.full_name,
         email: formData.email,
@@ -179,8 +176,6 @@ export default function HeirsPage() {
         code_validity_days: 7
       })
 
-      console.log('[HEIR] Server action returned:', result)
-
       if (result.heir) {
         setHeirs([result.heir as Heir, ...heirs])
         setNewlyCreatedHeir(result.heir as Heir)
@@ -189,11 +184,10 @@ export default function HeirsPage() {
         toast.success('Heir invitation created successfully')
       }
     } catch (error) {
-      console.error('[HEIR] Error in handleAddHeir:', error)
-      console.error('[HEIR] Error details:', {
-        message: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : undefined,
-        error
+      setShowForm(false)
+      logger.error('Error adding heir', error, {
+        formData: { full_name: formData.full_name, email: formData.email },
+        userId: user.id
       })
       logger.error('Error adding heir', error, { userId: user?.id })
       
@@ -336,7 +330,7 @@ export default function HeirsPage() {
               className="rounded-lg flex items-center gap-2"
             >
               <Mail className="h-4 w-4" />
-              Pending ({heirs.filter(h => h.invitation_status === 'pending' && !h.has_accepted).length + receivedInvitations.length})
+              Pending ({heirs.filter(h => h.invitation_status === 'pending' && !h.has_accepted).length + receivedInvitations.filter(h => h.invitation_status === 'pending').length})
             </Button>
             <Button
               variant={activeTab === 'successors' ? 'default' : 'outline'}
@@ -401,13 +395,13 @@ export default function HeirsPage() {
             {/* Received invitations */}
             <div className="space-y-3 mt-6">
               <h3 className="text-sm font-medium text-muted-foreground">Invitations you received</h3>
-              {receivedInvitations.length === 0 ? (
+              {receivedInvitations.filter(h => h.invitation_status === 'pending').length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground text-sm">
                   <Mail className="h-8 w-8 mx-auto mb-2 opacity-50" />
                   <p>No invitations received</p>
                 </div>
               ) : (
-                receivedInvitations.map((invitation) => (
+                receivedInvitations.filter(h => h.invitation_status === 'pending').map((invitation) => (
                   <HeirInvitationCard
                     key={invitation.id}
                     successor={{
@@ -456,6 +450,9 @@ export default function HeirsPage() {
                   ownerName={user?.email || 'Owner'}
                   ownerUserId={successor.user_id || ''}
                   isTrustedContact={trustedContactMap[successor.id] || false}
+                  onRemove={async () => {
+                    await loadReceivedInvitations()
+                  }}
                 />
               ))
             )}

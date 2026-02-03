@@ -13,6 +13,7 @@ import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 
 import { supabase } from "@/lib/supabase"
+import { logger } from "@/lib/utils/logger"
 
 import { Badge } from "@/components/ui/badge"
 
@@ -165,9 +166,7 @@ export function Sidebar({ onSignOut }: SidebarProps) {
         setIsProUser((profile as ProfileData | null)?.subscription_tier === 'pro')
 
       } catch (error) {
-
-        console.error('Error checking pro status:', error)
-
+        logger.error('Error checking pro status', error)
       }
 
     }

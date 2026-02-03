@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef } from "react"
-import { Dialog, DialogContent } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -24,6 +24,8 @@ import {
   Scale,
   Package
 } from "lucide-react"
+import { logger } from "@/lib/utils/logger"
+import { toast } from "@/lib/utils/toast"
 
 export type VaultItemType = 'password' | 'document' | 'video' | 'image' | 'note' | 'crypto' | 'bank' | 'other' | 'legal' | 'assets'
 
@@ -204,7 +206,7 @@ export function ItemForm({ isOpen, onClose, onSave, initialData, vaultCategory }
       
       setUploadError('')
     } catch (error) {
-      console.error('Upload error:', error)
+      logger.error('Upload error', error)
       setUploadError(error instanceof Error ? error.message : 'Failed to upload file')
     } finally {
       setIsUploading(false)
@@ -250,7 +252,8 @@ export function ItemForm({ isOpen, onClose, onSave, initialData, vaultCategory }
       await onSave(formData)
       onClose()
     } catch (error) {
-      console.error('Error saving item:', error)
+      logger.error('Error saving item', error)
+      toast.error('Failed to save item', 'Please try again')
     } finally {
       setLoading(false)
     }
@@ -542,6 +545,12 @@ export function ItemForm({ isOpen, onClose, onSave, initialData, vaultCategory }
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogTitle className="sr-only">
+          {initialData ? 'Edit Item' : 'Add New Item'}
+        </DialogTitle>
+        <DialogDescription className="sr-only">
+          {initialData ? 'Update the details of your vault item' : 'Add a new item to your vault'}
+        </DialogDescription>
         <div className="space-y-6">
           {/* Header */}
           <div className="text-center space-y-3">

@@ -7,17 +7,17 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { 
-  Save, 
-  X, 
   Home,
   Car,
   Landmark,
   TrendingUp,
   Shield,
-  Package,
+  Package as PackageIcon,
   Briefcase,
   FileText,
-  DollarSign
+  DollarSign,
+  MapPin,
+  AlertCircle
 } from "lucide-react"
 
 interface Vault {
@@ -57,6 +57,8 @@ interface AssetFormProps {
 }
 
 export function AssetForm({ initialData, onSubmit, onCancel, isEditing = false }: AssetFormProps) {
+  const [error, setError] = useState("")
+  const [loading, setLoading] = useState(false)
   const [formData, setFormData] = useState({
     name: initialData?.name || '',
     type: initialData?.type || 'other',
@@ -71,6 +73,9 @@ export function AssetForm({ initialData, onSubmit, onCancel, isEditing = false }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    setError("")
+    setLoading(true)
+    
     onSubmit({
       ...formData,
       value: formData.value ? parseFloat(String(formData.value)) : undefined,
@@ -83,7 +88,7 @@ export function AssetForm({ initialData, onSubmit, onCancel, isEditing = false }
     { value: 'bank_account', label: 'Bank Account', icon: Landmark, color: 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300' },
     { value: 'investment', label: 'Investment', icon: TrendingUp, color: 'bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-300' },
     { value: 'insurance', label: 'Insurance', icon: Shield, color: 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300' },
-    { value: 'personal_property', label: 'Personal Property', icon: Package, color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-950 dark:text-yellow-300' },
+    { value: 'personal_property', label: 'Personal Property', icon: PackageIcon, color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-950 dark:text-yellow-300' },
     { value: 'business', label: 'Business', icon: Briefcase, color: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300' },
     { value: 'other', label: 'Other', icon: FileText, color: 'bg-gray-100 text-gray-800 dark:bg-gray-950 dark:text-gray-300' }
   ]
@@ -97,127 +102,175 @@ export function AssetForm({ initialData, onSubmit, onCancel, isEditing = false }
 
 
   return (
-    <div className="w-full">
-      <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Asset Type Selection */}
-          <div className="space-y-3">
-            <Label className="text-sm font-semibold">Asset Type <span className="text-red-500">*</span></Label>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {assetTypes.map((assetType) => {
-                const Icon = assetType.icon
-                const isSelected = formData.type === assetType.value
-                return (
-                  <button
-                    key={assetType.value}
-                    type="button"
-                    onClick={() => setFormData({ ...formData, type: assetType.value as AssetFormData['type'] })}
-                    className={`
-                      flex flex-col items-center gap-2 p-3 rounded-lg border-2 transition-all
-                      ${
-                        isSelected 
-                          ? 'border-primary bg-primary/10' 
-                          : 'hover:border-primary/50 hover:bg-accent'
-                      }
-                    `}
-                    style={{ borderColor: isSelected ? undefined : '#232629' }}
-                  >
-                    <Icon className={`h-5 w-5 ${isSelected ? 'text-primary' : 'text-muted-foreground'}`} />
-                    <span className={`text-xs font-medium text-center ${isSelected ? 'text-primary' : 'text-muted-foreground'}`}>
-                      {assetType.label}
-                    </span>
-                  </button>
-                )
-              })}
-            </div>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="text-center space-y-3">
+        <div className="flex justify-center">
+          <div className="relative w-16 h-16 rounded-full flex items-center justify-center shadow-lg border" style={{ backgroundColor: '#8B5CF620', borderColor: '#8B5CF640', boxShadow: '0 20px 25px -5px rgba(139, 92, 246, 0.2)' }}>
+            <Briefcase className="h-8 w-8" style={{ color: '#8B5CF6' }} />
           </div>
+        </div>
+        <div className="space-y-1">
+          <h2 className="text-2xl font-bold" style={{ color: '#FAFAFA' }}>
+            {isEditing ? 'Edit Asset' : 'Add New Asset'}
+          </h2>
+          <p className="text-sm" style={{ color: '#A1A1AA' }}>
+            {isEditing ? 'Update asset information and details' : 'Add a new asset to your estate'}
+          </p>
+        </div>
+      </div>
 
-          {/* Basic Information Section */}
-          <div className="space-y-4">
-            <h3 className="text-sm font-semibold">Basic Information</h3>
-            
-            <div className="space-y-2">
-              <Label htmlFor="name">
-                Asset Name <span className="text-red-500">*</span>
-              </Label>
+      {/* Error Message */}
+      {error && (
+        <div className="flex items-start gap-3 p-3 rounded-lg bg-status-error/10 border-l-4 border-status-error">
+          <AlertCircle className="h-5 w-5 text-status-error flex-shrink-0 mt-0.5" />
+          <p className="text-sm text-status-error flex-1">{error}</p>
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Asset Type Selection */}
+        <div className="space-y-3">
+          <Label className="text-sm font-medium">Asset Type</Label>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            {assetTypes.map((assetType) => {
+              const Icon = assetType.icon
+              const isSelected = formData.type === assetType.value
+              return (
+                <button
+                  key={assetType.value}
+                  type="button"
+                  onClick={() => setFormData({ ...formData, type: assetType.value as AssetFormData['type'] })}
+                  disabled={loading}
+                  className="flex flex-col items-center gap-2 p-3 rounded-lg border-2 transition-all"
+                  style={isSelected ? { 
+                    backgroundColor: '#8B5CF620', 
+                    borderColor: '#8B5CF6',
+                    boxShadow: '0 4px 6px -1px rgba(139, 92, 246, 0.2)'
+                  } : { borderColor: '#232629' }}
+                >
+                  <Icon className="h-5 w-5" style={{ color: isSelected ? '#8B5CF6' : '#71717A' }} />
+                  <span className="text-xs font-medium text-center" style={{ color: isSelected ? '#8B5CF6' : '#A1A1AA' }}>
+                    {assetType.label}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Asset Name */}
+        <div className="space-y-2">
+          <Label htmlFor="name" className="text-sm font-medium">Asset Name</Label>
+          <div className="relative">
+            <FileText className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-text-tertiary" />
+            <Input
+              id="name"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              placeholder="e.g., Family Home, Toyota Camry, Chase Savings"
+              className="pl-12 h-12 transition-colors"
+              style={{ backgroundColor: '#141417', borderColor: '#232629' }}
+              required
+              disabled={loading}
+            />
+          </div>
+        </div>
+
+        {/* Description */}
+        <div className="space-y-2">
+          <Label htmlFor="description" className="text-sm font-medium">Description</Label>
+          <Textarea
+            id="description"
+            value={formData.description}
+            onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+            placeholder="Provide additional details about this asset"
+            rows={3}
+            className="transition-colors"
+            style={{ backgroundColor: '#141417', borderColor: '#232629' }}
+            disabled={loading}
+          />
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="value" className="text-sm font-medium">Estimated Value</Label>
+            <div className="relative">
+              <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-text-tertiary" />
               <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="e.g., Family Home, Toyota Camry, Chase Savings"
-                required
+                id="value"
+                type="number"
+                value={formData.value}
+                onChange={(e) => setFormData(prev => ({ ...prev, value: e.target.value }))}
+                placeholder="0.00"
+                step="0.01"
+                className="pl-12 h-12 transition-colors"
+                style={{ backgroundColor: '#141417', borderColor: '#232629' }}
+                disabled={loading}
               />
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
-            <Textarea
-              id="description"
-              value={formData.description}
-              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-              placeholder="Provide additional details about this asset"
-              rows={3}
-            />
+            <Label htmlFor="ownership_type" className="text-sm font-medium">Ownership Type</Label>
+            <Select
+              value={formData.ownership_type}
+              onValueChange={(value) => setFormData(prev => ({ ...prev, ownership_type: value as AssetFormData['ownership_type'] }))}
+              disabled={loading}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {ownershipTypes.map(type => (
+                  <SelectItem key={type.value} value={type.value}>
+                    {type.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
+        </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="value">Estimated Value</Label>
-              <div className="relative">
-                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="value"
-                  type="number"
-                  value={formData.value}
-                  onChange={(e) => setFormData(prev => ({ ...prev, value: e.target.value }))}
-                  placeholder="0.00"
-                  step="0.01"
-                  className="pl-9"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="ownership_type">Ownership Type</Label>
-              <Select
-                value={formData.ownership_type}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, ownership_type: value as AssetFormData['ownership_type'] }))}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {ownershipTypes.map(type => (
-                    <SelectItem key={type.value} value={type.value}>
-                      {type.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="location">Location</Label>
+        {/* Location */}
+        <div className="space-y-2">
+          <Label htmlFor="location" className="text-sm font-medium">Location</Label>
+          <div className="relative">
+            <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-text-tertiary" />
             <Input
               id="location"
               value={formData.location}
               onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
               placeholder="e.g., 123 Main St, New York, NY 10001"
+              className="pl-12 h-12 transition-colors"
+              style={{ backgroundColor: '#141417', borderColor: '#232629' }}
+              disabled={loading}
             />
           </div>
+        </div>
 
-          <div className="flex gap-3 pt-4">
-            <Button type="button" variant="outline" onClick={onCancel} className="flex-1">
-              <X className="h-4 w-4 mr-2" />
-              Cancel
-            </Button>
-            <Button type="submit" className="flex-1">
-              <Save className="h-4 w-4 mr-2" />
-              {isEditing ? 'Update Asset' : 'Save Asset'}
-            </Button>
-          </div>
-        </form>
+        {/* Form Actions */}
+        <div className="flex flex-col-reverse sm:flex-row gap-3 pt-2">
+          <Button 
+            type="button" 
+            variant="outline" 
+            onClick={onCancel} 
+            className="w-full sm:w-auto h-12 text-base transition-all"
+            style={{ borderColor: '#232629' }}
+            disabled={loading}
+          >
+            Cancel
+          </Button>
+          <Button 
+            type="submit" 
+            className="w-full sm:w-auto h-12 text-base font-semibold transition-all"
+            style={{ backgroundColor: '#8B5CF6', boxShadow: '0 10px 15px -3px rgba(139, 92, 246, 0.3)' }}
+            disabled={loading || !formData.name.trim()}
+          >
+            {loading ? (isEditing ? 'Updating...' : 'Saving...') : (isEditing ? 'Update Asset' : 'Save Asset')}
+          </Button>
+        </div>
+      </form>
     </div>
   )
 }

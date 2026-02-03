@@ -10,6 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Save, X } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { getGlobalTrigger, saveGlobalTrigger } from "@/lib/services/globalTriggerService"
+import { logger } from "@/lib/utils/logger"
+import { toast } from "@/lib/utils/toast"
 
 interface SignOffSettingsModalProps {
   isOpen: boolean
@@ -92,7 +94,7 @@ export function SignOffSettingsModal({
         }
       }
     } catch (error) {
-      console.error('Error loading settings:', error)
+      logger.error('Error loading settings', error, { userId })
     }
   }, [userId])
 
@@ -106,7 +108,7 @@ export function SignOffSettingsModal({
 
       setHeirs((data || []) as Heir[])
     } catch (error) {
-      console.error('Error loading heirs:', error)
+      logger.error('Error loading heirs', error, { userId })
     }
   }, [userId])
 
@@ -119,14 +121,12 @@ export function SignOffSettingsModal({
 
       setNotaries(data || [])
     } catch (error) {
-      console.error('Error loading notaries:', error)
+      logger.error('Error loading notaries', error, { userId })
     }
   }, [userId])
 
   const combineTrustedContacts = useCallback(() => {
     const contacts: TrustedContact[] = []
-    
-    console.log('Combining trusted contacts - Heirs:', heirs.length, 'Notaries:', notaries.length)
     
     heirs.forEach(heir => {
       contacts.push({
@@ -144,7 +144,6 @@ export function SignOffSettingsModal({
       })
     })
     
-    console.log('Total trusted contacts:', contacts.length)
     setTrustedContacts(contacts)
   }, [heirs, notaries])
 
@@ -203,7 +202,8 @@ export function SignOffSettingsModal({
       onSave()
       onClose()
     } catch (error) {
-      console.error('Error saving settings:', error)
+      logger.error('Error saving settings', error)
+      toast.error('Failed to save settings', 'Please try again')
     } finally {
       setLoading(false)
     }

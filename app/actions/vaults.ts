@@ -1,6 +1,7 @@
 "use server"
 
 import { createServerSupabaseClient } from '../../lib/supabase'
+import { logger } from '../../lib/utils/logger'
 import type { Database } from '../../lib/database.types'
 import { checkStorageLimit, checkVaultLimit } from '../../lib/subscription-limits'
 
@@ -132,7 +133,7 @@ export const vaultActions = {
   // Toggle Favorite - Note: is_favorite column doesn't exist in vaults table
   toggleFavorite: async (vaultId: string, isFavorite: boolean) => {
     // This function is deprecated as is_favorite doesn't exist in the vaults schema
-    console.warn('toggleFavorite is deprecated - is_favorite column does not exist')
+    logger.warn('toggleFavorite is deprecated - is_favorite column does not exist')
     return { id: vaultId, is_favorite: isFavorite }
   },
 

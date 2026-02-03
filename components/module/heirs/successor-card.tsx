@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
@@ -12,9 +12,15 @@ import {
   Mail,
   Phone,
   AlertTriangle,
-  Shield
+  Shield,
+  Bell,
+  X,
+  Users,
+  Trash2
 } from "lucide-react"
+import { logger } from "@/lib/utils/logger"
 import { toast } from "@/lib/utils/toast"
+import { supabase } from "@/lib/supabase"
 
 interface Successor {
   id: string
@@ -32,6 +38,15 @@ interface SuccessorCardProps {
   ownerName: string
   ownerUserId: string
   isTrustedContact?: boolean
+  onRemove?: () => void
+}
+
+interface DeathNotification {
+  hasNotification: boolean
+  totalHeirs: number
+  confirmedHeirs: number
+  confirmationProgress: number
+  alreadyConfirmed: boolean
 }
 
 const heirTypeLabels = {
@@ -52,10 +67,21 @@ export function SuccessorCard({
   successor, 
   ownerName,
   ownerUserId,
-  isTrustedContact = false
+  isTrustedContact = false,
+  onRemove
 }: SuccessorCardProps) {
   const [showConfirmModal, setShowConfirmModal] = useState(false)
+  const [showRemoveModal, setShowRemoveModal] = useState(false)
   const [confirming, setConfirming] = useState(false)
+  const [removing, setRemoving] = useState(false)
+  const [deathNotification, setDeathNotification] = useState<DeathNotification>({
+    hasNotification: false,
+    totalHeirs: 0,
+    confirmedHeirs: 0,
+    confirmationProgress: 0,
+    alreadyConfirmed: false
+  })
+  const [loading, setLoading] = useState(true)
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -65,23 +91,78 @@ export function SuccessorCard({
     })
   }
 
+  // Check for death notification
+  useEffect(() => {
+    const checkDeathNotification = async () => {
+      try {
+        const { data: ownerData } = await supabase
+          .from('users')
+          .select('global_trigger_method, global_trigger_settings')
+          .eq('id', ownerUserId)
+          .single()
+
+        if (ownerData?.global_trigger_method === 'heir_notification') {
+          const settings = ownerData.global_trigger_settings as { confirmed_heir_ids?: string[] } | null
+          const confirmedHeirIds = settings?.confirmed_heir_ids || []
+          
+          // Get total number of heirs
+          const { data: heirsData } = await supabase
+            .from('heirs')
+            .select('id')
+            .eq('user_id', ownerUserId)
+            .eq('is_active', true)
+            .eq('has_accepted', true)
+
+          const totalHeirs = heirsData?.length || 0
+          const confirmedHeirs = confirmedHeirIds.length
+          const alreadyConfirmed = confirmedHeirIds.includes(successor.id)
+
+          setDeathNotification({
+            hasNotification: true,
+            totalHeirs,
+            confirmedHeirs,
+            confirmationProgress: totalHeirs > 0 ? (confirmedHeirs / totalHeirs) * 100 : 0,
+            alreadyConfirmed
+          })
+        }
+      } catch (error) {
+        logger.error('Error checking death notification', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    checkDeathNotification()
+  }, [ownerUserId, successor.id])
+
   const handleConfirmDeath = async () => {
     setConfirming(true)
     try {
-      const response = await fetch('/api/confirm-death/trusted-contact', {
+      const endpoint = isTrustedContact ? '/api/confirm-death/trusted-contact' : '/api/confirm-death/heir'
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           heirId: successor.id,
-          ownerUserId 
+          ownerUserId,
+          confirmed: true
         })
       })
 
       const data = await response.json()
 
       if (response.ok && data.success) {
-        toast.success('Death confirmation submitted successfully')
+        toast.success(data.message || 'Death confirmation submitted successfully')
         setShowConfirmModal(false)
+        
+        // Update local state
+        setDeathNotification(prev => ({
+          ...prev,
+          confirmedHeirs: prev.confirmedHeirs + 1,
+          confirmationProgress: prev.totalHeirs > 0 ? ((prev.confirmedHeirs + 1) / prev.totalHeirs) * 100 : 0,
+          alreadyConfirmed: true
+        }))
+        
         if (data.triggered) {
           toast.info('Inheritance plan has been triggered')
         }
@@ -89,11 +170,78 @@ export function SuccessorCard({
         toast.error(data.message || 'Failed to confirm death')
       }
     } catch (error) {
-      console.error('Error confirming death:', error)
+      logger.error('Error confirming death', error)
       toast.error('Failed to submit confirmation')
     } finally {
       setConfirming(false)
     }
+  }
+
+  const handleDenyDeath = async () => {
+    setConfirming(true)
+    try {
+      const response = await fetch('/api/confirm-death/heir', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          heirId: successor.id,
+          ownerUserId,
+          confirmed: false
+        })
+      })
+
+      const data = await response.json()
+
+      if (response.ok && data.success) {
+        toast.success(data.message || 'Response recorded')
+        setDeathNotification(prev => ({ ...prev, hasNotification: false }))
+      } else {
+        toast.error(data.message || 'Failed to process response')
+      }
+    } catch (error) {
+      logger.error('Error denying death', error)
+      toast.error('Failed to submit response')
+    } finally {
+      setConfirming(false)
+    }
+  }
+
+  const handleRemoveSuccessor = async () => {
+    setRemoving(true)
+    try {
+      const response = await fetch('/api/successor/remove', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ heirId: successor.id })
+      })
+
+      const data = await response.json()
+
+      if (response.ok && data.success) {
+        toast.success('Successor role removed successfully')
+        setShowRemoveModal(false)
+        if (onRemove) {
+          onRemove()
+        }
+      } else {
+        toast.error(data.message || 'Failed to remove successor role')
+      }
+    } catch (error) {
+      logger.error('Error removing successor', error)
+      toast.error('Failed to remove successor role')
+    } finally {
+      setRemoving(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <Card className="border-primary/20">
+        <CardContent className="py-8">
+          <div className="text-center text-muted-foreground">Loading...</div>
+        </CardContent>
+      </Card>
+    )
   }
 
   return (
@@ -121,6 +269,91 @@ export function SuccessorCard({
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
+          {/* Death Notification Alert */}
+          {deathNotification.hasNotification && !deathNotification.alreadyConfirmed && (
+            <div className="p-4 bg-red-500/10 rounded-lg border-2 border-red-500/50 space-y-4">
+              <div className="flex items-start gap-3">
+                <Bell className="h-5 w-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-red-900 dark:text-red-200 mb-1">
+                    ⚠️ Death Notification
+                  </p>
+                  <p className="text-xs text-red-800 dark:text-red-300 mb-3">
+                    {ownerName} may have passed away. Please confirm if this is true.
+                  </p>
+                  {deathNotification.totalHeirs > 1 && (
+                    <div className="mb-3">
+                      <div className="flex items-center justify-between text-xs text-red-800 dark:text-red-300 mb-1">
+                        <span>Confirmation Progress</span>
+                        <span>{deathNotification.confirmedHeirs} of {deathNotification.totalHeirs} heirs confirmed</span>
+                      </div>
+                      <div className="w-full bg-red-200 dark:bg-red-900/30 rounded-full h-2">
+                        <div 
+                          className="bg-red-600 dark:bg-red-500 h-2 rounded-full transition-all"
+                          style={{ width: `${deathNotification.confirmationProgress}%` }}
+                        />
+                      </div>
+                      <p className="text-xs text-red-700 dark:text-red-400 mt-2">
+                        {deathNotification.totalHeirs === 1 
+                          ? 'Your confirmation will trigger the inheritance plan.'
+                          : 'All heirs must confirm to trigger the inheritance plan.'}
+                      </p>
+                    </div>
+                  )}
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={() => setShowConfirmModal(true)}
+                      size="sm"
+                      className="bg-red-600 hover:bg-red-700 text-white"
+                      disabled={confirming}
+                    >
+                      <CheckCircle className="h-4 w-4 mr-1" />
+                      Confirm Death
+                    </Button>
+                    <Button
+                      onClick={handleDenyDeath}
+                      size="sm"
+                      variant="outline"
+                      className="border-red-500/50"
+                      disabled={confirming}
+                    >
+                      <X className="h-4 w-4 mr-1" />
+                      Not Deceased
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Already Confirmed Alert */}
+          {deathNotification.hasNotification && deathNotification.alreadyConfirmed && (
+            <div className="p-4 bg-blue-500/10 rounded-lg border border-blue-500/30">
+              <div className="flex items-start gap-3">
+                <CheckCircle className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-blue-900 dark:text-blue-200 mb-1">
+                    Confirmation Recorded
+                  </p>
+                  <p className="text-xs text-blue-800 dark:text-blue-300">
+                    You have confirmed the death notification.
+                    {deathNotification.totalHeirs > 1 && (
+                      <> Waiting for {deathNotification.totalHeirs - deathNotification.confirmedHeirs} other heir(s) to confirm.</>
+                    )}
+                  </p>
+                  {deathNotification.totalHeirs > 1 && (
+                    <div className="mt-2">
+                      <div className="flex items-center gap-2 text-xs text-blue-800 dark:text-blue-300">
+                        <Users className="h-4 w-4" />
+                        <span>{deathNotification.confirmedHeirs} of {deathNotification.totalHeirs} confirmed ({Math.round(deathNotification.confirmationProgress)}%)</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Successor Information */}
           <div className="space-y-4">
             <h3 className="text-sm font-medium text-muted-foreground">Your Details</h3>
@@ -185,6 +418,18 @@ export function SuccessorCard({
             </p>
           </div>
 
+          {/* Remove Successor Button */}
+          <div className="pt-2">
+            <Button
+              onClick={() => setShowRemoveModal(true)}
+              variant="outline"
+              className="w-full h-11 border-red-500/50 hover:bg-red-500/10 text-red-600 dark:text-red-400"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Remove Successor Role
+            </Button>
+          </div>
+
           {/* Trusted Contact Section */}
           {isTrustedContact && (
             <div className="space-y-3 pt-2">
@@ -213,6 +458,68 @@ export function SuccessorCard({
           )}
         </CardContent>
       </Card>
+
+      {/* Remove Successor Modal */}
+      <Dialog open={showRemoveModal} onOpenChange={setShowRemoveModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Trash2 className="h-5 w-5 text-red-500" />
+              Remove Successor Role
+            </DialogTitle>
+            <DialogDescription>
+              This will permanently remove your successor role for {ownerName}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="p-4 bg-amber-500/10 rounded-lg border border-amber-500/20">
+              <p className="text-sm font-semibold text-amber-900 dark:text-amber-200 mb-2">
+                ⚠️ Important Notice
+              </p>
+              <p className="text-xs text-amber-800 dark:text-amber-300 leading-relaxed">
+                By removing your successor role, you will:
+              </p>
+              <ul className="mt-2 space-y-1 text-xs text-amber-800 dark:text-amber-300">
+                <li className="flex items-start gap-2">
+                  <X className="h-3 w-3 flex-shrink-0 mt-0.5" />
+                  <span>No longer have access to {ownerName}&apos;s vaults and assets</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <X className="h-3 w-3 flex-shrink-0 mt-0.5" />
+                  <span>Not receive inheritance notifications</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <X className="h-3 w-3 flex-shrink-0 mt-0.5" />
+                  <span>Be removed from {ownerName}&apos;s heir list</span>
+                </li>
+              </ul>
+            </div>
+
+            <p className="text-sm text-muted-foreground">
+              Are you sure you want to remove your successor role?
+            </p>
+          </div>
+
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setShowRemoveModal(false)}
+              disabled={removing}
+              className="w-full sm:w-auto"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleRemoveSuccessor}
+              disabled={removing}
+              className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white"
+            >
+              {removing ? 'Removing...' : 'Yes, Remove Role'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Death Confirmation Modal */}
       <Dialog open={showConfirmModal} onOpenChange={setShowConfirmModal}>

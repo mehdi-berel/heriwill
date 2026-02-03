@@ -4,8 +4,10 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent } from "@/components/ui/card"
 import { Power, AlertCircle, CheckCircle } from "lucide-react"
+import { logger } from "@/lib/utils/logger"
+import { toast } from "@/lib/utils/toast"
 
-interface ManualTriggerSectionProps {
+interface ManualTriggerSectionProps{
   userId: string
 }
 
@@ -31,13 +33,13 @@ export function ManualTriggerSection({ userId }: ManualTriggerSectionProps) {
         router.push('/')
       } else {
         const errorMsg = data.error || 'Failed to trigger inheritance plan'
-        console.error('API Error:', data)
+        logger.error('API Error triggering inheritance', { data })
         throw new Error(errorMsg)
       }
     } catch (error) {
-      console.error('Error triggering plan:', error)
+      logger.error('Error triggering plan', error)
       const errorMessage = error instanceof Error ? error.message : 'Failed to trigger inheritance plan. Please try again.'
-      alert(errorMessage)
+      toast.error('Failed to trigger inheritance', errorMessage)
     } finally {
       setSaving(false)
     }

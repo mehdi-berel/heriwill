@@ -122,7 +122,6 @@ export default function SignOffPage() {
       if (userData) {
         const userDataTyped = userData as { inheritance_triggered?: boolean }
         const triggered = userDataTyped.inheritance_triggered || false
-        console.log('[SIGN-OFF] Inheritance triggered status:', triggered)
         setInheritanceTriggered(triggered)
       }
 

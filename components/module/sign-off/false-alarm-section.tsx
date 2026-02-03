@@ -4,6 +4,8 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent } from "@/components/ui/card"
 import { AlertTriangle, RefreshCcw, CheckCircle } from "lucide-react"
+import { logger } from "@/lib/utils/logger"
+import { toast } from "@/lib/utils/toast"
 
 interface FalseAlarmSectionProps {
   userId: string
@@ -31,13 +33,13 @@ export function FalseAlarmSection({ userId }: FalseAlarmSectionProps) {
         router.refresh()
       } else {
         const errorMsg = data.error || 'Failed to declare false alarm'
-        console.error('API Error:', data)
+        logger.error('API Error declaring false alarm', { data })
         throw new Error(errorMsg)
       }
     } catch (error) {
-      console.error('Error declaring false alarm:', error)
+      logger.error('Error declaring false alarm', error)
       const errorMessage = error instanceof Error ? error.message : 'Failed to declare false alarm. Please try again.'
-      alert(errorMessage)
+      toast.error('Failed to declare false alarm', errorMessage)
     } finally {
       setSaving(false)
     }

@@ -41,18 +41,12 @@ export function HeirForm({ onSubmit, onCancel, initialData, isEditing = false }:
     invitation_expires_at: initialData?.invitation_expires_at || ''
   })
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
     setLoading(true)
     
-    try {
-      await onSubmit(formData)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save heir")
-    } finally {
-      setLoading(false)
-    }
+    onSubmit(formData)
   }
 
   return (

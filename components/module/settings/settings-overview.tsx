@@ -17,6 +17,7 @@ import {
   Trash2,
   AlertTriangle
 } from "lucide-react"
+import { logger } from "@/lib/utils/logger"
 
 interface SettingsOverviewProps {
   userId: string
@@ -81,7 +82,7 @@ export function SettingsOverview({ profile }: SettingsOverviewProps) {
 
   const handleSave = async (section: string) => {
     // In a real app, this would save to the database
-    console.log(`Saving ${section}:`, formData)
+    logger.info('Saving settings section', { section, formData })
     // Show success message
   }
 
@@ -92,7 +93,7 @@ export function SettingsOverview({ profile }: SettingsOverviewProps) {
     }
     
     // In a real app, this would update the password
-    console.log('Changing password')
+    logger.info('Changing password')
     // Reset form
     setFormData(prev => ({
       ...prev,
@@ -106,13 +107,13 @@ export function SettingsOverview({ profile }: SettingsOverviewProps) {
 
   const handleExportData = () => {
     // In a real app, this would export user data
-    console.log('Exporting user data')
+    logger.info('Exporting user data')
   }
 
   const handleDeleteAccount = () => {
     // In a real app, this would delete the account
     if (confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
-      console.log('Deleting account')
+      logger.info('Deleting account')
     }
   }
 

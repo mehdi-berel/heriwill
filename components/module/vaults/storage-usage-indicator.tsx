@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { HardDrive, TrendingUp } from "lucide-react"
 import { checkStorageLimit } from "@/lib/subscription-limits"
+import { logger } from "@/lib/utils/logger"
 
 interface StorageUsageIndicatorProps {
   userId: string
@@ -25,7 +26,7 @@ export function StorageUsageIndicator({ userId }: StorageUsageIndicatorProps) {
         const data = await checkStorageLimit(userId)
         setStorageData(data)
       } catch (error) {
-        console.error('Error loading storage data:', error)
+        logger.error('Error loading storage data', error, { userId })
       } finally {
         setLoading(false)
       }

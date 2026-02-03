@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
 import { supabase } from "@/lib/supabase"
+import { logger } from "@/lib/utils/logger"
 import { Sparkles, ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
@@ -37,7 +38,7 @@ export function ProTierGuard({ children, pageName }: ProTierGuardProps) {
         setIsProUser(hasProAccess)
         setLoading(false)
       } catch (error) {
-        console.error("Error checking pro access:", error)
+        logger.error('Error checking pro access', error)
         setIsProUser(false)
         setLoading(false)
       }

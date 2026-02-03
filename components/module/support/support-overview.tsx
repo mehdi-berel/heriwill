@@ -28,6 +28,7 @@ import {
   Zap,
   Plus
 } from "lucide-react"
+import { logger } from "@/lib/utils/logger"
 
 interface UserProfile {
   full_name?: string
@@ -299,7 +300,7 @@ export function SupportOverview({}: SupportOverviewProps) {
 
   const handleSubmitTicket = () => {
     // In a real app, this would submit the ticket
-    console.log('Submitting ticket:', ticketForm)
+    logger.info('Submitting ticket', { ticketForm })
     // Reset form
     setTicketForm({
       subject: '',

@@ -4,6 +4,8 @@ import { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { MessageSquare, Send, Loader2 } from "lucide-react"
+import { logger } from "@/lib/utils/logger"
+import { toast } from "@/lib/utils/toast"
 
 export function FeedbackButton() {
   const [isExpanded, setIsExpanded] = useState(false)
@@ -52,12 +54,13 @@ export function FeedbackButton() {
           setMessage("")
         }, 2000)
       } else {
-        console.error("FormSubmit error:", await response.text())
-        alert("Failed to send feedback. Please try again.")
+        const errorText = await response.text()
+        logger.error('FormSubmit error', { errorText })
+        toast.error('Failed to send feedback', 'Please try again')
       }
     } catch (error) {
-      console.error("Error submitting feedback:", error)
-      alert("Failed to send feedback. Please try again.")
+      logger.error('Error submitting feedback', error)
+      toast.error('Failed to send feedback', 'Please try again')
     } finally {
       setLoading(false)
     }

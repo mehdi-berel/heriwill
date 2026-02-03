@@ -4,9 +4,16 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { CreditCard, Download, AlertTriangle, CheckCircle, Crown, Zap, Loader2, ExternalLink } from "lucide-react"
-import { useRevenueCat } from "@/contexts/RevenueCatContext"
-import { getOfferings, purchasePackage, getCustomerInfo, getSubscriptionTier } from "@/lib/revenuecat"
+import { 
+  getCustomerInfo, 
+  getOfferings, 
+  purchasePackage, 
+  getSubscriptionTier
+} from "@/lib/revenuecat"
+import { logger } from "@/lib/utils/logger"
+import { toast } from "@/lib/utils/toast"
 import { isProPackage, isMonthlyPackage, isYearlyPackage } from "@/lib/revenuecat-config"
+import { useRevenueCat } from "@/contexts/RevenueCatContext"
 import { SyncSubscriptionButton } from "./sync-subscription-button"
 
 interface BillingSettingsProps {
@@ -103,7 +110,7 @@ export function BillingSettings({
       } catch (error) {
         // Silently handle errors - RevenueCat may not be configured
         if (process.env.NODE_ENV === 'development') {
-          console.debug('RevenueCat data not available:', error)
+          logger.debug('RevenueCat data not available', { error })
         }
       } finally {
         setLoading(false)
@@ -124,12 +131,12 @@ export function BillingSettings({
       const tier = await getSubscriptionTier()
       setSubscriptionTier(tier)
       
-      alert('Subscription purchased successfully!')
+      toast.success('Subscription purchased successfully!')
     } catch (error: unknown) {
-      console.error('Purchase error:', error)
+      logger.error('Purchase error', error)
       const err = error as Record<string, unknown>
       if (err.userCancelled) {
-        alert('Purchase cancelled')
+        toast.info('Purchase cancelled')
       } else {
         alert('Purchase failed: ' + (err.message || 'Unknown error'))
       }

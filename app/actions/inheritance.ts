@@ -11,7 +11,8 @@
  * TODO: Remove this file after confirming no active usage
  */
 
-import { supabase } from '../../lib/supabase'
+import { supabase } from '@/lib/supabase'
+import { logger } from '@/lib/utils/logger'
 import type { Database } from '../../lib/database.types'
 
 type TriggerRow = Database['public']['Tables']['inheritance_triggers']['Row']
@@ -40,7 +41,7 @@ export const inheritanceActions = {
   // Create Inheritance Plan
   // @deprecated - inheritance_plans table no longer exists
   createPlan: async () => {
-    console.warn('createPlan is deprecated - use globalTriggerService')
+    logger.warn('createPlan is deprecated - use globalTriggerService')
     return null
     // const { data, error } = await (supabase.from('inheritance_plans') as any)
     //   .insert({
@@ -59,7 +60,7 @@ export const inheritanceActions = {
   // Update Inheritance Plan
   // @deprecated - inheritance_plans table no longer exists
   updatePlan: async () => {
-    console.warn('updatePlan is deprecated - use globalTriggerService')
+    logger.warn('updatePlan is deprecated - use globalTriggerService')
     return null
     // const { data, error } = await (supabase.from('inheritance_plans') as any)
     //   .update(updateData)
@@ -74,7 +75,7 @@ export const inheritanceActions = {
   // Delete Inheritance Plan
   // @deprecated - inheritance_plans table no longer exists
   deletePlan: async () => {
-    console.warn('deletePlan is deprecated - use globalTriggerService')
+    logger.warn('deletePlan is deprecated - use globalTriggerService')
     return null
     // const { error } = await supabase
     //   .from('inheritance_plans')
@@ -87,7 +88,7 @@ export const inheritanceActions = {
   // Get Plan by ID
   // @deprecated - inheritance_plans table no longer exists
   getPlanById: async () => {
-    console.warn('getPlanById is deprecated - use globalTriggerService')
+    logger.warn('getPlanById is deprecated - use globalTriggerService')
     return null
     // const { data, error } = await supabase
     //   .from('inheritance_plans')
@@ -102,7 +103,7 @@ export const inheritanceActions = {
   // Get All Plans for User
   // @deprecated - inheritance_plans table no longer exists
   getAllPlans: async (): Promise<PlanRow[]> => {
-    console.warn('getAllPlans is deprecated - use globalTriggerService')
+    logger.warn('getAllPlans is deprecated - use globalTriggerService')
     return []
     // const { data, error } = await supabase
     //   .from('inheritance_plans')
@@ -119,7 +120,7 @@ export const inheritanceActions = {
   updatePlanStatus: async () => {
     // This function is obsolete - inheritance_plans table removed
     // Use globalTriggerService instead
-    console.warn('updatePlanStatus is deprecated - use globalTriggerService')
+    logger.warn('updatePlanStatus is deprecated - use globalTriggerService')
     return null
     // const { data } = await (supabase.from('inheritance_plans') as any)
     //   .update({ is_active: isActive })

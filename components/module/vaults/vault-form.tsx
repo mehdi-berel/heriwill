@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { supabase } from "@/lib/supabase"
+import { logger } from "@/lib/utils/logger"
 import { 
   FolderOpen, 
   Lock, 
@@ -59,7 +60,7 @@ export function VaultForm({ onSubmit, onCancel, initialData }: VaultFormProps) {
 
         setIsProUser((profile as { subscription_tier?: string } | null)?.subscription_tier === 'pro')
       } catch (error) {
-        console.error('Error checking pro status:', error)
+        logger.error('Error checking pro status', error)
       }
     }
 

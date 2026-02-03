@@ -1,0 +1,104 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { createServerSupabaseClient } from '@/lib/supabase'
+import { logger } from '@/lib/utils/logger'
+
+export async function POST(request: NextRequest) {
+  try {
+    const supabase = await createServerSupabaseClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+      return NextResponse.json(
+        { success: false, message: 'Not authenticated' },
+        { status: 401 }
+      )
+    }
+
+    const body = await request.json()
+    const { itemId } = body
+
+    if (!itemId) {
+      return NextResponse.json(
+        { success: false, message: 'Item ID is required' },
+        { status: 400 }
+      )
+    }
+
+    // Get item details
+    const { data: itemData, error: itemError } = await supabase
+      .from('vault_items')
+      .select('*, vaults!inner(user_id)')
+      .eq('id', itemId)
+      .single()
+
+    if (itemError || !itemData) {
+      return NextResponse.json(
+        { success: false, message: 'Item not found' },
+        { status: 404 }
+      )
+    }
+
+    const vaultOwnerId = (itemData.vaults as { user_id: string }).user_id
+
+    // Verify user is an heir with access
+    const { data: heirData } = await supabase
+      .from('heirs')
+      .select('user_id')
+      .eq('heir_user_id', user.id)
+      .eq('user_id', vaultOwnerId)
+      .eq('is_active', true)
+
+    if (!heirData || heirData.length === 0) {
+      return NextResponse.json(
+        { success: false, message: 'Not authorized' },
+        { status: 403 }
+      )
+    }
+
+    // Check for completed inheritance trigger
+    const { data: triggerData } = await supabase
+      .from('inheritance_triggers')
+      .select('user_id')
+      .eq('user_id', vaultOwnerId)
+      .eq('status', 'completed')
+      .single()
+
+    if (!triggerData) {
+      return NextResponse.json(
+        { success: false, message: 'No inheritance access' },
+        { status: 403 }
+      )
+    }
+
+    // Prepare item data for download
+    const downloadData = {
+      title: itemData.title_encrypted,
+      type: itemData.item_type,
+      metadata: itemData.metadata,
+      tags: itemData.tags,
+      is_favorite: itemData.is_favorite,
+      created_at: itemData.created_at,
+      updated_at: itemData.updated_at,
+      downloaded_at: new Date().toISOString()
+    }
+
+    const jsonString = JSON.stringify(downloadData, null, 2)
+    const fileName = `${itemData.item_type}_${itemData.title_encrypted?.replace(/[^a-z0-9]/gi, '_') || 'item'}.json`
+
+    return new NextResponse(jsonString, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Disposition': `attachment; filename="${fileName}"`
+      }
+    })
+  } catch (error) {
+    logger.error('Error in item download', error)
+    return NextResponse.json(
+      { 
+        success: false, 
+        message: error instanceof Error ? error.message : 'Failed to download item' 
+      },
+      { status: 500 }
+    )
+  }
+}

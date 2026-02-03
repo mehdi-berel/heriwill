@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase"
+import { logger } from "./logger"
 
 export interface UploadResult {
   success: boolean
@@ -44,7 +45,7 @@ export async function uploadFile(
       })
 
     if (error) {
-      console.error('Supabase upload error:', error)
+      logger.error('Supabase upload error', error)
       return {
         success: false,
         error: error.message
@@ -62,7 +63,7 @@ export async function uploadFile(
       filePath: filePath
     }
   } catch (error) {
-    console.error('File upload error:', error)
+    logger.error('File upload error', error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error occurred'
@@ -86,7 +87,7 @@ export async function deleteFile(
       .remove([filePath])
 
     if (error) {
-      console.error('Supabase delete error:', error)
+      logger.error('Supabase delete error', error)
       return {
         success: false,
         error: error.message
@@ -95,7 +96,7 @@ export async function deleteFile(
 
     return { success: true }
   } catch (error) {
-    console.error('File delete error:', error)
+    logger.error('File delete error', error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error occurred'
@@ -121,7 +122,7 @@ export async function getSignedUrl(
       .createSignedUrl(filePath, expiresIn)
 
     if (error) {
-      console.error('Supabase signed URL error:', error)
+      logger.error('Supabase signed URL error', error)
       return {
         success: false,
         error: error.message
@@ -133,7 +134,7 @@ export async function getSignedUrl(
       signedUrl: data.signedUrl
     }
   } catch (error) {
-    console.error('Signed URL error:', error)
+    logger.error('Signed URL error', error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error occurred'

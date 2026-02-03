@@ -1,4 +1,5 @@
 import { supabase } from './supabase'
+import { logger } from './utils/logger'
 
 // Storage bucket names
 export const STORAGE_BUCKETS = {
@@ -67,7 +68,7 @@ export async function uploadFile(
       })
 
     if (error) {
-      console.error('Upload error:', error)
+      logger.error('Upload error', error)
       return {
         success: false,
         error: error.message
@@ -85,7 +86,7 @@ export async function uploadFile(
       filePath: data.path
     }
   } catch (error) {
-    console.error('Upload exception:', error)
+    logger.error('Upload exception', error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Upload failed'
@@ -175,7 +176,7 @@ export async function getUserStorageUsage(userId: string): Promise<number> {
 
     return totalSize
   } catch (error) {
-    console.error('Error calculating storage usage:', error)
+    logger.error('Error calculating storage usage', error)
     return 0
   }
 }

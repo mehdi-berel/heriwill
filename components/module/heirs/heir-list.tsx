@@ -11,6 +11,8 @@ import {
   Copy,
   Check
 } from "lucide-react"
+import { logger } from "@/lib/utils/logger"
+import { toast } from "@/lib/utils/toast"
 
 interface Heir {
   id: string
@@ -71,7 +73,8 @@ export function HeirList({
       setCopiedId(heir.id)
       setTimeout(() => setCopiedId(null), 2000)
     } catch (err) {
-      console.error('Failed to copy:', err)
+      logger.error('Failed to copy', err, { heirId: heir.id })
+      toast.error('Failed to copy', 'Please try again')
     }
   }
 

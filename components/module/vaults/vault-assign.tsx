@@ -8,6 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Users, Search, Scale } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { supabase } from "@/lib/supabase"
+import { logger } from "@/lib/utils/logger"
 
 interface Heir {
   id: string
@@ -70,7 +71,7 @@ export function VaultAssign({
           .order('created_at', { ascending: false })
 
         if (error) {
-          console.error('Error loading notaries:', error)
+          logger.error('Error loading notaries', error)
           setNotaries([])
         } else {
           setNotaries((data || []) as Notary[])
@@ -84,7 +85,7 @@ export function VaultAssign({
           .order('created_at', { ascending: false })
 
         if (error) {
-          console.error('Error loading heirs:', error)
+          logger.error('Error loading heirs', error)
           setHeirs([])
         } else {
           // Map database fields to component interface
@@ -104,7 +105,7 @@ export function VaultAssign({
       }
       setLoading(false)
     } catch (error) {
-      console.error('Error loading data:', error)
+      logger.error('Error loading data', error)
       setLoading(false)
     }
   }, [isNotaryMode])

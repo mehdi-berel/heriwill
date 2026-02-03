@@ -4,6 +4,8 @@ import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Bell, Mail, Smartphone, CheckCircle } from "lucide-react"
+import { logger } from "@/lib/utils/logger"
+import { toast } from "@/lib/utils/toast"
 
 export function NotificationSettings() {
   const [formData, setFormData] = useState({
@@ -43,8 +45,9 @@ export function NotificationSettings() {
       setSaveStatus('success')
       setTimeout(() => setSaveStatus('idle'), 3000)
     } catch (error) {
-      console.error('Save error:', error)
+      logger.error('Save error', error)
       setSaveStatus('error')
+      toast.error('Failed to save settings', 'Please try again')
       setTimeout(() => setSaveStatus('idle'), 3000)
     } finally {
       setIsSaving(false)

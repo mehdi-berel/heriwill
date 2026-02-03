@@ -1,4 +1,5 @@
 import { supabase } from './supabase'
+import { logger } from './utils/logger'
 
 export interface SubscriptionLimits {
   maxVaults: number
@@ -56,7 +57,7 @@ export async function checkVaultLimit(userId: string): Promise<{ canCreate: bool
       tier,
     }
   } catch (error) {
-    console.error('Error checking vault limit:', error)
+    logger.error('Error checking vault limit', error)
     return { canCreate: false, currentCount: 0, limit: 1, tier: 'free' }
   }
 }
@@ -89,7 +90,7 @@ export async function checkHeirLimit(userId: string): Promise<{ canCreate: boole
       tier,
     }
   } catch (error) {
-    console.error('Error checking heir limit:', error)
+    logger.error('Error checking heir limit', error)
     return { canCreate: false, currentCount: 0, limit: 1, tier: 'free' }
   }
 }
@@ -144,7 +145,7 @@ export async function checkStorageLimit(userId: string, additionalSizeBytes: num
       remainingGB: Math.round(remainingGB * 100) / 100,
     }
   } catch (error) {
-    console.error('Error checking storage limit:', error)
+    logger.error('Error checking storage limit', error)
     return { 
       canUpload: false, 
       currentUsageGB: 0, 

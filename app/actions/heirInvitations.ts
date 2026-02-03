@@ -269,7 +269,7 @@ export async function rejectHeirInvitation(invitationCode: string) {
 }
 
 /**
- * Get pending invitations for current user (where they are the heir)
+ * Get pending and accepted invitations for current user (where they are the heir)
  */
 export async function getPendingInvitations() {
   const supabase = await createServerSupabaseClient()
@@ -278,15 +278,15 @@ export async function getPendingInvitations() {
     return []
   }
 
+  // Get invitations where user's email matches (pending) OR where heir_user_id matches (accepted)
   const { data: heirs, error } = await supabase
     .from('heirs')
     .select('*, users!heirs_user_id_fkey(full_name, email)')
-    .eq('email_encrypted', user.email || '')
-    .eq('invitation_status', 'pending')
+    .or(`and(email_encrypted.eq.${user.email},invitation_status.eq.pending),and(heir_user_id.eq.${user.id},invitation_status.eq.accepted)`)
     .order('created_at', { ascending: false })
 
   if (error) {
-    logger.error('Error fetching pending invitations', error)
+    logger.error('Error fetching invitations', error)
     return []
   }
 

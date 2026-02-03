@@ -174,14 +174,6 @@ function UpgradePageContent() {
               ? 'border-primary-500 bg-gradient-to-br from-gray-900/80 to-primary-900/20 shadow-xl shadow-primary-500/20'
               : 'border-gray-800 bg-gray-900/60'
           } p-6 md:p-8 relative transform transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl flex-shrink-0 w-[85vw] md:w-auto snap-center`}>
-            {currentPlan === 'free' && (
-              <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 z-10">
-                <Badge className="bg-gradient-to-r from-primary-500 to-indigo-500 text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-lg border border-primary-400/50 flex items-center gap-1.5">
-                  <Check size={14} className="fill-current" />
-                  Active Plan
-                </Badge>
-              </div>
-            )}
             {/* Plan Icon */}
             <div className="mb-4">
               <div className="inline-flex p-2 rounded-lg bg-gray-800/50 border border-gray-700">
@@ -237,14 +229,6 @@ function UpgradePageContent() {
             } p-6 md:p-8 relative transform transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl md:scale-105 flex-shrink-0 w-[85vw] md:w-auto snap-center`}
             style={{ borderColor: 'rgb(168 85 247)' }}
           >
-            {currentPlan === 'premium' && (
-              <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 z-10">
-                <Badge className="bg-gradient-to-r from-primary-500 to-indigo-500 text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-lg border border-primary-400/50 flex items-center gap-1.5">
-                  <Check size={14} className="fill-current" />
-                  Active Plan
-                </Badge>
-              </div>
-            )}
             {/* Plan Icon */}
             <div className="mb-4">
               <div className="inline-flex p-2 rounded-lg bg-gradient-to-br from-primary-600/20 to-indigo-600/20 border border-primary-500/30">

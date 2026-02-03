@@ -10,6 +10,8 @@ import { Select, SelectItem } from "@/components/ui/select"
 import { Save, X } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import type { Database } from '@/lib/database.types'
+import { logger } from "@/lib/utils/logger"
+import { toast } from "@/lib/utils/toast"
 
 interface SignOffSettingsProps {
   method: string
@@ -91,7 +93,7 @@ export function SignOffSettings({ method, userId, onSave, onCancel }: SignOffSet
         }
       }
     } catch (error) {
-      console.error('Error loading settings:', error)
+      logger.error('Error loading settings', error, { userId })
     }
   }, [userId])
 
@@ -105,7 +107,7 @@ export function SignOffSettings({ method, userId, onSave, onCancel }: SignOffSet
 
       setHeirs((data || []) as Heir[])
     } catch (error) {
-      console.error('Error loading heirs:', error)
+      logger.error('Error loading heirs', error, { userId })
     }
   }, [userId])
 
@@ -118,7 +120,7 @@ export function SignOffSettings({ method, userId, onSave, onCancel }: SignOffSet
 
       setNotaries(data || [])
     } catch (error) {
-      console.error('Error loading notaries:', error)
+      logger.error('Error loading notaries', error, { userId })
     }
   }, [userId])
 
@@ -208,7 +210,8 @@ export function SignOffSettings({ method, userId, onSave, onCancel }: SignOffSet
 
       onSave()
     } catch (error) {
-      console.error('Error saving settings:', error)
+      logger.error('Error saving settings', error)
+      toast.error('Failed to save settings', 'Please try again')
     } finally {
       setLoading(false)
     }
