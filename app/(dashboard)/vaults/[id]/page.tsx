@@ -152,7 +152,13 @@ export default function VaultDetailPage() {
 
   const loadVaultItems = useCallback(async (vaultId: string) => {
     try {
-      const items = await vaultItemActions.getVaultItems(vaultId)
+      const { data: items, error } = await supabase
+        .from('vault_items')
+        .select('*')
+        .eq('vault_id', vaultId)
+        .order('created_at', { ascending: false })
+      
+      if (error) throw error
       
       interface VaultItemRaw {
         id: string
@@ -168,7 +174,7 @@ export default function VaultDetailPage() {
       // Valid item types
       const validTypes: VaultItemType[] = ['password', 'document', 'video', 'image', 'note', 'crypto', 'bank', 'other', 'legal', 'assets']
       
-      const mappedItems: VaultItem[] = (items as VaultItemRaw[]).map((item: VaultItemRaw) => {
+      const mappedItems: VaultItem[] = ((items || []) as VaultItemRaw[]).map((item: VaultItemRaw) => {
         // Ensure item_type is valid, default to 'other' if not
         const itemType = validTypes.includes(item.item_type as VaultItemType) 
           ? (item.item_type as VaultItemType)

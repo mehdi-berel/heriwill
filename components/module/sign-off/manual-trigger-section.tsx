@@ -28,7 +28,7 @@ export function ManualTriggerSection({ userId }: ManualTriggerSectionProps) {
       if (response.ok) {
         setShowModal(false)
         alert('Inheritance plan triggered successfully. Your heirs have been notified.')
-        router.push('/dashboard')
+        router.push('/')
       } else {
         const errorMsg = data.error || 'Failed to trigger inheritance plan'
         console.error('API Error:', data)

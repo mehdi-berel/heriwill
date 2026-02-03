@@ -40,6 +40,9 @@ export async function GET(request: NextRequest) {
     // 3. Check verification timeouts
     await checkVerificationTimeouts()
 
+    // 4. Check for accounts past deactivation date
+    await checkAccountDeactivations()
+
     return NextResponse.json({ success: true })
   } catch (error) {
     logger.error('Error in trigger check cron job', error)
@@ -152,8 +155,69 @@ async function checkVerificationTimeouts() {
   }
 }
 
+async function checkAccountDeactivations() {
+  try {
+    const now = new Date().toISOString()
+
+    // Get all users with deactivation date passed and inheritance still triggered
+    const { data, error } = await supabase
+      .from('users')
+      .select('id, email, full_name, account_deactivation_date')
+      .eq('inheritance_triggered', true)
+      .lte('account_deactivation_date', now)
+      .eq('is_active', true)
+
+    if (error) {
+      logger.error('Error fetching users for deactivation', error)
+      return
+    }
+
+    const users = data as unknown as Array<{ id: string; email: string; full_name: string | null; account_deactivation_date: string }>
+    if (!users || users.length === 0) return
+
+    for (const user of users) {
+      logger.info(`Deactivating account for user ${user.id} (${user.email}) - 30 days passed without false alarm`)
+      
+      // Deactivate the account
+      const { error: deactivateError } = await supabase
+        .from('users')
+        .update({
+          is_active: false,
+          account_locked: true,
+        } as never)
+        .eq('id', user.id)
+
+      if (deactivateError) {
+        logger.error(`Error deactivating user ${user.id}`, deactivateError)
+      } else {
+        logger.info(`Successfully deactivated account for user ${user.id}`)
+      }
+    }
+  } catch (error) {
+    logger.error('Error checking account deactivations', error)
+  }
+}
+
 async function triggerPlan(userId: string, reason: string) {
-  // Call the trigger logic service
-  // This would contain the logic to update database state, notify heirs, etc.
-  logger.info(`Plan triggered for user ${userId}, reason: ${reason}`)
+  try {
+    logger.info(`Triggering inheritance plan for user ${userId}, reason: ${reason}`)
+    
+    // Call the trigger-inheritance endpoint
+    const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'https://app.heriwill.com'}/api/trigger-inheritance`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, reason })
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json()
+      logger.error(`Failed to trigger inheritance for user ${userId}`, errorData)
+      return
+    }
+
+    const result = await response.json()
+    logger.info(`Successfully triggered inheritance for user ${userId}`, result)
+  } catch (error) {
+    logger.error(`Error triggering inheritance for user ${userId}`, error)
+  }
 }

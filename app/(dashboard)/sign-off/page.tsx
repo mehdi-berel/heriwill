@@ -9,6 +9,7 @@ import { InactivitySection } from "@/components/module/sign-off/inactivity-secti
 import { TrustedContactSection } from "@/components/module/sign-off/trusted-contact-section"
 import { HeirNotificationSection } from "@/components/module/sign-off/heir-notification-section"
 import { ScheduledDateSection } from "@/components/module/sign-off/scheduled-date-section"
+import { FalseAlarmSection } from "@/components/module/sign-off/false-alarm-section"
 import { Card, CardContent } from "@/components/ui/card"
 import { Clock, Users, Bell, Calendar, Hand, AlertCircle, Power } from "lucide-react"
 import { Switch } from "@/components/ui/switch"
@@ -73,6 +74,7 @@ export default function SignOffPage() {
   const [isActivated, setIsActivated] = useState(false)
   const [saving, setSaving] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [inheritanceTriggered, setInheritanceTriggered] = useState(false)
   const [triggerSettings, setTriggerSettings] = useState<{
     inactivityDays?: number
     trustedContactHeirId?: string
@@ -110,6 +112,20 @@ export default function SignOffPage() {
 
   const loadSignOffSettings = async (userId: string) => {
     try {
+      // Check if inheritance has been triggered
+      const { data: userData } = await supabase
+        .from('users')
+        .select('inheritance_triggered')
+        .eq('id', userId)
+        .single()
+      
+      if (userData) {
+        const userDataTyped = userData as { inheritance_triggered?: boolean }
+        const triggered = userDataTyped.inheritance_triggered || false
+        console.log('[SIGN-OFF] Inheritance triggered status:', triggered)
+        setInheritanceTriggered(triggered)
+      }
+
       const globalTrigger = await getGlobalTrigger(userId)
 
       if (globalTrigger) {
@@ -141,133 +157,147 @@ export default function SignOffPage() {
 
   return (
     <div className="p-4 md:p-6 space-y-4 md:space-y-6 max-w-4xl mx-auto">
-        {/* Activation Toggle Card */}
-        <Card className={isActivated ? "bg-green-50 dark:bg-green-950/20 border-green-500/50" : "bg-gray-50 dark:bg-gray-900/30 border-gray-300 dark:border-gray-700"}>
-          <CardContent className="p-4 md:p-5">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 md:gap-3 mb-2">
-                  <Power className={`h-5 w-5 md:h-6 md:w-6 flex-shrink-0 ${isActivated ? 'text-green-600 dark:text-green-400' : 'text-gray-400'}`} />
-                  <Label className="text-base md:text-lg font-semibold">
-                    {isActivated ? 'Sign-Off Plan Active' : 'Sign-Off Plan Inactive'}
-                  </Label>
+        {/* Show False Alarm Section if inheritance is triggered */}
+        {inheritanceTriggered && user ? (
+          <FalseAlarmSection userId={user.id} />
+        ) : (
+          <>
+            {/* Activation Toggle Card */}
+            <Card className={isActivated ? "bg-green-50 dark:bg-green-950/20 border-green-500/50" : "bg-gray-50 dark:bg-gray-900/30 border-gray-300 dark:border-gray-700"}>
+              <CardContent className="p-4 md:p-5">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 md:gap-3 mb-2">
+                      <Power className={`h-5 w-5 md:h-6 md:w-6 flex-shrink-0 ${isActivated ? 'text-green-600 dark:text-green-400' : 'text-gray-400'}`} />
+                      <Label className="text-base md:text-lg font-semibold">
+                        {isActivated ? 'Sign-Off Plan Active' : 'Sign-Off Plan Inactive'}
+                      </Label>
+                    </div>
+                    <p className="text-xs md:text-sm text-text-secondary">
+                      {isActivated 
+                        ? `Your inheritance plan will trigger using ${DETECTION_METHODS.find(m => m.id === activeMethod)?.title || 'the configured method'}` 
+                        : 'Enable your sign-off plan to activate the inheritance trigger'}
+                    </p>
+                  </div>
+                  <Switch
+                    checked={isActivated}
+                    onCheckedChange={async (checked) => {
+                      if (!user) return
+
+                      if (!checked) {
+                        // Deactivate - delete the trigger
+                        setSaving(true)
+                        try {
+                          await deleteGlobalTrigger(user.id)
+                          setIsActivated(false)
+                          setActiveMethod(null)
+                        } catch (error) {
+                          logger.error('Error deactivating trigger', error, { userId: user.id })
+                          toast.error('Failed to deactivate', 'Please try again')
+                        } finally {
+                          setSaving(false)
+                        }
+                      } else {
+                        // Activate - need to have a configured method
+                        if (!activeMethod) {
+                          toast.error('Please select and configure a detection method first')
+                          return
+                        }
+                        // Reactivate the existing method
+                        setSaving(true)
+                        try {
+                          await loadSignOffSettings(user.id)
+                          setIsActivated(true)
+                        } catch (error) {
+                          logger.error('Error activating trigger', error, { userId: user.id, method: activeMethod })
+                          toast.error('Failed to activate', 'Please try again')
+                        } finally {
+                          setSaving(false)
+                        }
+                      }
+                    }}
+                    disabled={saving || (!isActivated && !activeMethod)}
+                    className="flex-shrink-0"
+                  />
                 </div>
-                <p className="text-xs md:text-sm text-text-secondary">
-                  {isActivated 
-                    ? `Your inheritance plan will trigger using ${DETECTION_METHODS.find(m => m.id === activeMethod)?.title || 'the configured method'}` 
-                    : 'Enable your sign-off plan to activate the inheritance trigger'}
-                </p>
-              </div>
-              <Switch
-                checked={isActivated}
-                onCheckedChange={async (checked) => {
-                  if (!user) return
+              </CardContent>
+            </Card>
+          </>
+        )}
 
-                  if (!checked) {
-                    // Deactivate - delete the trigger
-                    setSaving(true)
-                    try {
-                      await deleteGlobalTrigger(user.id)
-                      setIsActivated(false)
-                      setActiveMethod(null)
-                    } catch (error) {
-                      logger.error('Error deactivating trigger', error, { userId: user.id })
-                      toast.error('Failed to deactivate', 'Please try again')
-                    } finally {
-                      setSaving(false)
-                    }
-                  } else {
-                    // Activate - need to have a configured method
-                    if (!activeMethod) {
-                      toast.error('Please select and configure a detection method first')
-                      return
-                    }
-                    // Reactivate the existing method
-                    setSaving(true)
-                    try {
-                      await loadSignOffSettings(user.id)
-                      setIsActivated(true)
-                    } catch (error) {
-                      logger.error('Error activating trigger', error, { userId: user.id, method: activeMethod })
-                      toast.error('Failed to activate', 'Please try again')
-                    } finally {
-                      setSaving(false)
-                    }
-                  }
+        {/* Show detection methods only if inheritance is NOT triggered */}
+        {!inheritanceTriggered && (
+          <>
+            {/* Info Banner */}
+            <Card className="bg-blue-600/5 border-blue-600/20">
+              <CardContent className="flex items-start gap-3 p-4">
+                <AlertCircle className="h-5 w-5 text-blue-400 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-sm text-text-secondary">
+                    Choose a method to detect when your inheritance plan should be activated. You can change this at any time.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Detection Methods */}
+            <div>
+              <h2 className="text-lg md:text-xl font-semibold text-text-primary mb-3 md:mb-4">Detection Methods</h2>
+              <SignOffMethodSelector
+                methods={DETECTION_METHODS}
+                selectedMethod={activeMethod}
+                onMethodSelect={(methodId) => {
+                  setSelectedMethod(methodId)
+                  setIsModalOpen(true)
                 }}
-                disabled={saving || (!isActivated && !activeMethod)}
-                className="flex-shrink-0"
               />
+              
+              {/* Active Method Section - Shows configuration details */}
+              {isActivated && activeMethod && (
+                <div className="mt-4 md:mt-6">
+                  {activeMethod === 'manual_trigger' && user && (
+                    <ManualTriggerSection userId={user.id} />
+                  )}
+                  {activeMethod === 'inactivity' && (
+                    <InactivitySection inactivityDays={triggerSettings.inactivityDays || 30} />
+                  )}
+                  {activeMethod === 'trusted_contact' && (
+                    <TrustedContactSection trustedContactHeirId={triggerSettings.trustedContactHeirId || ''} />
+                  )}
+                  {activeMethod === 'heir_notification' && (
+                    <HeirNotificationSection 
+                      notificationFrequency={triggerSettings.notificationFrequency || 7}
+                      verificationThreshold={triggerSettings.verificationThreshold || 2}
+                    />
+                  )}
+                  {activeMethod === 'scheduled_date' && (
+                    <ScheduledDateSection scheduledDate={triggerSettings.scheduledDate || ''} />
+                  )}
+                </div>
+              )}
             </div>
-          </CardContent>
-        </Card>
+          </>
+        )}
 
-        {/* Info Banner */}
-        <Card className="bg-blue-600/5 border-blue-600/20">
-          <CardContent className="flex items-start gap-3 p-4">
-            <AlertCircle className="h-5 w-5 text-blue-400 flex-shrink-0 mt-0.5" />
-            <div className="flex-1">
-              <p className="text-sm text-text-secondary">
-                Choose a method to detect when your inheritance plan should be activated. You can change this at any time.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Detection Methods */}
-        <div>
-          <h2 className="text-lg md:text-xl font-semibold text-text-primary mb-3 md:mb-4">Detection Methods</h2>
-          <SignOffMethodSelector
-            methods={DETECTION_METHODS}
-            selectedMethod={activeMethod}
-            onMethodSelect={(methodId) => {
-              setSelectedMethod(methodId)
-              setIsModalOpen(true)
+        {/* Settings Modal - Only show if not triggered */}
+        {!inheritanceTriggered && (
+          <SignOffSettingsModal
+            isOpen={isModalOpen}
+            onClose={() => {
+              setIsModalOpen(false)
+              setSelectedMethod(null)
+            }}
+            method={selectedMethod}
+            methodTitle={DETECTION_METHODS.find(m => m.id === selectedMethod)?.title || ''}
+            userId={user?.id || ''}
+            onSave={async () => {
+              if (!user) return
+              setActiveMethod(selectedMethod)
+              setIsActivated(true)
+              await loadSignOffSettings(user.id)
             }}
           />
-          
-          {/* Active Method Section - Shows configuration details */}
-          {isActivated && activeMethod && (
-            <div className="mt-4 md:mt-6">
-              {activeMethod === 'manual_trigger' && user && (
-                <ManualTriggerSection userId={user.id} />
-              )}
-              {activeMethod === 'inactivity' && (
-                <InactivitySection inactivityDays={triggerSettings.inactivityDays || 30} />
-              )}
-              {activeMethod === 'trusted_contact' && (
-                <TrustedContactSection trustedContactHeirId={triggerSettings.trustedContactHeirId || ''} />
-              )}
-              {activeMethod === 'heir_notification' && (
-                <HeirNotificationSection 
-                  notificationFrequency={triggerSettings.notificationFrequency || 7}
-                  verificationThreshold={triggerSettings.verificationThreshold || 2}
-                />
-              )}
-              {activeMethod === 'scheduled_date' && (
-                <ScheduledDateSection scheduledDate={triggerSettings.scheduledDate || ''} />
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Settings Modal */}
-        <SignOffSettingsModal
-          isOpen={isModalOpen}
-          onClose={() => {
-            setIsModalOpen(false)
-            setSelectedMethod(null)
-          }}
-          method={selectedMethod}
-          methodTitle={DETECTION_METHODS.find(m => m.id === selectedMethod)?.title || ''}
-          userId={user?.id || ''}
-          onSave={async () => {
-            if (!user) return
-            setActiveMethod(selectedMethod)
-            setIsActivated(true)
-            await loadSignOffSettings(user.id)
-          }}
-        />
+        )}
     </div>
   )
 }

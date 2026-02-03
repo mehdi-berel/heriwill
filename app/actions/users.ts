@@ -186,6 +186,18 @@ export const userActions = {
     return { id: userId }
   },
 
+  // Get Inheritance Status
+  getInheritanceStatus: async (userId: string) => {
+    const { data, error } = await supabase
+      .from('users')
+      .select('inheritance_triggered, inheritance_triggered_at, account_deactivation_date')
+      .eq('id', userId)
+      .single()
+
+    if (error) throw new Error(error.message)
+    return data
+  },
+
   // Get User Statistics
   getUserStats: async (userId: string) => {
     const user = await userActions.getUserProfile(userId)
@@ -210,7 +222,10 @@ export const userActions = {
       isAccountLocked: userData?.account_locked || false,
       isEmailVerified: userData?.email_verified || false,
       lastActivity: userData?.last_activity,
-      lastLogin: userData?.last_login
+      lastLogin: userData?.last_login,
+      inheritanceTriggered: userData?.inheritance_triggered || false,
+      inheritanceTriggeredAt: userData?.inheritance_triggered_at,
+      accountDeactivationDate: userData?.account_deactivation_date
     }
 
     return stats

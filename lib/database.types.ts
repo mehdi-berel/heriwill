@@ -519,6 +519,7 @@ export type Database = {
       }
       users: {
         Row: {
+          account_deactivation_date: string | null
           account_locked: boolean | null
           avatar_url: string | null
           created_at: string
@@ -532,6 +533,8 @@ export type Database = {
           global_trigger_method: string | null
           global_trigger_settings: Json | null
           id: string
+          inheritance_triggered: boolean | null
+          inheritance_triggered_at: string | null
           is_active: boolean | null
           last_activity: string | null
           last_login: string | null
@@ -545,6 +548,7 @@ export type Database = {
           user_type: string | null
         }
         Insert: {
+          account_deactivation_date?: string | null
           account_locked?: boolean | null
           avatar_url?: string | null
           created_at?: string
@@ -558,6 +562,8 @@ export type Database = {
           global_trigger_method?: string | null
           global_trigger_settings?: Json | null
           id: string
+          inheritance_triggered?: boolean | null
+          inheritance_triggered_at?: string | null
           is_active?: boolean | null
           last_activity?: string | null
           last_login?: string | null
@@ -571,6 +577,7 @@ export type Database = {
           user_type?: string | null
         }
         Update: {
+          account_deactivation_date?: string | null
           account_locked?: boolean | null
           avatar_url?: string | null
           created_at?: string
@@ -584,6 +591,8 @@ export type Database = {
           global_trigger_method?: string | null
           global_trigger_settings?: Json | null
           id?: string
+          inheritance_triggered?: boolean | null
+          inheritance_triggered_at?: string | null
           is_active?: boolean | null
           last_activity?: string | null
           last_login?: string | null

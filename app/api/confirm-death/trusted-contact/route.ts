@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
       const supabase = createServiceRoleClient()
 
       // Call the trigger-inheritance endpoint logic
-      const triggerResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/trigger-inheritance`, {
+      const triggerResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'https://app.heriwill.com'}/api/trigger-inheritance`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
             confirmed_by_heir_id: heirId,
             confirmed_at: new Date().toISOString()
           },
-          status: 'triggered',
+          status: 'pending',
           requires_verification: false,
           triggered_at: new Date().toISOString()
         } as never)

@@ -38,12 +38,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 2. Update user status - restore to normal
+    // 2. Update user status - restore to normal and clear deactivation date
     const updateResult = await supabase
       .from('users')
       .update({
         inheritance_triggered: false,
         inheritance_triggered_at: null,
+        account_deactivation_date: null,
       } as never)
       .eq('id', userId)
     const updateUserError = updateResult.error
@@ -63,9 +64,22 @@ export async function POST(request: NextRequest) {
       logger.error('Error fetching vaults', vaultsError)
     }
 
-    // 4. Vaults remain as-is - no status to restore
-    // Access control is managed via heir_vault_access table
-    logger.info(`${vaults?.length || 0} vaults remain accessible to owner`)
+    // 4. Delete shared_vaults entries created during trigger
+    // This removes heir access to the vaults
+    const vaultIds = vaults?.map(v => v.id) || []
+    if (vaultIds.length > 0) {
+      const { error: deleteSharedVaultsError } = await supabase
+        .from('shared_vaults')
+        .delete()
+        .eq('owner_id', userId)
+        .in('vault_id', vaultIds)
+
+      if (deleteSharedVaultsError) {
+        logger.error('Error deleting shared vaults', deleteSharedVaultsError)
+      } else {
+        logger.info(`Deleted shared vault entries for user ${userId}`)
+      }
+    }
 
     // 5. Cancel/update inheritance trigger records
     const triggerResult = await supabase

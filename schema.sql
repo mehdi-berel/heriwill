@@ -177,6 +177,9 @@ CREATE TABLE public.users (
   locked_until timestamp with time zone,
   failed_login_attempts integer DEFAULT 0,
   user_type text DEFAULT 'user'::text CHECK (user_type = ANY (ARRAY['user'::text, 'notary'::text])),
+  inheritance_triggered boolean DEFAULT false,
+  inheritance_triggered_at timestamp with time zone,
+  account_deactivation_date timestamp with time zone,
   CONSTRAINT users_pkey PRIMARY KEY (id),
   CONSTRAINT users_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id),
   CONSTRAINT users_trusted_contact_heir_id_fkey FOREIGN KEY (trusted_contact_heir_id) REFERENCES public.heirs(id)

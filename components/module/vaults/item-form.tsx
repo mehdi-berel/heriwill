@@ -1,14 +1,13 @@
 "use client"
 
 import { useState, useRef } from "react"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { 
-  Save, 
   X, 
   Eye, 
   EyeOff, 
@@ -543,28 +542,53 @@ export function ItemForm({ isOpen, onClose, onSave, initialData, vaultCategory }
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{initialData ? 'Edit Item' : 'Add New Item'}</DialogTitle>
-          <DialogDescription>
-            {initialData ? 'Update the details of your vault item' : 'Add a new item to your vault'}
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-6 py-4">
-          {/* Title */}
-          <div className="space-y-2">
-            <Label htmlFor="title">Title <span className="text-red-500">*</span></Label>
-            <Input
-              id="title"
-              value={formData.title}
-              onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-              placeholder="Enter item title"
-            />
+        <div className="space-y-6">
+          {/* Header */}
+          <div className="text-center space-y-3">
+            <div className="flex justify-center">
+              <div className="relative w-16 h-16 rounded-full flex items-center justify-center shadow-lg border" style={{ backgroundColor: '#8B5CF620', borderColor: '#8B5CF640', boxShadow: '0 20px 25px -5px rgba(139, 92, 246, 0.2)' }}>
+                <Package className="h-8 w-8" style={{ color: '#8B5CF6' }} />
+              </div>
+            </div>
+            <div className="space-y-1">
+              <h2 className="text-2xl font-bold" style={{ color: '#FAFAFA' }}>
+                {initialData ? 'Edit Item' : 'Add New Item'}
+              </h2>
+              <p className="text-sm" style={{ color: '#A1A1AA' }}>
+                {initialData ? 'Update the details of your vault item' : 'Add a new item to your vault'}
+              </p>
+            </div>
           </div>
 
-          {/* Type Selection */}
-          <div className="space-y-2">
-            <Label>Type <span className="text-red-500">*</span></Label>
+          {/* Error Message */}
+          {uploadError && (
+            <div className="flex items-start gap-3 p-3 rounded-lg bg-status-error/10 border-l-4 border-status-error">
+              <AlertCircle className="h-5 w-5 text-status-error flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-status-error flex-1">{uploadError}</p>
+            </div>
+          )}
+
+          <div className="space-y-6">
+            {/* Title */}
+            <div className="space-y-2">
+              <Label htmlFor="title" className="text-sm font-medium">Title</Label>
+              <div className="relative">
+                <FileText className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-text-tertiary" />
+                <Input
+                  id="title"
+                  value={formData.title}
+                  onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                  placeholder="Enter item title"
+                  className="pl-12 h-12 transition-colors"
+                  style={{ backgroundColor: '#141417', borderColor: '#232629' }}
+                  disabled={loading}
+                />
+              </div>
+            </div>
+
+            {/* Type Selection */}
+            <div className="space-y-3">
+              <Label className="text-sm font-medium">Item Type</Label>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
               {ITEM_TYPES.map((type) => {
                 const Icon = type.icon
@@ -576,15 +600,17 @@ export function ItemForm({ isOpen, onClose, onSave, initialData, vaultCategory }
                     onClick={() => handleTypeChange(type.value as VaultItemType)}
                     disabled={!!initialData}
                     className={`p-3 rounded-lg border-2 transition-all ${
-                      isSelected
-                        ? 'border-primary-500 bg-primary-50 dark:bg-primary-950/30'
-                        : 'hover:border-gray-300'
-                    } ${initialData ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-                    style={{ borderColor: isSelected ? undefined : '#232629' }}
+                      initialData ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+                    }`}
+                    style={isSelected ? { 
+                      backgroundColor: '#8B5CF620', 
+                      borderColor: '#8B5CF6',
+                      boxShadow: '0 4px 6px -1px rgba(139, 92, 246, 0.2)'
+                    } : { borderColor: '#232629' }}
                   >
                     <div className="flex flex-col items-center gap-2">
-                      <Icon className={`h-5 w-5 ${isSelected ? 'text-primary-600' : 'text-gray-600'}`} />
-                      <span className={`text-xs font-medium ${isSelected ? 'text-primary-600' : 'text-gray-700'}`}>
+                      <Icon className="h-5 w-5" style={{ color: isSelected ? '#8B5CF6' : '#71717A' }} />
+                      <span className="text-xs font-medium" style={{ color: isSelected ? '#8B5CF6' : '#A1A1AA' }}>
                         {type.label}
                       </span>
                     </div>
@@ -601,15 +627,17 @@ export function ItemForm({ isOpen, onClose, onSave, initialData, vaultCategory }
                     onClick={() => handleTypeChange(type.value as VaultItemType)}
                     disabled={!!initialData}
                     className={`p-3 rounded-lg border-2 transition-all ${
-                      isSelected
-                        ? 'border-primary-500 bg-primary-50 dark:bg-primary-950/30'
-                        : 'hover:border-gray-300'
-                    } ${initialData ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-                    style={{ borderColor: isSelected ? undefined : '#232629' }}
+                      initialData ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+                    }`}
+                    style={isSelected ? { 
+                      backgroundColor: '#8B5CF620', 
+                      borderColor: '#8B5CF6',
+                      boxShadow: '0 4px 6px -1px rgba(139, 92, 246, 0.2)'
+                    } : { borderColor: '#232629' }}
                   >
                     <div className="flex flex-col items-center gap-2">
-                      <Icon className={`h-5 w-5 ${isSelected ? 'text-primary-600' : 'text-gray-600'}`} />
-                      <span className={`text-xs font-medium ${isSelected ? 'text-primary-600' : 'text-gray-700'}`}>
+                      <Icon className="h-5 w-5" style={{ color: isSelected ? '#8B5CF6' : '#71717A' }} />
+                      <span className="text-xs font-medium" style={{ color: isSelected ? '#8B5CF6' : '#A1A1AA' }}>
                         {type.label}
                       </span>
                     </div>
@@ -619,29 +647,31 @@ export function ItemForm({ isOpen, onClose, onSave, initialData, vaultCategory }
             </div>
           </div>
 
-          {/* Metadata Fields */}
-          {renderMetadataFields()}
-        </div>
+            {/* Metadata Fields */}
+            {renderMetadataFields()}
 
-        <DialogFooter>
-          <Button onClick={onClose} variant="outline" disabled={loading}>
-            <X className="h-4 w-4 mr-2" />
-            Cancel
-          </Button>
-          <Button onClick={handleSubmit} disabled={loading || !isFormValid()}>
-            {loading ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Saving...
-              </>
-            ) : (
-              <>
-                <Save className="h-4 w-4 mr-2" />
-                {initialData ? 'Update' : 'Save'} Item
-              </>
-            )}
-          </Button>
-        </DialogFooter>
+            {/* Form Actions */}
+            <div className="flex flex-col-reverse sm:flex-row gap-3 pt-2">
+              <Button 
+                onClick={onClose} 
+                variant="outline" 
+                disabled={loading}
+                className="w-full sm:w-auto h-12 text-base transition-all"
+                style={{ borderColor: '#232629' }}
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleSubmit} 
+                disabled={loading || !isFormValid()}
+                className="w-full sm:w-auto h-12 text-base font-semibold transition-all"
+                style={{ backgroundColor: '#8B5CF6', boxShadow: '0 10px 15px -3px rgba(139, 92, 246, 0.3)' }}
+              >
+                {loading ? 'Saving...' : (initialData ? 'Update Item' : 'Save Item')}
+              </Button>
+            </div>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   )

@@ -140,7 +140,7 @@ export async function POST(request: NextRequest) {
           reason: reason || 'User manually triggered inheritance plan',
           triggered_by: userId
         },
-        status: 'triggered',
+        status: 'pending',
         requires_verification: false,
         triggered_at: new Date().toISOString(),
       } as never)
@@ -151,7 +151,11 @@ export async function POST(request: NextRequest) {
 
     if (triggerError || !trigger) {
       logger.error('Error creating trigger', triggerError)
-      return NextResponse.json({ error: 'Failed to create trigger' }, { status: 500 })
+      console.error('[TRIGGER-INHERITANCE] Full error details:', JSON.stringify(triggerError, null, 2))
+      return NextResponse.json({ 
+        error: 'Failed to create trigger',
+        details: triggerError 
+      }, { status: 500 })
     }
 
     // 5. Create shared_vaults entries for heirs with user accounts
@@ -209,12 +213,16 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 7. Update user status
+    // 7. Update user status with 30-day deactivation date
+    const deactivationDate = new Date()
+    deactivationDate.setDate(deactivationDate.getDate() + 30)
+    
     const updateResult = await supabase
       .from('users')
       .update({
         inheritance_triggered: true,
         inheritance_triggered_at: new Date().toISOString(),
+        account_deactivation_date: deactivationDate.toISOString(),
       } as never)
       .eq('id', userId)
     const updateError = updateResult.error
@@ -222,6 +230,8 @@ export async function POST(request: NextRequest) {
     if (updateError) {
       logger.error('Error updating user status', updateError)
     }
+
+    logger.info(`Account will be deactivated on ${deactivationDate.toISOString()} if no false alarm is declared`)
 
     logger.info(`Inheritance plan successfully triggered for user ${userId}`)
 
