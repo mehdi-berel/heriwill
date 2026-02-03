@@ -69,14 +69,46 @@ export const vaultActions = {
   // Update Vault
   updateVault: async (vaultId: string, updateData: VaultUpdate) => {
     const supabase = await createServerSupabaseClient()
+    
+    // Get authenticated user
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) {
+      logger.error('Authentication error in updateVault', authError)
+      throw new Error('Not authenticated')
+    }
+
+    // Verify user owns this vault
+    const { data: vault, error: vaultError } = await supabase
+      .from('vaults')
+      .select('user_id')
+      .eq('id', vaultId)
+      .single()
+
+    if (vaultError) {
+      logger.error('Error fetching vault for ownership check', vaultError, { vaultId })
+      throw new Error('Vault not found')
+    }
+
+    if (vault.user_id !== user.id) {
+      logger.error('User does not own vault', { userId: user.id, vaultUserId: vault.user_id, vaultId })
+      throw new Error('You do not have permission to update this vault')
+    }
+
+    // Update the vault
     const { data, error } = await supabase
       .from('vaults')
       .update(updateData)
       .eq('id', vaultId)
+      .eq('user_id', user.id)
       .select()
       .single()
 
-    if (error) throw new Error(error.message)
+    if (error) {
+      logger.error('Error updating vault', error, { vaultId, userId: user.id })
+      throw new Error(error.message)
+    }
+    
+    logger.info('Vault updated successfully', { vaultId, userId: user.id })
     return data
   },
 

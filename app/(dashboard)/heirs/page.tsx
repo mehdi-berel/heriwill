@@ -443,25 +443,28 @@ export default function HeirsPage() {
                   <p>No invitations received</p>
                 </div>
               ) : (
-                receivedInvitations.filter(h => h.invitation_status === 'pending').map((invitation) => (
-                  <HeirInvitationCard
-                    key={invitation.id}
-                    successor={{
-                      id: invitation.id,
-                      full_name: invitation.full_name_encrypted || 'Unknown',
-                      email: invitation.email_encrypted || undefined,
-                      phone: invitation.phone_encrypted || undefined,
-                      relationship: invitation.relationship || undefined,
-                      heir_type: invitation.heir_type || 'family',
-                      invitation_status: invitation.invitation_status || 'pending',
-                      invited_at: invitation.invited_at || ''
-                    }}
-                    ownerName={user?.email || 'Owner'}
-                    isAccepted={invitation.has_accepted || false}
-                    onAccept={() => handleAcceptInvitation(invitation.invitation_code || '')}
-                    onDecline={() => handleDeclineInvitation(invitation.invitation_code || '')}
-                  />
-                ))
+                receivedInvitations.filter(h => h.invitation_status === 'pending').map((invitation) => {
+                  const ownerData = (invitation as unknown as { users?: { full_name?: string; email?: string } }).users
+                  return (
+                    <HeirInvitationCard
+                      key={invitation.id}
+                      successor={{
+                        id: invitation.id,
+                        full_name: ownerData?.full_name || ownerData?.email || 'Unknown',
+                        email: ownerData?.email || undefined,
+                        phone: undefined,
+                        relationship: invitation.relationship || undefined,
+                        heir_type: invitation.heir_type || 'family',
+                        invitation_status: invitation.invitation_status || 'pending',
+                        invited_at: invitation.invited_at || ''
+                      }}
+                      ownerName={ownerData?.full_name || ownerData?.email || 'Owner'}
+                      isAccepted={invitation.has_accepted || false}
+                      onAccept={() => handleAcceptInvitation(invitation.invitation_code || '')}
+                      onDecline={() => handleDeclineInvitation(invitation.invitation_code || '')}
+                    />
+                  )
+                })
               )}
             </div>
           </div>
@@ -476,27 +479,30 @@ export default function HeirsPage() {
                 <p className="text-sm mt-2">Accept invitations in the Pending tab to become a successor</p>
               </div>
             ) : (
-              receivedInvitations.filter(h => h.has_accepted).map((successor) => (
-                <SuccessorCard
-                  key={successor.id}
-                  successor={{
-                    id: successor.id,
-                    full_name: successor.full_name_encrypted || 'Unknown',
-                    email: successor.email_encrypted || undefined,
-                    phone: successor.phone_encrypted || undefined,
-                    relationship: successor.relationship || undefined,
-                    heir_type: successor.heir_type || 'family',
-                    invitation_status: successor.invitation_status || 'accepted',
-                    invited_at: successor.invited_at || ''
-                  }}
-                  ownerName={user?.email || 'Owner'}
-                  ownerUserId={successor.user_id || ''}
-                  isTrustedContact={trustedContactMap[successor.id] || false}
-                  onRemove={async () => {
-                    await loadReceivedInvitations()
-                  }}
-                />
-              ))
+              receivedInvitations.filter(h => h.has_accepted).map((successor) => {
+                const ownerData = (successor as unknown as { users?: { full_name?: string; email?: string } }).users
+                return (
+                  <SuccessorCard
+                    key={successor.id}
+                    successor={{
+                      id: successor.id,
+                      full_name: ownerData?.full_name || ownerData?.email || 'Unknown',
+                      email: ownerData?.email || undefined,
+                      phone: undefined,
+                      relationship: successor.relationship || undefined,
+                      heir_type: successor.heir_type || 'family',
+                      invitation_status: successor.invitation_status || 'accepted',
+                      invited_at: successor.invited_at || ''
+                    }}
+                    ownerName={ownerData?.full_name || ownerData?.email || 'Owner'}
+                    ownerUserId={successor.user_id || ''}
+                    isTrustedContact={trustedContactMap[successor.id] || false}
+                    onRemove={async () => {
+                      await loadReceivedInvitations()
+                    }}
+                  />
+                )
+              })
             )}
           </div>
         )}

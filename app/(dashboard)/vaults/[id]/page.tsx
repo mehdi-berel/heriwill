@@ -281,13 +281,22 @@ export default function VaultDetailPage() {
     if (!vault) return
 
     try {
+      logger.info('Assigning heirs/notaries to vault', { 
+        vaultId: vault.id, 
+        vaultCategory: vault.category,
+        heirIds,
+        isNotaryMode: vault.category === 'pro'
+      })
+
       // Update vault with assigned heir IDs using server action
-      await vaultActions.updateVault(vault.id, {
+      const updatedVault = await vaultActions.updateVault(vault.id, {
         access_control: {
           allowedHeirs: heirIds,
           requireApproval: vault.access_control?.requireApproval || false
         } as never
       })
+
+      logger.info('Vault updated successfully', { vaultId: vault.id, updatedVault })
 
       setVault({
         ...vault,
@@ -297,10 +306,23 @@ export default function VaultDetailPage() {
         }
       })
       setShowAssignModal(false)
-      toast.success('Heirs assigned successfully')
+      
+      const successMessage = vault.category === 'pro' 
+        ? 'Notary assigned successfully' 
+        : 'Heirs assigned successfully'
+      toast.success(successMessage)
     } catch (error) {
-      logger.error('Error assigning heirs', error, { vaultId })
-      toast.error('Failed to assign heirs. Please try again.')
+      logger.error('Error assigning heirs/notaries', error, { 
+        vaultId,
+        vaultCategory: vault.category,
+        errorMessage: (error as Error).message,
+        errorStack: (error as Error).stack
+      })
+      
+      const errorMessage = vault.category === 'pro'
+        ? 'Failed to assign notary. Please try again.'
+        : 'Failed to assign heirs. Please try again.'
+      toast.error(errorMessage, (error as Error).message)
     }
   }
 

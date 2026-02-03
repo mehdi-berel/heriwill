@@ -354,9 +354,9 @@ export function SuccessorCard({
             </div>
           )}
 
-          {/* Successor Information */}
+          {/* Owner Information */}
           <div className="space-y-4">
-            <h3 className="text-sm font-medium text-muted-foreground">Your Details</h3>
+            <h3 className="text-sm font-medium text-muted-foreground">Owner Details</h3>
             <div className="space-y-3">
               <div className="flex items-center gap-3">
                 <User className="h-4 w-4 text-muted-foreground" />
