@@ -115,12 +115,43 @@ export const vaultActions = {
   // Delete Vault
   deleteVault: async (vaultId: string) => {
     const supabase = await createServerSupabaseClient()
+    
+    // Get authenticated user
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) {
+      logger.error('Authentication error in deleteVault', authError)
+      throw new Error('Not authenticated')
+    }
+
+    // Verify user owns this vault
+    const { data: vault, error: vaultError } = await supabase
+      .from('vaults')
+      .select('user_id')
+      .eq('id', vaultId)
+      .single()
+
+    if (vaultError) {
+      logger.error('Error fetching vault for ownership check', vaultError, { vaultId })
+      throw new Error('Vault not found')
+    }
+
+    if (vault.user_id !== user.id) {
+      logger.error('User does not own vault', { userId: user.id, vaultUserId: vault.user_id, vaultId })
+      throw new Error('You do not have permission to delete this vault')
+    }
+
     const { error } = await supabase
       .from('vaults')
       .delete()
       .eq('id', vaultId)
+      .eq('user_id', user.id)
 
-    if (error) throw new Error(error.message)
+    if (error) {
+      logger.error('Error deleting vault', error, { vaultId, userId: user.id })
+      throw new Error(error.message)
+    }
+    
+    logger.info('Vault deleted successfully', { vaultId, userId: user.id })
   },
 
   // Get Vault by ID
@@ -258,7 +289,7 @@ export const vaultItemActions = {
         item_type: (itemData.item_type || itemData.type || 'other') as Database["public"]["Enums"]["vault_item_type"],
         file_size: itemData.file_size || itemData.size || null,
         storage_path: storagePath,
-        storage_bucket: itemData.storage_bucket || 'vault-items',
+        storage_bucket: itemData.storage_bucket || 'vault-files',
         tags: itemData.tags || [],
         metadata: (itemData.metadata || {}) as Database['public']['Tables']['vault_items']['Insert']['metadata'],
         is_favorite: itemData.is_favorite || false,

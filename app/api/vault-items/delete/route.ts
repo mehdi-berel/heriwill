@@ -1,16 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase'
-import { logger } from '@/lib/utils/logger'
+import { rateLimit, RateLimitPresets } from '@/lib/middleware/rateLimit'
+import { sanitizeApiError } from '@/lib/utils/error-handler'
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createServerSupabaseClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    // Apply standard rate limiting
+    const rateLimitResult = await rateLimit(RateLimitPresets.userOperations)(request)
+    if (rateLimitResult) {
+      return rateLimitResult
+    }
 
-    if (!user) {
+    const supabase = await createServerSupabaseClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+      const sanitized = sanitizeApiError(authError || new Error('Not authenticated'), { action: 'delete_vault_item' })
       return NextResponse.json(
-        { success: false, message: 'Not authenticated' },
-        { status: 401 }
+        { success: false, message: sanitized.error },
+        { status: sanitized.statusCode }
       )
     }
 
@@ -24,28 +32,50 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Verify ownership before delete
+    const { data: existingItem, error: fetchError } = await supabase
+      .from('vault_items')
+      .select('user_id')
+      .eq('id', itemId)
+      .single()
+
+    if (fetchError || !existingItem) {
+      return NextResponse.json(
+        { success: false, message: 'Item not found' },
+        { status: 404 }
+      )
+    }
+
+    if (existingItem.user_id !== user.id) {
+      return NextResponse.json(
+        { success: false, message: 'Unauthorized: You do not own this item' },
+        { status: 403 }
+      )
+    }
+
     const { error } = await supabase
       .from('vault_items')
       .delete()
       .eq('id', itemId)
+      .eq('user_id', user.id)
 
     if (error) {
-      logger.error('Error deleting vault item', error)
+      const sanitized = sanitizeApiError(error, { itemId, userId: user.id, action: 'delete_vault_item' })
       return NextResponse.json(
-        { success: false, message: error.message },
-        { status: 500 }
+        { success: false, message: sanitized.error },
+        { status: sanitized.statusCode }
       )
     }
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    logger.error('Error in delete vault item API', error)
+    const sanitized = sanitizeApiError(error, { action: 'delete_vault_item' })
     return NextResponse.json(
       { 
         success: false, 
-        message: error instanceof Error ? error.message : 'Failed to delete vault item' 
+        message: sanitized.error 
       },
-      { status: 500 }
+      { status: sanitized.statusCode }
     )
   }
 }

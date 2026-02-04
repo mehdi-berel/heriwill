@@ -2,9 +2,17 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase'
 import { logger } from '@/lib/utils/logger'
 import { notifyHeirRejected } from '@/lib/services/notificationService'
+import { rateLimit, RateLimitPresets } from '@/lib/middleware/rateLimit'
+import { sanitizeApiError } from '@/lib/utils/error-handler'
 
 export async function POST(request: NextRequest) {
   try {
+    // Apply standard rate limiting
+    const rateLimitResult = await rateLimit(RateLimitPresets.standard)(request)
+    if (rateLimitResult) {
+      return rateLimitResult
+    }
+
     const { invitationCode } = await request.json()
 
     if (!invitationCode) {
@@ -15,12 +23,13 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = await createServerSupabaseClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
 
-    if (!user) {
+    if (authError || !user) {
+      const sanitized = sanitizeApiError(authError || new Error('Not authenticated'), { action: 'reject_invitation' })
       return NextResponse.json(
-        { success: false, error: 'Not authenticated' },
-        { status: 401 }
+        { success: false, error: sanitized.error },
+        { status: sanitized.statusCode }
       )
     }
 
@@ -35,10 +44,10 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (fetchError || !existingHeir) {
-      logger.error('Invitation not found or already processed', fetchError)
+      const sanitized = sanitizeApiError(fetchError || new Error('Invitation not found'), { invitationCode, userId: user.id, action: 'fetch_invitation' })
       return NextResponse.json(
-        { success: false, error: 'Invitation not found or already processed' },
-        { status: 404 }
+        { success: false, error: sanitized.error },
+        { status: sanitized.statusCode }
       )
     }
 
@@ -70,14 +79,10 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (updateError) {
-      logger.error('Error updating heir invitation status', updateError, {
-        heirId: existingHeir.id,
-        errorCode: updateError.code,
-        errorMessage: updateError.message
-      })
+      const sanitized = sanitizeApiError(updateError, { heirId: existingHeir.id, userId: user.id, action: 'reject_invitation' })
       return NextResponse.json(
-        { success: false, error: 'Failed to reject invitation: ' + updateError.message },
-        { status: 500 }
+        { success: false, error: sanitized.error },
+        { status: sanitized.statusCode }
       )
     }
 
@@ -99,13 +104,10 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    logger.error('Unexpected error in reject-invitation API', error, {
-      errorName: (error as Error).name,
-      errorMessage: (error as Error).message
-    })
+    const sanitized = sanitizeApiError(error, { action: 'reject_invitation' })
     return NextResponse.json(
-      { success: false, error: 'An unexpected error occurred' },
-      { status: 500 }
+      { success: false, error: sanitized.error },
+      { status: sanitized.statusCode }
     )
   }
 }

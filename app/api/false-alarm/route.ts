@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase'
 import { logger } from '@/lib/utils/logger'
 import { notifyFalseAlarm } from '@/lib/services/notificationService'
+import { rateLimit, RateLimitPresets } from '@/lib/middleware/rateLimit'
+import { sanitizeApiError } from '@/lib/utils/error-handler'
+import { validateUUID } from '@/lib/utils/validation'
 
 /**
  * API endpoint to declare false alarm and restore account
@@ -9,10 +12,18 @@ import { notifyFalseAlarm } from '@/lib/services/notificationService'
  */
 export async function POST(request: NextRequest) {
   try {
+    // Apply strict rate limiting for false alarm
+    const rateLimitResult = await rateLimit(RateLimitPresets.strict)(request)
+    if (rateLimitResult) {
+      return rateLimitResult
+    }
+
     const { userId } = await request.json()
 
-    if (!userId) {
-      return NextResponse.json({ error: 'User ID is required' }, { status: 400 })
+    // Validate user ID
+    const validation = validateUUID(userId)
+    if (!validation.isValid) {
+      return NextResponse.json({ error: validation.error }, { status: 400 })
     }
 
     logger.info(`False alarm declared for user ${userId}`)
@@ -27,8 +38,8 @@ export async function POST(request: NextRequest) {
       .single() as { data: { inheritance_triggered: boolean; inheritance_triggered_at: string | null; full_name: string | null; email: string } | null; error: unknown }
 
     if (userError || !userData) {
-      logger.error('User not found', userError)
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+      const sanitized = sanitizeApiError(userError || new Error('User not found'), { userId, action: 'false_alarm' })
+      return NextResponse.json({ error: sanitized.error }, { status: sanitized.statusCode })
     }
 
     if (!userData.inheritance_triggered) {
@@ -50,8 +61,8 @@ export async function POST(request: NextRequest) {
     const updateUserError = updateResult.error
 
     if (updateUserError) {
-      logger.error('Error updating user status', updateUserError)
-      return NextResponse.json({ error: 'Failed to update user status' }, { status: 500 })
+      const sanitized = sanitizeApiError(updateUserError, { userId, action: 'update_user_status' })
+      return NextResponse.json({ error: sanitized.error }, { status: sanitized.statusCode })
     }
 
     // 3. Get all user's vaults
@@ -137,10 +148,10 @@ export async function POST(request: NextRequest) {
       vaultsRestored: vaults?.length || 0,
     })
   } catch (error) {
-    logger.error('Error in false-alarm endpoint', error)
+    const sanitized = sanitizeApiError(error, { action: 'false_alarm' })
     return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
+      { error: sanitized.error },
+      { status: sanitized.statusCode }
     )
   }
 }

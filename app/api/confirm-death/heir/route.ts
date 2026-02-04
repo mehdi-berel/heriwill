@@ -2,16 +2,25 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase'
 import { recordHeirDeathConfirmation } from '@/lib/services/globalTriggerService'
 import { logger } from '@/lib/utils/logger'
+import { rateLimit, RateLimitPresets } from '@/lib/middleware/rateLimit'
+import { sanitizeApiError } from '@/lib/utils/error-handler'
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createServerSupabaseClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    // Apply standard rate limiting
+    const rateLimitResult = await rateLimit(RateLimitPresets.standard)(request)
+    if (rateLimitResult) {
+      return rateLimitResult
+    }
 
-    if (!user) {
+    const supabase = await createServerSupabaseClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+      const sanitized = sanitizeApiError(authError || new Error('Not authenticated'), { action: 'confirm_death_heir' })
       return NextResponse.json(
-        { success: false, message: 'Not authenticated' },
-        { status: 401 }
+        { success: false, message: sanitized.error },
+        { status: sanitized.statusCode }
       )
     }
 
@@ -35,10 +44,10 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (heirError || !heirData) {
-      logger.error('Heir verification failed', heirError, { heirId, userId: user.id })
+      const sanitized = sanitizeApiError(heirError || new Error('Unauthorized'), { heirId, userId: user.id, action: 'verify_heir' })
       return NextResponse.json(
-        { success: false, message: 'You are not authorized to confirm this' },
-        { status: 403 }
+        { success: false, message: sanitized.error },
+        { status: sanitized.statusCode }
       )
     }
 
@@ -82,13 +91,10 @@ export async function POST(request: NextRequest) {
       })
     }
   } catch (error) {
-    logger.error('Error in heir death confirmation', error)
+    const sanitized = sanitizeApiError(error, { action: 'confirm_death_heir' })
     return NextResponse.json(
-      { 
-        success: false, 
-        message: error instanceof Error ? error.message : 'Failed to process confirmation' 
-      },
-      { status: 500 }
+      { success: false, message: sanitized.error },
+      { status: sanitized.statusCode }
     )
   }
 }

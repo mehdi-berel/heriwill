@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { getCustomerInfo, getSubscriptionTier } from '@/lib/revenuecat'
 import { logger } from '@/lib/utils/logger'
+import { rateLimit, RateLimitPresets } from '@/lib/middleware/rateLimit'
+import { sanitizeApiError } from '@/lib/utils/error-handler'
 
 /**
  * Manual subscription sync endpoint
@@ -10,6 +12,12 @@ import { logger } from '@/lib/utils/logger'
  */
 export async function POST(request: NextRequest) {
   try {
+    // Apply standard rate limiting
+    const rateLimitResult = await rateLimit(RateLimitPresets.standard)(request)
+    if (rateLimitResult) {
+      return rateLimitResult
+    }
+
     const { userId } = await request.json()
 
     if (!userId) {
@@ -26,9 +34,10 @@ export async function POST(request: NextRequest) {
     ])
 
     if (!customerInfo) {
+      const sanitized = sanitizeApiError(new Error('Failed to fetch customer info'), { userId, action: 'sync_subscription' })
       return NextResponse.json(
-        { error: 'Failed to fetch RevenueCat customer info' },
-        { status: 500 }
+        { error: sanitized.error },
+        { status: sanitized.statusCode }
       )
     }
 
@@ -60,11 +69,10 @@ export async function POST(request: NextRequest) {
       .eq('id', userId)
 
     if (error) {
-      logger.error('Failed to update user subscription in database', error)
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      const sanitized = sanitizeApiError(error, { userId, action: 'update_subscription_db' })
       return NextResponse.json(
-        { error: 'Failed to update database', details: errorMessage },
-        { status: 500 }
+        { error: sanitized.error },
+        { status: sanitized.statusCode }
       )
     }
 
@@ -83,10 +91,10 @@ export async function POST(request: NextRequest) {
       }
     })
   } catch (error) {
-    logger.error('Error syncing subscription', error)
+    const sanitized = sanitizeApiError(error, { action: 'sync_subscription' })
     return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
+      { error: sanitized.error },
+      { status: sanitized.statusCode }
     )
   }
 }

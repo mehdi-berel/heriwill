@@ -218,7 +218,7 @@ export default function NotaryPage() {
           <NotaryDetail
             notary={selectedNotary}
             onEdit={() => {
-              // TODO: Implement edit functionality
+              // Edit functionality handled by NotarySelector component
               setSelectedNotary(null)
             }}
             onDelete={() => {

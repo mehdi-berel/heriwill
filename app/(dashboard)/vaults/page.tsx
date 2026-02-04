@@ -107,8 +107,8 @@ export default function VaultsPage() {
           .single()
         
         const subscriptionTier = (userProfile as { subscription_tier?: string } | null)?.subscription_tier ?? 'free'
-        // Lock vaults for free/classic users (non-premium/pro)
-        const isFreeUser = subscriptionTier === 'free' || subscriptionTier === 'classic'
+        // Lock vaults for free users (non-premium/pro)
+        const isFreeUser = subscriptionTier === 'free'
         
         const vaultsWithCounts = await Promise.all(
           allVaults.map(async (vault: Record<string, unknown>, index: number) => {

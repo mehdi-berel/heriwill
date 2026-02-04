@@ -137,7 +137,7 @@ export async function createLegalDocumentFromTemplate(
         item_type: 'legal',
         title_encrypted: documentTitle,
         storage_path: storagePath,
-        storage_bucket: 'vault-items',
+        storage_bucket: 'vault-files',
         metadata: {
           template_id: templateId,
           template_name: template.name,

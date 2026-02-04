@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { confirmTrustedContactDeath } from '@/lib/services/globalTriggerService'
 import { logger } from '@/lib/utils/logger'
+import { rateLimit, RateLimitPresets } from '@/lib/middleware/rateLimit'
+import { sanitizeApiError } from '@/lib/utils/error-handler'
 
 // Service role client for admin operations
 function createServiceRoleClient() {
@@ -22,6 +24,12 @@ function createServiceRoleClient() {
  */
 export async function POST(request: NextRequest) {
   try {
+    // Apply standard rate limiting
+    const rateLimitResult = await rateLimit(RateLimitPresets.standard)(request)
+    if (rateLimitResult) {
+      return rateLimitResult
+    }
+
     const { heirId, ownerUserId } = await request.json()
 
     if (!heirId || !ownerUserId) {
@@ -102,14 +110,14 @@ export async function POST(request: NextRequest) {
       message: 'Confirmation recorded'
     })
   } catch (error) {
-    logger.error('Error in trusted contact death confirmation', error)
+    const sanitized = sanitizeApiError(error, { action: 'confirm_death_trusted_contact' })
     return NextResponse.json(
       { 
         success: false,
-        error: 'Internal server error',
-        message: 'Failed to process death confirmation'
+        error: sanitized.error,
+        message: sanitized.error
       },
-      { status: 500 }
+      { status: sanitized.statusCode }
     )
   }
 }

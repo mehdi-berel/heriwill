@@ -1,4 +1,4 @@
-import { supabase } from '../../lib/supabase'
+import { supabase, createServerSupabaseClient } from '@/lib/supabase'
 import type { Database } from '../../lib/database.types'
 
 type AssetRow = Database['public']['Tables']['assets']['Row']
@@ -31,7 +31,7 @@ export const digitalAssetActions = {
         name: assetData.name,
         type: assetData.type || 'other',
         notes: assetData.notes,
-        ownership_type: 'individual',
+        ownership_type: 'sole',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       })
@@ -44,6 +44,28 @@ export const digitalAssetActions = {
 
   // Update Digital Asset
   updateDigitalAsset: async (assetId: string, updateData: DigitalAssetUpdateData) => {
+    const supabase = await createServerSupabaseClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    
+    if (authError || !user) {
+      throw new Error('Not authenticated')
+    }
+
+    // Verify ownership before update
+    const { data: existingAsset, error: fetchError } = await supabase
+      .from('assets')
+      .select('user_id')
+      .eq('id', assetId)
+      .single()
+
+    if (fetchError || !existingAsset) {
+      throw new Error('Asset not found')
+    }
+
+    if (existingAsset.user_id !== user.id) {
+      throw new Error('Unauthorized: You do not own this asset')
+    }
+
     const { data, error } = await supabase
       .from('assets')
       .update({
@@ -51,6 +73,7 @@ export const digitalAssetActions = {
         updated_at: new Date().toISOString()
       })
       .eq('id', assetId)
+      .eq('user_id', user.id)
       .select()
       .single()
 
@@ -60,10 +83,33 @@ export const digitalAssetActions = {
 
   // Delete Digital Asset
   deleteDigitalAsset: async (assetId: string) => {
+    const supabase = await createServerSupabaseClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    
+    if (authError || !user) {
+      throw new Error('Not authenticated')
+    }
+
+    // Verify ownership before delete
+    const { data: existingAsset, error: fetchError } = await supabase
+      .from('assets')
+      .select('user_id')
+      .eq('id', assetId)
+      .single()
+
+    if (fetchError || !existingAsset) {
+      throw new Error('Asset not found')
+    }
+
+    if (existingAsset.user_id !== user.id) {
+      throw new Error('Unauthorized: You do not own this asset')
+    }
+
     const { error } = await supabase
       .from('assets')
       .delete()
       .eq('id', assetId)
+      .eq('user_id', user.id)
 
     if (error) throw new Error(error.message)
   },

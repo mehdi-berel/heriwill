@@ -190,7 +190,7 @@ CREATE TABLE public.vault_items (
   user_id uuid NOT NULL,
   item_type USER-DEFINED NOT NULL,
   storage_path text NOT NULL UNIQUE,
-  storage_bucket text NOT NULL DEFAULT 'vault-items'::text,
+  storage_bucket text NOT NULL DEFAULT 'vault-files'::text,
   file_size bigint,
   title_encrypted text NOT NULL,
   tags ARRAY,
@@ -222,7 +222,7 @@ CREATE TABLE public.vaults (
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone NOT NULL DEFAULT now(),
   last_accessed timestamp with time zone,
-  category text NOT NULL DEFAULT 'share_after_death'::text CHECK (category = ANY (ARRAY['share'::text, 'delete'::text, 'pro'::text])),
+  category text NOT NULL DEFAULT 'share'::text CHECK (category = ANY (ARRAY['share'::text, 'delete'::text, 'pro'::text])),
   CONSTRAINT vaults_pkey PRIMARY KEY (id),
   CONSTRAINT vaults_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
 );

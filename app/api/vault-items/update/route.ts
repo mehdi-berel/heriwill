@@ -1,16 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase'
-import { logger } from '@/lib/utils/logger'
+import { rateLimit, RateLimitPresets } from '@/lib/middleware/rateLimit'
+import { sanitizeApiError } from '@/lib/utils/error-handler'
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createServerSupabaseClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    // Apply user operations rate limiting
+    const rateLimitResult = await rateLimit(RateLimitPresets.userOperations)(request)
+    if (rateLimitResult) {
+      return rateLimitResult
+    }
 
-    if (!user) {
+    const supabase = await createServerSupabaseClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+      const sanitized = sanitizeApiError(authError || new Error('Not authenticated'), { action: 'update_vault_item' })
       return NextResponse.json(
-        { success: false, message: 'Not authenticated' },
-        { status: 401 }
+        { success: false, message: sanitized.error },
+        { status: sanitized.statusCode }
       )
     }
 
@@ -24,6 +32,27 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Verify ownership before update
+    const { data: existingItem, error: fetchError } = await supabase
+      .from('vault_items')
+      .select('user_id')
+      .eq('id', itemId)
+      .single()
+
+    if (fetchError || !existingItem) {
+      return NextResponse.json(
+        { success: false, message: 'Item not found' },
+        { status: 404 }
+      )
+    }
+
+    if (existingItem.user_id !== user.id) {
+      return NextResponse.json(
+        { success: false, message: 'Unauthorized: You do not own this item' },
+        { status: 403 }
+      )
+    }
+
     const updatePayload: Record<string, unknown> = {}
     if (title_encrypted) updatePayload.title_encrypted = title_encrypted
     if (item_type) updatePayload.item_type = item_type
@@ -34,26 +63,27 @@ export async function POST(request: NextRequest) {
       .from('vault_items')
       .update(updatePayload)
       .eq('id', itemId)
+      .eq('user_id', user.id)
       .select()
       .single()
 
     if (error) {
-      logger.error('Error updating vault item', error)
+      const sanitized = sanitizeApiError(error, { itemId, userId: user.id, action: 'update_vault_item' })
       return NextResponse.json(
-        { success: false, message: error.message },
-        { status: 500 }
+        { success: false, message: sanitized.error },
+        { status: sanitized.statusCode }
       )
     }
 
     return NextResponse.json({ success: true, data })
   } catch (error) {
-    logger.error('Error in update vault item API', error)
+    const sanitized = sanitizeApiError(error, { action: 'update_vault_item' })
     return NextResponse.json(
       { 
         success: false, 
-        message: error instanceof Error ? error.message : 'Failed to update vault item' 
+        message: sanitized.error 
       },
-      { status: 500 }
+      { status: sanitized.statusCode }
     )
   }
 }

@@ -21,6 +21,17 @@ interface HeirData {
 // Create Heir
 export async function createHeir(heirData: HeirData) {
     const supabase = await createServerSupabaseClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    
+    if (authError || !user) {
+      throw new Error('Not authenticated')
+    }
+
+    // Verify the user_id matches authenticated user
+    if (heirData.user_id !== user.id) {
+      throw new Error('Unauthorized: Cannot create heir for another user')
+    }
+
     const { data, error } = await supabase
       .from('heirs')
       .insert({
@@ -48,10 +59,32 @@ export async function createHeir(heirData: HeirData) {
 // Update Heir
 export async function updateHeir(heirId: string, updateData: HeirUpdate) {
     const supabase = await createServerSupabaseClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    
+    if (authError || !user) {
+      throw new Error('Not authenticated')
+    }
+
+    // Verify ownership before update
+    const { data: existingHeir, error: fetchError } = await supabase
+      .from('heirs')
+      .select('user_id')
+      .eq('id', heirId)
+      .single()
+
+    if (fetchError || !existingHeir) {
+      throw new Error('Heir not found')
+    }
+
+    if (existingHeir.user_id !== user.id) {
+      throw new Error('Unauthorized: You do not own this heir')
+    }
+
     const { data, error } = await supabase
       .from('heirs')
       .update(updateData)
       .eq('id', heirId)
+      .eq('user_id', user.id)
       .select()
       .single()
 
@@ -62,10 +95,32 @@ export async function updateHeir(heirId: string, updateData: HeirUpdate) {
 // Delete Heir
 export async function deleteHeir(heirId: string) {
     const supabase = await createServerSupabaseClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    
+    if (authError || !user) {
+      throw new Error('Not authenticated')
+    }
+
+    // Verify ownership before delete
+    const { data: existingHeir, error: fetchError } = await supabase
+      .from('heirs')
+      .select('user_id')
+      .eq('id', heirId)
+      .single()
+
+    if (fetchError || !existingHeir) {
+      throw new Error('Heir not found')
+    }
+
+    if (existingHeir.user_id !== user.id) {
+      throw new Error('Unauthorized: You do not own this heir')
+    }
+
     const { error } = await supabase
       .from('heirs')
       .delete()
       .eq('id', heirId)
+      .eq('user_id', user.id)
 
   if (error) throw new Error(error.message)
 }

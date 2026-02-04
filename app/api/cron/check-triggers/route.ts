@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { logger } from '@/lib/utils/logger'
 import { Database } from '@/lib/database.types'
+import { rateLimit, RateLimitPresets } from '@/lib/middleware/rateLimit'
+import { sanitizeApiError } from '@/lib/utils/error-handler'
 
 /**
  * Vercel Cron Job - Check Sign-Off Trigger Conditions
@@ -23,6 +25,12 @@ type User = Database['public']['Tables']['users']['Row']
 
 export async function GET(request: NextRequest) {
   try {
+    // Apply relaxed rate limiting for cron jobs
+    const rateLimitResult = await rateLimit(RateLimitPresets.relaxed)(request)
+    if (rateLimitResult) {
+      return rateLimitResult
+    }
+
     // Verify cron secret to prevent unauthorized access
     const authHeader = request.headers.get('authorization')
     if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -45,8 +53,8 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    logger.error('Error in trigger check cron job', error)
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
+    const sanitized = sanitizeApiError(error, { action: 'cron_check_triggers' })
+    return NextResponse.json({ error: sanitized.error }, { status: sanitized.statusCode })
   }
 }
 
@@ -82,9 +90,29 @@ async function checkInactivityTriggers() {
 
       // Check if we need to send a warning
       if (diffDays >= (inactivityDays - warningDays) && diffDays < inactivityDays) {
-        // Send warning email if not already sent
-        // TODO: Check if warning was already sent
-        logger.info(`Sending inactivity warning to user ${user.id}`)
+        // Check if warning was already sent
+        const warningKey = 'inactivity_warning_sent'
+        const settingsObj = typeof user.global_trigger_settings === 'object' && user.global_trigger_settings !== null 
+          ? user.global_trigger_settings as Record<string, unknown>
+          : {}
+        const warningSent = settingsObj[warningKey]
+        
+        if (!warningSent) {
+          logger.info(`Sending inactivity warning to user ${user.id}`)
+          
+          // Mark warning as sent in user settings
+          const updatedSettings = {
+            ...settingsObj,
+            [warningKey]: new Date().toISOString()
+          }
+          
+          await supabase
+            .from('users')
+            .update({ global_trigger_settings: updatedSettings })
+            .eq('id', user.id)
+        } else {
+          logger.info(`Inactivity warning already sent to user ${user.id} at ${warningSent}`)
+        }
       }
 
       // Check if we need to trigger

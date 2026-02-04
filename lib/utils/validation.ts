@@ -193,3 +193,75 @@ export function validateTimezone(timezone: string): ValidationResult {
 
   return { isValid: true }
 }
+
+/**
+ * Validate UUID format
+ */
+export function validateUUID(uuid: string): ValidationResult {
+  if (!uuid || uuid.trim().length === 0) {
+    return { isValid: false, error: 'ID is required' }
+  }
+
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+  if (!uuidRegex.test(uuid)) {
+    return { isValid: false, error: 'Invalid ID format' }
+  }
+
+  return { isValid: true }
+}
+
+/**
+ * Validate confirmation code for destructive actions
+ * Confirmation code should be a specific string like "DELETE" or "CONFIRM"
+ */
+export function validateConfirmationCode(
+  code: string,
+  expectedCode: string
+): ValidationResult {
+  if (!code || code.trim().length === 0) {
+    return { isValid: false, error: 'Confirmation code is required' }
+  }
+
+  if (code.trim().toUpperCase() !== expectedCode.toUpperCase()) {
+    return { 
+      isValid: false, 
+      error: `Please type "${expectedCode}" to confirm this action` 
+    }
+  }
+
+  return { isValid: true }
+}
+
+/**
+ * Validate reason text for destructive actions
+ */
+export function validateReason(
+  reason: string,
+  options: { required?: boolean; minLength?: number; maxLength?: number } = {}
+): ValidationResult {
+  const { required = false, minLength = 10, maxLength = 500 } = options
+
+  if (required && (!reason || reason.trim().length === 0)) {
+    return { isValid: false, error: 'Reason is required' }
+  }
+
+  if (!reason || reason.trim().length === 0) {
+    return { isValid: true } // Optional
+  }
+
+  if (reason.length < minLength) {
+    return { 
+      isValid: false, 
+      error: `Reason must be at least ${minLength} characters` 
+    }
+  }
+
+  if (reason.length > maxLength) {
+    return { 
+      isValid: false, 
+      error: `Reason is too long (max ${maxLength} characters)` 
+    }
+  }
+
+  return { isValid: true }
+}

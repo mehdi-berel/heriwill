@@ -1,16 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase'
 import { logger } from '@/lib/utils/logger'
+import { rateLimit, RateLimitPresets } from '@/lib/middleware/rateLimit'
+import { sanitizeApiError } from '@/lib/utils/error-handler'
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createServerSupabaseClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    // Apply standard rate limiting
+    const rateLimitResult = await rateLimit(RateLimitPresets.standard)(request)
+    if (rateLimitResult) {
+      return rateLimitResult
+    }
 
-    if (!user) {
+    const supabase = await createServerSupabaseClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+      const sanitized = sanitizeApiError(authError || new Error('Not authenticated'), { action: 'remove_successor' })
       return NextResponse.json(
-        { success: false, message: 'Not authenticated' },
-        { status: 401 }
+        { success: false, message: sanitized.error },
+        { status: sanitized.statusCode }
       )
     }
 
@@ -33,10 +42,10 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (heirError || !heirData) {
-      logger.error('Heir verification failed', heirError, { heirId, userId: user.id })
+      const sanitized = sanitizeApiError(heirError || new Error('Unauthorized'), { heirId, userId: user.id, action: 'verify_successor' })
       return NextResponse.json(
-        { success: false, message: 'You are not authorized to remove this successor role' },
-        { status: 403 }
+        { success: false, message: sanitized.error },
+        { status: sanitized.statusCode }
       )
     }
 
@@ -48,10 +57,10 @@ export async function POST(request: NextRequest) {
       .eq('heir_user_id', user.id)
 
     if (deleteError) {
-      logger.error('Error deleting heir record', deleteError, { heirId })
+      const sanitized = sanitizeApiError(deleteError, { heirId, userId: user.id, action: 'delete_successor' })
       return NextResponse.json(
-        { success: false, message: 'Failed to remove successor role' },
-        { status: 500 }
+        { success: false, message: sanitized.error },
+        { status: sanitized.statusCode }
       )
     }
 
@@ -62,13 +71,13 @@ export async function POST(request: NextRequest) {
       message: 'Successor role removed successfully'
     })
   } catch (error) {
-    logger.error('Error in remove successor', error)
+    const sanitized = sanitizeApiError(error, { action: 'remove_successor' })
     return NextResponse.json(
       { 
         success: false, 
-        message: error instanceof Error ? error.message : 'Failed to remove successor role' 
+        message: sanitized.error 
       },
-      { status: 500 }
+      { status: sanitized.statusCode }
     )
   }
 }
