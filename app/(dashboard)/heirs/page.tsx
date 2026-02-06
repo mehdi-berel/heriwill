@@ -11,21 +11,16 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { Search, Users, Mail, Heart, Scale } from "lucide-react"
+import { supabase } from "@/lib/supabase"
+import { User } from "@supabase/supabase-js"
 import { Badge } from "@/components/ui/badge"
-import { getCurrentUser, getUserSubscriptionTier } from "@/app/actions/users"
 import { logger } from "@/lib/utils/logger"
 import { toast } from "@/lib/utils/toast"
 import { 
-  getPendingInvitations, 
   acceptHeirInvitation, 
   rejectHeirInvitation 
 } from "@/app/actions/heirInvitations"
-import { createHeir, updateHeir, deleteHeir, getAllHeirs, getOwnerTrustedContactStatus } from "@/app/actions/heirs"
-
-interface AuthUser {
-  id: string
-  email: string | null
-}
+import { createHeir, updateHeir, deleteHeir } from "@/app/actions/heirs"
 
 interface Heir {
   id: string
@@ -48,6 +43,7 @@ interface Heir {
   heir_user_id: string | null
   created_at: string
   updated_at: string
+  users?: { full_name: string | null; email: string | null }
 }
 
 interface HeirFormData {
@@ -63,7 +59,7 @@ interface HeirFormData {
 }
 
 export default function HeirsPage() {
-  const [user, setUser] = useState<AuthUser | null>(null)
+  const [user, setUser] = useState<User | null>(null)
   const [heirs, setHeirs] = useState<Heir[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [showForm, setShowForm] = useState(false)
@@ -80,32 +76,97 @@ export default function HeirsPage() {
 
   const loadHeirs = useCallback(async (userId: string) => {
     try {
-      const result = await getAllHeirs(userId)
-      setHeirs((result.data || []) as Heir[])
+      const { data, error } = await supabase
+        .from('heirs')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+
+      if (error) {
+        logger.error('Error loading heirs', error, { userId })
+        toast.error('Failed to load heirs', 'Please refresh the page')
+        return
+      }
+      setHeirs((data || []) as Heir[])
     } catch (error) {
       logger.error('Error loading heirs', error, { userId })
       toast.error('Failed to load heirs', 'Please refresh the page')
     }
   }, [])
 
-  const loadReceivedInvitations = useCallback(async (userId: string, userEmail: string | null) => {
+  const loadReceivedInvitations = useCallback(async (userId: string, userEmail: string | undefined) => {
     try {
-      const invitations = await getPendingInvitations(userId, userEmail ?? undefined)
-      setReceivedInvitations(invitations as Heir[])
-      
+      // Query 1: Get accepted invitations where heir_user_id matches
+      const { data: acceptedByUserId, error: error1 } = await supabase
+        .from('heirs')
+        .select('*')
+        .eq('heir_user_id', userId)
+        .eq('invitation_status', 'accepted')
+        .order('created_at', { ascending: false })
+
+      if (error1) {
+        logger.error('Error fetching accepted invitations', error1)
+      }
+
+      // Query 2: Get pending invitations where email matches
+      let pendingByEmail: typeof acceptedByUserId = null
+      if (userEmail) {
+        const { data, error: error2 } = await supabase
+          .from('heirs')
+          .select('*')
+          .eq('email_encrypted', userEmail.toLowerCase().trim())
+          .eq('invitation_status', 'pending')
+          .order('created_at', { ascending: false })
+
+        if (error2) {
+          logger.error('Error fetching pending invitations by email', error2)
+        }
+        pendingByEmail = data
+      }
+
+      // Combine and deduplicate
+      const allInvitations = [...(pendingByEmail || []), ...(acceptedByUserId || [])]
+      const uniqueInvitations = allInvitations.filter((inv, index, self) =>
+        index === self.findIndex((t) => t.id === inv.id)
+      )
+
+      // Fetch owner data for each invitation
+      const invitationsWithOwnerData = await Promise.all(
+        uniqueInvitations.map(async (invitation) => {
+          const { data: ownerData } = await supabase
+            .from('users')
+            .select('full_name, email')
+            .eq('id', invitation.user_id)
+            .single()
+
+          return {
+            ...invitation,
+            users: ownerData || { full_name: null, email: null }
+          }
+        })
+      )
+
+      setReceivedInvitations(invitationsWithOwnerData as Heir[])
+
       // Check trusted contact status for accepted invitations
-      const acceptedInvitations = (invitations as Heir[]).filter(inv => inv.has_accepted)
+      const acceptedInvitations = invitationsWithOwnerData.filter(inv => inv.has_accepted)
       const trustedMap: Record<string, boolean> = {}
-      
+
       for (const invitation of acceptedInvitations) {
         if (invitation.user_id) {
-          const isTrusted = await getOwnerTrustedContactStatus(invitation.user_id, invitation.id)
-          if (isTrusted) {
+          const { data: ownerData } = await supabase
+            .from('users')
+            .select('trusted_contact_heir_id')
+            .eq('id', invitation.user_id)
+            .single()
+
+          const owner = ownerData as { trusted_contact_heir_id?: string | null } | null
+          if (owner?.trusted_contact_heir_id === invitation.id) {
             trustedMap[invitation.id] = true
           }
         }
       }
-      
+
       setTrustedContactMap(trustedMap)
     } catch (error) {
       logger.error('Error loading invitations', error)
@@ -113,38 +174,42 @@ export default function HeirsPage() {
   }, [])
 
   useEffect(() => {
-    let isMounted = true
-
-    const initializePage = async () => {
-      try {
-        const currentUser = await getCurrentUser()
-        if (!currentUser) {
-          router.push("/login")
-          return
-        }
-        if (!isMounted) return
-        setUser(currentUser)
-
-        // Get user tier
-        const tier = await getUserSubscriptionTier(currentUser.id)
-        if (!isMounted) return
-        setUserTier(tier)
-
-        // Load heirs data and invitations
-        await loadHeirs(currentUser.id)
-        if (isMounted) {
-          await loadReceivedInvitations(currentUser.id, currentUser.email)
-        }
-      } catch (error) {
-        logger.error('Error initializing heirs page', error)
+    const getUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        router.push("/login")
+        return
       }
+      setUser(user)
+
+      // Get user tier
+      const { data: userProfile } = await supabase
+        .from('users')
+        .select('subscription_tier')
+        .eq('id', user.id)
+        .single()
+
+      const tier = (userProfile as { subscription_tier?: string } | null)?.subscription_tier as 'free' | 'premium' | 'pro' ?? 'free'
+      setUserTier(tier)
+
+      // Load heirs data and invitations
+      await loadHeirs(user.id)
+      await loadReceivedInvitations(user.id, user.email ?? undefined)
     }
 
-    initializePage()
+    getUser()
 
-    return () => {
-      isMounted = false
-    }
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!session?.user) {
+        router.push("/login")
+      } else {
+        setUser(session.user)
+        loadHeirs(session.user.id)
+        loadReceivedInvitations(session.user.id, session.user.email ?? undefined)
+      }
+    })
+
+    return () => subscription.unsubscribe()
   }, [router, loadHeirs, loadReceivedInvitations])
 
   const handleAddHeir = async (formData: HeirFormData) => {
@@ -254,7 +319,7 @@ export default function HeirsPage() {
   const handleAcceptInvitation = async (invitationCode: string) => {
     try {
       await acceptHeirInvitation(invitationCode)
-      await loadReceivedInvitations(user?.id || '', user?.email ?? null)
+      await loadReceivedInvitations(user?.id || '', user?.email ?? undefined)
       await loadHeirs(user?.id || '')
     } catch (error) {
       logger.error('Error accepting invitation', error, { invitationCode })
@@ -265,7 +330,7 @@ export default function HeirsPage() {
   const handleDeclineInvitation = async (invitationCode: string) => {
     try {
       await rejectHeirInvitation(invitationCode)
-      await loadReceivedInvitations(user?.id || '', user?.email ?? null)
+      await loadReceivedInvitations(user?.id || '', user?.email ?? undefined)
     } catch (error) {
       logger.error('Error declining invitation', error, { invitationCode })
       toast.error('Failed to decline invitation', 'Please try again')
@@ -399,21 +464,20 @@ export default function HeirsPage() {
                 </div>
               ) : (
                 receivedInvitations.filter(h => h.invitation_status === 'pending').map((invitation) => {
-                  const ownerData = (invitation as unknown as { users?: { full_name?: string; email?: string } }).users
                   return (
                     <HeirInvitationCard
                       key={invitation.id}
                       successor={{
                         id: invitation.id,
-                        full_name: ownerData?.full_name || ownerData?.email || 'Unknown',
-                        email: ownerData?.email || undefined,
+                        full_name: invitation.users?.full_name || invitation.users?.email || 'Unknown',
+                        email: invitation.users?.email || undefined,
                         phone: undefined,
                         relationship: invitation.relationship || undefined,
                         heir_type: invitation.heir_type || 'family',
                         invitation_status: invitation.invitation_status || 'pending',
                         invited_at: invitation.invited_at || ''
                       }}
-                      ownerName={ownerData?.full_name || ownerData?.email || 'Owner'}
+                      ownerName={invitation.users?.full_name || invitation.users?.email || 'Owner'}
                       isAccepted={invitation.has_accepted || false}
                       onAccept={() => handleAcceptInvitation(invitation.invitation_code || '')}
                       onDecline={() => handleDeclineInvitation(invitation.invitation_code || '')}
@@ -435,25 +499,24 @@ export default function HeirsPage() {
               </div>
             ) : (
               receivedInvitations.filter(h => h.has_accepted).map((successor) => {
-                const ownerData = (successor as unknown as { users?: { full_name?: string; email?: string } }).users
                 return (
                   <SuccessorCard
                     key={successor.id}
                     successor={{
                       id: successor.id,
-                      full_name: ownerData?.full_name || ownerData?.email || 'Unknown',
-                      email: ownerData?.email || undefined,
+                      full_name: successor.users?.full_name || successor.users?.email || 'Unknown',
+                      email: successor.users?.email || undefined,
                       phone: undefined,
                       relationship: successor.relationship || undefined,
                       heir_type: successor.heir_type || 'family',
                       invitation_status: successor.invitation_status || 'accepted',
                       invited_at: successor.invited_at || ''
                     }}
-                    ownerName={ownerData?.full_name || ownerData?.email || 'Owner'}
+                    ownerName={successor.users?.full_name || successor.users?.email || 'Owner'}
                     ownerUserId={successor.user_id || ''}
                     isTrustedContact={trustedContactMap[successor.id] || false}
                     onRemove={async () => {
-                      await loadReceivedInvitations(user?.id || '', user?.email ?? null)
+                      await loadReceivedInvitations(user?.id || '', user?.email ?? undefined)
                     }}
                   />
                 )

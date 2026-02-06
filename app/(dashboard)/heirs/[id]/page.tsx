@@ -5,8 +5,8 @@ import { useRouter, useParams } from "next/navigation"
 import { HeirDetail } from "@/components/module/heirs/heir-detail"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft, Edit, Trash2 } from "lucide-react"
-import { getCurrentUser } from "@/app/actions/users"
-import { getHeirById, deleteHeir, revokeAccess, getHeirActivities } from "@/app/actions/heirs"
+import { supabase } from "@/lib/supabase"
+import { deleteHeir, revokeAccess } from "@/app/actions/heirs"
 import { logger } from "@/lib/utils/logger"
 import { toast } from "@/lib/utils/toast"
 
@@ -55,8 +55,15 @@ export default function HeirDetailPage() {
 
   const loadHeir = useCallback(async (id: string) => {
     try {
-      const data = await getHeirById(id)
-      if (!data) throw new Error('Heir not found')
+      const { data, error } = await supabase
+        .from('heirs')
+        .select('*')
+        .eq('id', id)
+        .single()
+
+      if (error || !data) {
+        throw new Error('Heir not found')
+      }
 
       const heirData = data as Record<string, unknown>
       const mappedHeir: Heir = {
@@ -91,8 +98,27 @@ export default function HeirDetailPage() {
 
   const loadHeirActivities = useCallback(async (id: string) => {
     try {
-      const activities = await getHeirActivities(id)
-      setActivities(activities as HeirActivity[])
+      const { data, error } = await supabase
+        .from('audit_logs')
+        .select('*')
+        .eq('resource_type', 'heir')
+        .eq('resource_id', id)
+        .order('created_at', { ascending: false })
+        .limit(20)
+
+      if (error) {
+        logger.error('Error loading heir activities', error, { heirId: id })
+        setActivities([])
+        return
+      }
+
+      setActivities((data || []).map((activity: Record<string, unknown>) => ({
+        id: activity.id as string,
+        type: activity.action as string,
+        description: (activity.metadata as Record<string, unknown>)?.description as string || activity.action as string,
+        timestamp: activity.created_at as string,
+        metadata: activity.metadata as Record<string, unknown>
+      })) as HeirActivity[])
     } catch (error) {
       logger.error('Error loading heir activities', error, { heirId: id })
       setActivities([])
@@ -105,32 +131,29 @@ export default function HeirDetailPage() {
       return
     }
 
-    let isMounted = true
-
-    const initializePage = async () => {
-      try {
-        const currentUser = await getCurrentUser()
-        if (!currentUser) {
-          router.push("/login")
-          return
-        }
-        if (!isMounted) return
-
-        // Load heir data
-        await Promise.all([
-          loadHeir(heirId),
-          loadHeirActivities(heirId)
-        ])
-      } catch (error) {
-        logger.error('Error initializing heir detail page', error)
+    const getUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        router.push("/login")
+        return
       }
+
+      // Load heir data
+      await Promise.all([
+        loadHeir(heirId),
+        loadHeirActivities(heirId)
+      ])
     }
 
-    initializePage()
+    getUser()
 
-    return () => {
-      isMounted = false
-    }
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!session?.user) {
+        router.push("/login")
+      }
+    })
+
+    return () => subscription.unsubscribe()
   }, [router, heirId, loadHeir, loadHeirActivities])
 
   const handleEdit = () => {
