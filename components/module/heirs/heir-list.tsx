@@ -130,7 +130,7 @@ export function HeirList({
                 isLocked ? 'opacity-60 hover:opacity-80' : 'hover:border-primary/50'
               }`}
               style={{ borderColor: '#232629' }}
-              onClick={isLocked ? () => router.push('/settings?tab=subscription') : () => onView(heir)}
+              onClick={isLocked ? () => router.push('/upgrade') : () => onView(heir)}
             >
               {isLocked && (
                 <div className="absolute inset-0 flex items-center justify-center bg-background/50 rounded-xl z-10 pointer-events-none">

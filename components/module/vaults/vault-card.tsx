@@ -73,7 +73,7 @@ export function VaultCard({
 
   return (
     <div
-      onClick={isLocked ? () => router.push('/settings?tab=subscription') : onPress}
+      onClick={isLocked ? () => router.push('/upgrade') : onPress}
       className={`relative flex items-center p-4 bg-background-card border rounded-xl transition-all group cursor-pointer ${
         isSelected ? 'border-primary bg-primary/5' : ''
       } ${
