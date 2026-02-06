@@ -25,8 +25,6 @@ import {
 
   Users,
 
-  Scale,
-
   LogOut,
 
   Lock,
@@ -92,20 +90,6 @@ const navigation = [
     icon: Power,
 
     description: "Death detection",
-
-  },
-
-  {
-
-    name: "Notary",
-
-    href: "/notary",
-
-    icon: Scale,
-
-    description: "Legal witnesses",
-
-    isPro: true,
 
   },
 

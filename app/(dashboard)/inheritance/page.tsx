@@ -30,52 +30,39 @@ export default function InheritanceRoute() {
     try {
       setLoading(true)
       
-      // Check if user is an heir
-      const { data: heirData, error: heirError } = await supabase
-        .from('heirs')
-        .select('user_id')
-        .eq('heir_user_id', currentUserId)
+      // Get shared vaults directly — these are created by the inheritance trigger
+      const { data: sharedVaults, error: sharedError } = await supabase
+        .from('shared_vaults')
+        .select(`
+          vault_id,
+          owner_id,
+          shared_at,
+          vaults (id, name, description, icon, color, category, created_at, user_id)
+        `)
+        .eq('shared_with_user_id', currentUserId)
         .eq('is_active', true)
+        .eq('accepted', true)
 
-      if (heirError || !heirData || heirData.length === 0) {
-        setVaults([])
-        return
-      }
-
-      const ownerIds = heirData.map(h => h.user_id)
-
-      // Check for completed inheritance triggers
-      const { data: triggersData } = await supabase
-        .from('inheritance_triggers')
-        .select('user_id')
-        .in('user_id', ownerIds)
-        .eq('status', 'completed')
-
-      if (!triggersData || triggersData.length === 0) {
-        setVaults([])
-        return
-      }
-
-      const triggeredOwnerIds = triggersData.map(t => t.user_id)
-
-      // Get vaults from triggered owners
-      const { data: vaultsData } = await supabase
-        .from('vaults')
-        .select('*')
-        .in('user_id', triggeredOwnerIds)
-
-      if (!vaultsData) {
+      if (sharedError || !sharedVaults || sharedVaults.length === 0) {
+        if (sharedError) logger.error('Error loading shared vaults', sharedError)
         setVaults([])
         return
       }
 
       // Get owner names and item counts
       const vaultsWithDetails = await Promise.all(
-        vaultsData.map(async (vault) => {
+        sharedVaults.map(async (sv) => {
+          const vault = sv.vaults as unknown as {
+            id: string; name: string; description: string | null
+            icon: string | null; color: string | null; category: string
+            created_at: string; user_id: string
+          }
+          if (!vault) return null
+
           const { data: ownerData } = await supabase
             .from('users')
             .select('full_name, email')
-            .eq('id', vault.user_id)
+            .eq('id', sv.owner_id)
             .single()
 
           const { count } = await supabase
@@ -97,7 +84,7 @@ export default function InheritanceRoute() {
         })
       )
 
-      setVaults(vaultsWithDetails)
+      setVaults(vaultsWithDetails.filter(Boolean) as InheritedVault[])
     } catch (error) {
       logger.error('Error loading inherited vaults', error)
       setVaults([])

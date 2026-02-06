@@ -18,6 +18,7 @@ import {
 import { supabase } from "@/lib/supabase"
 import { logger } from "@/lib/utils/logger"
 import { toast } from "@/lib/utils/toast"
+import JSZip from "jszip"
 import { ItemsList } from "@/components/module/inheritance/items-list"
 import { ItemPreview } from "@/components/module/inheritance/item-preview"
 
@@ -57,51 +58,39 @@ export default function InheritedVaultDetailPage() {
   const [downloading, setDownloading] = useState(false)
   const [selectedItem, setSelectedItem] = useState<VaultItem | null>(null)
   const [showItemPreview, setShowItemPreview] = useState(false)
+  const [itemPreviewUrl, setItemPreviewUrl] = useState<string | null>(null)
 
   const loadVaultDetails = useCallback(async (userId: string) => {
     try {
       setLoading(true)
 
-      // Verify user is an heir and inheritance is triggered
-      const { data: heirData } = await supabase
-        .from('heirs')
-        .select('user_id, heir_user_id')
-        .eq('heir_user_id', userId)
+      // Verify user has access via shared_vaults
+      const { data: sharedVault, error: sharedError } = await supabase
+        .from('shared_vaults')
+        .select(`
+          owner_id,
+          vaults (id, name, description, icon, color, category, user_id, created_at)
+        `)
+        .eq('vault_id', vaultId)
+        .eq('shared_with_user_id', userId)
         .eq('is_active', true)
-
-      if (!heirData || heirData.length === 0) {
-        logger.error('User is not an heir', null, { userId })
-        router.push('/inheritance')
-        return
-      }
-
-      const ownerIds = heirData.map(h => h.user_id)
-
-      // Check for completed inheritance triggers
-      const { data: triggersData } = await supabase
-        .from('inheritance_triggers')
-        .select('user_id')
-        .in('user_id', ownerIds)
-        .eq('status', 'completed')
-
-      if (!triggersData || triggersData.length === 0) {
-        logger.error('No completed inheritance triggers', null, { userId, ownerIds })
-        router.push('/inheritance')
-        return
-      }
-
-      const triggeredOwnerIds = triggersData.map(t => t.user_id)
-
-      // Get vault details
-      const { data: vaultData, error: vaultError } = await supabase
-        .from('vaults')
-        .select('id, name, description, icon, color, category, user_id, created_at')
-        .eq('id', vaultId)
-        .in('user_id', triggeredOwnerIds)
+        .eq('accepted', true)
         .single()
 
-      if (vaultError || !vaultData) {
-        logger.error('Vault not found or not accessible', vaultError, { vaultId, userId })
+      if (sharedError || !sharedVault) {
+        logger.error('Vault not shared with user', sharedError, { vaultId, userId })
+        router.push('/inheritance')
+        return
+      }
+
+      const vaultData = sharedVault.vaults as unknown as {
+        id: string; name: string; description: string | null
+        icon: string | null; color: string | null; category: string
+        user_id: string; created_at: string
+      }
+
+      if (!vaultData) {
+        logger.error('Vault data not found', null, { vaultId })
         router.push('/inheritance')
         return
       }
@@ -110,7 +99,7 @@ export default function InheritedVaultDetailPage() {
       const { data: ownerData } = await supabase
         .from('users')
         .select('full_name, email')
-        .eq('id', vaultData.user_id)
+        .eq('id', sharedVault.owner_id)
         .single()
 
       const owner = ownerData as { full_name?: string; email?: string } | null
@@ -168,11 +157,37 @@ export default function InheritedVaultDetailPage() {
     })
   }
 
-  const handleItemClick = (itemId: string) => {
+  const handleItemClick = async (itemId: string) => {
     const item = items.find(i => i.id === itemId)
     if (item) {
       setSelectedItem(item)
+      setItemPreviewUrl(null)
       setShowItemPreview(true)
+
+      // Load preview URL for previewable items
+      const meta = item.metadata as Record<string, string | undefined>
+      const filePath = meta?.filePath
+      if (filePath && ['image', 'video', 'document'].includes(item.item_type)) {
+        const url = await getSignedUrl(filePath)
+        setItemPreviewUrl(url)
+      }
+    }
+  }
+
+  const getSignedUrl = async (filePath: string, bucket: string = 'vault-files'): Promise<string | null> => {
+    try {
+      const { data, error } = await supabase.storage
+        .from(bucket)
+        .createSignedUrl(filePath, 3600)
+
+      if (error || !data?.signedUrl) {
+        logger.error('Error creating signed URL', error, { filePath, bucket })
+        return null
+      }
+      return data.signedUrl
+    } catch (error) {
+      logger.error('Error getting signed URL', error, { filePath })
+      return null
     }
   }
 
@@ -181,25 +196,51 @@ export default function InheritedVaultDetailPage() {
     if (!item) return
 
     try {
-      const response = await fetch('/api/inheritance/download-item', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ itemId })
-      })
+      const metadata = item.metadata as Record<string, string | undefined>
+      const filePath = metadata.filePath
 
-      if (!response.ok) {
-        throw new Error('Failed to download item')
+      if (filePath) {
+        // Download actual file from storage using signed URL
+        const signedUrl = await getSignedUrl(filePath)
+        if (!signedUrl) {
+          toast.error('Failed to get download link')
+          return
+        }
+
+        const response = await fetch(signedUrl)
+        if (!response.ok) throw new Error('Failed to download file')
+
+        const blob = await response.blob()
+        const url = window.URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = metadata.fileName || item.title_encrypted || 'download'
+        document.body.appendChild(a)
+        a.click()
+        window.URL.revokeObjectURL(url)
+        document.body.removeChild(a)
+        toast.success('File downloaded successfully')
+      } else {
+        // For items without files (passwords, notes, crypto), export as JSON
+        const downloadData = {
+          title: item.title_encrypted,
+          type: item.item_type,
+          metadata: item.metadata,
+          tags: item.tags,
+          created_at: item.created_at
+        }
+        const jsonString = JSON.stringify(downloadData, null, 2)
+        const blob = new Blob([jsonString], { type: 'application/json' })
+        const url = window.URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `${item.title_encrypted?.replace(/[^a-z0-9]/gi, '_') || 'item'}.json`
+        document.body.appendChild(a)
+        a.click()
+        window.URL.revokeObjectURL(url)
+        document.body.removeChild(a)
+        toast.success('Item exported successfully')
       }
-
-      const blob = await response.blob()
-      const url = window.URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `${item.title_encrypted.replace(/[^a-z0-9]/gi, '_')}.json`
-      document.body.appendChild(a)
-      a.click()
-      window.URL.revokeObjectURL(url)
-      document.body.removeChild(a)
     } catch (error) {
       logger.error('Error downloading item', error, { itemId })
       toast.error('Failed to download item', 'Please try again')
@@ -211,18 +252,55 @@ export default function InheritedVaultDetailPage() {
     
     setDownloading(true)
     try {
-      const response = await fetch('/api/inheritance/export-vault', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ vaultId: vault.id })
-      })
+      const zip = new JSZip()
 
-      if (!response.ok) {
-        throw new Error('Failed to download vault')
+      // Add vault metadata
+      zip.file('vault-info.json', JSON.stringify({
+        name: vault.name,
+        description: vault.description,
+        category: vault.category,
+        owner: vault.owner_name,
+        created_at: vault.created_at,
+        exported_at: new Date().toISOString(),
+        total_items: items.length
+      }, null, 2))
+
+      // Download each item and add to ZIP
+      for (const item of items) {
+        const metadata = item.metadata as Record<string, string | undefined>
+        const filePath = metadata.filePath
+
+        if (filePath) {
+          // File-based item: download actual file
+          const signedUrl = await getSignedUrl(filePath)
+          if (signedUrl) {
+            try {
+              const response = await fetch(signedUrl)
+              if (response.ok) {
+                const blob = await response.blob()
+                const fileName = metadata.fileName || `${item.item_type}_${item.id}`
+                zip.file(fileName, blob)
+              }
+            } catch (fileError) {
+              logger.error('Error downloading file for ZIP', fileError, { itemId: item.id })
+            }
+          }
+        } else {
+          // Non-file item (password, note, crypto): add as JSON
+          const fileName = `${item.item_type}_${item.title_encrypted?.replace(/[^a-z0-9]/gi, '_') || item.id}.json`
+          zip.file(fileName, JSON.stringify({
+            title: item.title_encrypted,
+            type: item.item_type,
+            metadata: item.metadata,
+            tags: item.tags,
+            created_at: item.created_at
+          }, null, 2))
+        }
       }
 
-      const blob = await response.blob()
-      const url = window.URL.createObjectURL(blob)
+      // Generate and download ZIP
+      const zipBlob = await zip.generateAsync({ type: 'blob' })
+      const url = window.URL.createObjectURL(zipBlob)
       const a = document.createElement('a')
       a.href = url
       a.download = `${vault.name.replace(/[^a-z0-9]/gi, '_')}_export.zip`
@@ -230,6 +308,7 @@ export default function InheritedVaultDetailPage() {
       a.click()
       window.URL.revokeObjectURL(url)
       document.body.removeChild(a)
+      toast.success('Vault downloaded successfully')
     } catch (error) {
       logger.error('Error downloading vault', error, { vaultId: vault?.id })
       toast.error('Failed to download vault', 'Please try again')
@@ -340,6 +419,7 @@ export default function InheritedVaultDetailPage() {
         <ItemsList 
           items={items} 
           onItemClick={handleItemClick}
+          onDownloadItem={handleDownloadItem}
         />
       </div>
 
@@ -352,6 +432,7 @@ export default function InheritedVaultDetailPage() {
           setSelectedItem(null)
         }}
         onDownload={handleDownloadItem}
+        previewUrl={itemPreviewUrl}
       />
     </div>
   )

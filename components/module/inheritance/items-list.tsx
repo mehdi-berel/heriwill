@@ -16,8 +16,6 @@ import {
   Calendar,
   Download
 } from "lucide-react"
-import { logger } from "@/lib/utils/logger"
-import { toast } from "@/lib/utils/toast"
 
 interface VaultItem {
   id: string
@@ -31,6 +29,7 @@ interface VaultItem {
 interface ItemsListProps {
   items: VaultItem[]
   onItemClick?: (itemId: string) => void
+  onDownloadItem?: (itemId: string) => void
 }
 
 const ITEM_TYPE_ICONS = {
@@ -57,36 +56,15 @@ const ITEM_TYPE_COLORS = {
   other: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400'
 }
 
-export function ItemsList({ items, onItemClick }: ItemsListProps) {
+export function ItemsList({ items, onItemClick, onDownloadItem }: ItemsListProps) {
   const [downloading, setDownloading] = useState<string | null>(null)
 
-  const handleDownload = async (itemId: string, itemTitle: string, e: React.MouseEvent) => {
+  const handleDownload = async (itemId: string, e: React.MouseEvent) => {
     e.stopPropagation()
+    if (!onDownloadItem) return
     setDownloading(itemId)
-    
     try {
-      const response = await fetch('/api/inheritance/download-item', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ itemId })
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to download item')
-      }
-
-      const blob = await response.blob()
-      const url = window.URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `${itemTitle.replace(/[^a-z0-9]/gi, '_')}.json`
-      document.body.appendChild(a)
-      a.click()
-      window.URL.revokeObjectURL(url)
-      document.body.removeChild(a)
-    } catch (error) {
-      logger.error('Error downloading item', error, { itemId })
-      toast.error('Failed to download item', 'Please try again')
+      await onDownloadItem(itemId)
     } finally {
       setDownloading(null)
     }
@@ -143,7 +121,7 @@ export function ItemsList({ items, onItemClick }: ItemsListProps) {
                       size="sm"
                       variant="ghost"
                       className="h-8 w-8 p-0 flex-shrink-0"
-                      onClick={(e) => handleDownload(item.id, item.title_encrypted || 'item', e)}
+                      onClick={(e) => handleDownload(item.id, e)}
                       disabled={downloading === item.id}
                     >
                       <Download className="h-4 w-4" />

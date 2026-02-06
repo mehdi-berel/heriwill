@@ -1,5 +1,6 @@
 "use client"
 
+import Image from "next/image"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -18,7 +19,7 @@ import {
   EyeOff,
   Calendar
 } from "lucide-react"
-import { useState } from "react"
+import { useState, useCallback } from "react"
 
 interface VaultItem {
   id: string
@@ -36,6 +37,7 @@ interface ItemPreviewProps {
   isOpen: boolean
   onClose: () => void
   onDownload?: (itemId: string) => void
+  previewUrl?: string | null
 }
 
 const ITEM_TYPE_ICONS = {
@@ -62,10 +64,16 @@ const ITEM_TYPE_COLORS = {
   other: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400'
 }
 
-export function ItemPreview({ item, isOpen, onClose, onDownload }: ItemPreviewProps) {
+export function ItemPreview({ item, isOpen, onClose, onDownload, previewUrl }: ItemPreviewProps) {
   const [showPassword, setShowPassword] = useState(false)
   const [showPrivateKey, setShowPrivateKey] = useState(false)
   const [copiedField, setCopiedField] = useState<string | null>(null)
+
+  const handleOpenChange = useCallback((open: boolean) => {
+    if (!open) {
+      onClose()
+    }
+  }, [onClose])
 
   if (!item) return null
 
@@ -228,6 +236,46 @@ export function ItemPreview({ item, isOpen, onClose, onDownload }: ItemPreviewPr
       case 'video':
         return (
           <div className="space-y-4">
+            {/* Inline preview for images */}
+            {item.item_type === 'image' && previewUrl && (
+              <div className="rounded-lg overflow-hidden border bg-muted relative w-full" style={{ minHeight: 200 }}>
+                <Image 
+                  src={previewUrl} 
+                  alt={item.title_encrypted || 'Image'} 
+                  fill
+                  className="object-contain"
+                  unoptimized
+                />
+              </div>
+            )}
+            {/* Inline preview for videos */}
+            {item.item_type === 'video' && previewUrl && (
+              <div className="rounded-lg overflow-hidden border bg-black">
+                <video 
+                  src={previewUrl} 
+                  controls 
+                  className="w-full max-h-[400px]"
+                >
+                  Your browser does not support the video tag.
+                </video>
+              </div>
+            )}
+            {/* Inline preview for PDFs */}
+            {item.item_type === 'document' && previewUrl && String(metadata.fileName).toLowerCase().endsWith('.pdf') && (
+              <div className="rounded-lg overflow-hidden border">
+                <iframe 
+                  src={previewUrl} 
+                  className="w-full h-[500px]"
+                  title={item.title_encrypted || 'Document'}
+                />
+              </div>
+            )}
+            {/* Loading state */}
+            {!previewUrl && (
+              <div className="flex items-center justify-center py-8 text-muted-foreground">
+                <p>Loading preview...</p>
+              </div>
+            )}
             {metadata.fileName && (
               <div>
                 <label className="text-sm font-medium text-muted-foreground">File Name</label>
@@ -238,19 +286,6 @@ export function ItemPreview({ item, isOpen, onClose, onDownload }: ItemPreviewPr
               <div>
                 <label className="text-sm font-medium text-muted-foreground">File Size</label>
                 <p className="p-2 bg-muted rounded mt-1">{String(metadata.fileSize)}</p>
-              </div>
-            )}
-            {metadata.fileUrl && (
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">File</label>
-                <a 
-                  href={String(metadata.fileUrl)} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="block p-2 bg-muted rounded mt-1 text-blue-500 hover:underline truncate"
-                >
-                  View {item.item_type}
-                </a>
               </div>
             )}
             {metadata.description && (
@@ -290,7 +325,7 @@ export function ItemPreview({ item, isOpen, onClose, onDownload }: ItemPreviewPr
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-start gap-3">
