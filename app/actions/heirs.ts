@@ -3,6 +3,7 @@
 import { createServerSupabaseClient, createServiceRoleClient } from '@/lib/supabase'
 import type { Database } from '@/lib/database.types'
 import { logger } from '@/lib/utils/logger'
+import { checkHeirLimit } from '@/lib/subscription-limits'
 
 type HeirRow = Database['public']['Tables']['heirs']['Row']
 type HeirUpdate = Database['public']['Tables']['heirs']['Update']
@@ -31,6 +32,12 @@ export async function createHeir(heirData: HeirData) {
     // Verify the user_id matches authenticated user
     if (heirData.user_id !== user.id) {
       throw new Error('Unauthorized: Cannot create heir for another user')
+    }
+
+    // Check heir limit
+    const heirLimitCheck = await checkHeirLimit(user.id)
+    if (!heirLimitCheck.canCreate) {
+      throw new Error(`Heir limit reached. You can add up to ${heirLimitCheck.limit} heir(s) on your ${heirLimitCheck.tier} plan. Upgrade to add more heirs.`)
     }
 
     const { data, error } = await supabase

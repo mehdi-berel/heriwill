@@ -137,6 +137,31 @@ export default function HeirDetailPage() {
         return
       }
 
+      // Check if this heir is locked for free users
+      const { data: userProfile } = await supabase
+        .from('users')
+        .select('subscription_tier')
+        .eq('id', user.id)
+        .single()
+
+      const tier = (userProfile as { subscription_tier?: string } | null)?.subscription_tier ?? 'free'
+
+      if (tier === 'free') {
+        // Get all heirs sorted by creation date to determine if this one is locked
+        const { data: allHeirs } = await supabase
+          .from('heirs')
+          .select('id')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: true })
+
+        const heirIndex = (allHeirs || []).findIndex((h: { id: string }) => h.id === heirId)
+        if (heirIndex > 0) {
+          toast.error('Upgrade your plan to access this heir')
+          router.push('/heirs')
+          return
+        }
+      }
+
       // Load heir data
       await Promise.all([
         loadHeir(heirId),

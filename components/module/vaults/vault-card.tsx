@@ -1,5 +1,6 @@
 "use client"
 
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { 
   FolderOpen, 
@@ -7,7 +8,8 @@ import {
   Trash2,
   Shield,
   Edit,
-  ChevronRight
+  ChevronRight,
+  Lock
 } from "lucide-react"
 
 export type VaultCategory = 'share' | 'delete' | 'pro'
@@ -63,18 +65,30 @@ export function VaultCard({
   heirCount = 0,
   isSelected = false 
 }: VaultCardProps) {
+  const router = useRouter()
   const CategoryIcon = categoryIcons[vault.category] || FolderOpen
   const itemCount = vault.item_count || 0
   const label = vault.name || categoryLabels[vault.category] || 'Vault'
+  const isLocked = vault.is_locked === true
 
   return (
     <div
-      onClick={onPress}
-      className={`flex items-center p-4 bg-background-card border rounded-xl cursor-pointer hover:border-primary/50 transition-all group ${
+      onClick={isLocked ? () => router.push('/settings?tab=subscription') : onPress}
+      className={`relative flex items-center p-4 bg-background-card border rounded-xl transition-all group cursor-pointer ${
         isSelected ? 'border-primary bg-primary/5' : ''
+      } ${
+        isLocked ? 'opacity-60 hover:opacity-80' : 'hover:border-primary/50'
       }`}
       style={{ borderColor: isSelected ? undefined : '#232629' }}
     >
+      {isLocked && (
+        <div className="absolute inset-0 flex items-center justify-center bg-background/50 rounded-xl z-10 pointer-events-none">
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-muted rounded-full">
+            <Lock className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm font-medium text-muted-foreground">Upgrade to unlock</span>
+          </div>
+        </div>
+      )}
       {/* Icon Container */}
       <div 
         className="w-12 h-12 rounded-full flex items-center justify-center mr-3 flex-shrink-0"
@@ -116,7 +130,7 @@ export function VaultCard({
             <Share2 className="h-4 w-4" />
           </Button>
         )}
-        {onEdit && (
+        {!isLocked && onEdit && (
           <Button
             size="sm"
             variant="ghost"
@@ -129,7 +143,7 @@ export function VaultCard({
             <Edit className="h-4 w-4" />
           </Button>
         )}
-        {onDelete && (
+        {!isLocked && onDelete && (
           <Button
             size="sm"
             variant="ghost"
@@ -142,7 +156,8 @@ export function VaultCard({
             <Trash2 className="h-4 w-4 text-red-500" />
           </Button>
         )}
-        <ChevronRight className="h-5 w-5 text-muted-foreground" />
+        {!isLocked && <ChevronRight className="h-5 w-5 text-muted-foreground" />}
+        {isLocked && <Lock className="h-5 w-5 text-muted-foreground" />}
       </div>
     </div>
   )

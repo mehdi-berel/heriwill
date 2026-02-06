@@ -285,6 +285,24 @@ export function ItemDetails({ item, isOpen, onClose, onEdit, onDelete }: ItemDet
                 <p className="text-base text-text-primary whitespace-pre-wrap">
                   {item.metadata.content || 'No content'}
                 </p>
+                <Button 
+                  onClick={() => {
+                    const content = item.metadata.content || ''
+                    const blob = new Blob([content], { type: 'text/plain' })
+                    const url = URL.createObjectURL(blob)
+                    const a = document.createElement('a')
+                    a.href = url
+                    a.download = `${item.title?.replace(/[^a-z0-9]/gi, '_') || 'note'}.txt`
+                    document.body.appendChild(a)
+                    a.click()
+                    document.body.removeChild(a)
+                    URL.revokeObjectURL(url)
+                  }} 
+                  className="w-full mt-4"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Download as .txt
+                </Button>
               </CardContent>
             </Card>
           </div>

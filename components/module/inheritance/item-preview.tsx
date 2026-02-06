@@ -223,11 +223,31 @@ export function ItemPreview({ item, isOpen, onClose, onDownload, previewUrl }: I
 
       case 'note':
         return (
-          <div>
-            <label className="text-sm font-medium text-muted-foreground">Content</label>
-            <div className="mt-1 p-4 bg-muted rounded whitespace-pre-wrap">
-              {String(metadata.content || 'No content')}
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium text-muted-foreground">Content</label>
+              <div className="mt-1 p-4 bg-muted rounded whitespace-pre-wrap">
+                {String(metadata.content || 'No content')}
+              </div>
             </div>
+            <Button 
+              onClick={() => {
+                const content = String(metadata.content || '')
+                const blob = new Blob([content], { type: 'text/plain' })
+                const url = window.URL.createObjectURL(blob)
+                const a = document.createElement('a')
+                a.href = url
+                a.download = `${item.title_encrypted?.replace(/[^a-z0-9]/gi, '_') || 'note'}.txt`
+                document.body.appendChild(a)
+                a.click()
+                document.body.removeChild(a)
+                window.URL.revokeObjectURL(url)
+              }}
+              className="w-full"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Download as .txt
+            </Button>
           </div>
         )
 

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { HeirForm } from "@/components/module/heirs/heir-form"
 import { HeirList } from "@/components/module/heirs/heir-list"
@@ -14,6 +14,8 @@ import { Search, Users, Mail, Heart, Scale } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { User } from "@supabase/supabase-js"
 import { Badge } from "@/components/ui/badge"
+import { UpgradeModal } from "@/components/module/subscription/upgrade-modal"
+import { checkHeirLimit } from "@/lib/subscription-limits"
 import { logger } from "@/lib/utils/logger"
 import { toast } from "@/lib/utils/toast"
 
@@ -71,6 +73,7 @@ export default function HeirsPage() {
   const [newlyCreatedHeir, setNewlyCreatedHeir] = useState<Heir | null>(null)
   const [userTier, setUserTier] = useState<'free' | 'premium' | 'pro'>('free')
   const [trustedContactMap, setTrustedContactMap] = useState<Record<string, boolean>>({})
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false)
   const router = useRouter()
 
   const loadHeirs = useCallback(async (userId: string) => {
@@ -79,7 +82,7 @@ export default function HeirsPage() {
         .from('heirs')
         .select('*')
         .eq('user_id', userId)
-        .order('created_at', { ascending: false })
+        .order('created_at', { ascending: true })
 
       if (error) {
         logger.error('Error loading heirs', error, { userId })
@@ -211,6 +214,20 @@ export default function HeirsPage() {
     return () => subscription.unsubscribe()
   }, [router, loadHeirs, loadReceivedInvitations])
 
+  // Compute locked heir IDs based on subscription tier
+  // Free users: only the first created heir is unlocked
+  // Premium/Pro: all heirs unlocked
+  const lockedHeirIds = useMemo(() => {
+    const locked = new Set<string>()
+    if (userTier === 'free' && heirs.length > 1) {
+      // heirs are sorted by created_at ascending, so index 0 is the first created
+      heirs.forEach((heir, index) => {
+        if (index > 0) locked.add(heir.id)
+      })
+    }
+    return locked
+  }, [heirs, userTier])
+
   const handleAddHeir = async (formData: HeirFormData) => {
     if (!user) {
       logger.error('No user found when adding heir')
@@ -221,6 +238,14 @@ export default function HeirsPage() {
     try {
       logger.info('Starting heir creation', { userId: user.id, email: formData.email })
       
+      // Check heir limit before creating
+      const limitCheck = await checkHeirLimit(user.id)
+      if (!limitCheck.canCreate) {
+        setShowForm(false)
+        setShowUpgradeModal(true)
+        return
+      }
+
       const expirationDate = new Date()
       expirationDate.setDate(expirationDate.getDate() + 7)
 
@@ -259,13 +284,16 @@ export default function HeirsPage() {
       
     } catch (error) {
       setShowForm(false)
-      logger.error('Error adding heir', error, {
-        formData: { full_name: formData.full_name, email: formData.email },
-        userId: user.id
-      })
-      
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
-      toast.error('Failed to add heir', errorMessage)
+      const message = error instanceof Error ? error.message : ''
+      if (message.includes('Heir limit reached')) {
+        setShowUpgradeModal(true)
+      } else {
+        logger.error('Error adding heir', error, {
+          formData: { full_name: formData.full_name, email: formData.email },
+          userId: user.id
+        })
+        toast.error('Failed to add heir', message || 'Unknown error occurred')
+      }
     }
   }
 
@@ -522,6 +550,7 @@ export default function HeirsPage() {
             searchTerm={searchTerm}
             onSearchChange={setSearchTerm}
             selectedStatus={null}
+            lockedHeirIds={lockedHeirIds}
           />
         )}
 
@@ -544,6 +573,7 @@ export default function HeirsPage() {
                   searchTerm={searchTerm}
                   onSearchChange={setSearchTerm}
                   selectedStatus={null}
+                  lockedHeirIds={lockedHeirIds}
                 />
               )}
             </div>
@@ -694,6 +724,14 @@ export default function HeirsPage() {
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* Upgrade Modal */}
+        <UpgradeModal
+          isOpen={showUpgradeModal}
+          onClose={() => setShowUpgradeModal(false)}
+          reason="heir_limit"
+          currentPlan={userTier}
+        />
     </div>
   )
 }

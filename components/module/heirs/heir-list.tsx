@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { 
   Users, 
@@ -9,7 +10,8 @@ import {
   Trash2, 
   CheckCircle,
   Copy,
-  Check
+  Check,
+  Lock
 } from "lucide-react"
 import { logger } from "@/lib/utils/logger"
 import { toast } from "@/lib/utils/toast"
@@ -49,6 +51,7 @@ interface HeirListProps {
   searchTerm?: string
   onSearchChange?: (term: string) => void
   selectedStatus?: 'pending' | 'accepted' | 'active' | null
+  lockedHeirIds?: Set<string>
 }
 
 export function HeirList({ 
@@ -57,8 +60,10 @@ export function HeirList({
   onEdit, 
   onDelete, 
   searchTerm = '',
-  selectedStatus = null
+  selectedStatus = null,
+  lockedHeirIds = new Set()
 }: HeirListProps) {
+  const router = useRouter()
   const [copiedId, setCopiedId] = useState<string | null>(null)
 
   const copyInvitationLink = async (heir: Heir, e: React.MouseEvent) => {
@@ -116,13 +121,25 @@ export function HeirList({
         </div>
       ) : (
         <div className="space-y-3">
-          {sortedHeirs.map((heir) => (
+          {sortedHeirs.map((heir) => {
+            const isLocked = lockedHeirIds.has(heir.id)
+            return (
             <div
               key={heir.id}
-              className="flex items-center p-4 bg-background-card border rounded-xl cursor-pointer hover:border-primary/50 transition-all group"
+              className={`relative flex items-center p-4 bg-background-card border rounded-xl cursor-pointer transition-all group ${
+                isLocked ? 'opacity-60 hover:opacity-80' : 'hover:border-primary/50'
+              }`}
               style={{ borderColor: '#232629' }}
-              onClick={() => onView(heir)}
+              onClick={isLocked ? () => router.push('/settings?tab=subscription') : () => onView(heir)}
             >
+              {isLocked && (
+                <div className="absolute inset-0 flex items-center justify-center bg-background/50 rounded-xl z-10 pointer-events-none">
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-muted rounded-full">
+                    <Lock className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm font-medium text-muted-foreground">Upgrade to unlock</span>
+                  </div>
+                </div>
+              )}
               {/* Icon Container */}
               <div 
                 className="w-12 h-12 rounded-full flex items-center justify-center mr-3 flex-shrink-0"
@@ -155,7 +172,7 @@ export function HeirList({
 
               {/* Actions */}
               <div className="flex items-center gap-2 ml-2">
-                {heir.invitation_status === 'pending' && heir.invitation_code && (
+                {!isLocked && heir.invitation_status === 'pending' && heir.invitation_code && (
                   <Button
                     size="sm"
                     variant="ghost"
@@ -170,31 +187,36 @@ export function HeirList({
                     )}
                   </Button>
                 )}
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-9 w-9 p-0 opacity-0 group-hover:opacity-100 transition-opacity hidden sm:flex"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    onEdit(heir)
-                  }}
-                >
-                  <Edit className="h-4 w-4" />
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-9 w-9 p-0 opacity-0 group-hover:opacity-100 transition-opacity bg-red-500/10 hover:bg-red-500/20 hidden sm:flex"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    onDelete(heir.id)
-                  }}
-                >
-                  <Trash2 className="h-4 w-4 text-red-500" />
-                </Button>
+                {!isLocked && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-9 w-9 p-0 opacity-0 group-hover:opacity-100 transition-opacity hidden sm:flex"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onEdit(heir)
+                    }}
+                  >
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                )}
+                {!isLocked && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-9 w-9 p-0 opacity-0 group-hover:opacity-100 transition-opacity bg-red-500/10 hover:bg-red-500/20 hidden sm:flex"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onDelete(heir.id)
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4 text-red-500" />
+                  </Button>
+                )}
+                {isLocked && <Lock className="h-5 w-5 text-muted-foreground" />}
               </div>
             </div>
-          ))}
+          )})}
         </div>
       )}
     </div>

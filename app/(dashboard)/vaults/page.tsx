@@ -10,6 +10,8 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { Search } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { User } from "@supabase/supabase-js"
+import { createVault } from "@/app/actions/vaults"
+import { UpgradeModal } from "@/components/module/subscription/upgrade-modal"
 import { sanitizeInput } from "@/lib/utils/sanitize"
 import { logger } from "@/lib/utils/logger"
 import { toast } from "@/lib/utils/toast"
@@ -51,6 +53,9 @@ export default function VaultsPage() {
   const [editingVault, setEditingVault] = useState<Vault | null>(null)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [vaultToDelete, setVaultToDelete] = useState<string | null>(null)
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false)
+  const [upgradeReason, setUpgradeReason] = useState<'vault_limit' | 'pro_feature'>('vault_limit')
+  const [subscriptionTier, setSubscriptionTier] = useState<'free' | 'premium' | 'pro'>('free')
   const router = useRouter()
 
   const loadVaults = useCallback(async (userId: string) => {
@@ -60,43 +65,15 @@ export default function VaultsPage() {
         .from('vaults')
         .select('*')
         .eq('user_id', userId)
-        .order('created_at', { ascending: false })
+        .order('created_at', { ascending: true })
 
       if (error) {
         logger.error('Error loading vaults', error, { userId })
         return
       }
 
-      // Load inherited vaults via shared_vaults
-      const { data: sharedVaults, error: sharedError } = await supabase
-        .from('shared_vaults')
-        .select(`
-          vault_id,
-          owner_id,
-          accepted,
-          vaults (*)
-        `)
-        .eq('shared_with_user_id', userId)
-        .eq('is_active', true)
-        .eq('accepted', true)
-
-      if (sharedError) {
-        logger.error('Error loading shared vaults', sharedError, { userId })
-      }
-
-      // Combine owned and inherited vaults
-      const inheritedVaultData = (sharedVaults as Array<{
-        vault_id: string
-        owner_id: string
-        accepted: boolean
-        vaults: Record<string, unknown>
-      }> | null)?.map(sv => ({
-        ...(sv.vaults),
-        is_inherited: true,
-        inherited_from_user_id: sv.owner_id
-      })) || []
-
-      const allVaults = [...(ownedVaults || []), ...inheritedVaultData]
+      // Inherited/shared vaults are shown on the /inheritance page, not here
+      const allVaults = [...(ownedVaults || [])]
 
       if (allVaults.length > 0) {
         // Get user's subscription tier
@@ -106,9 +83,10 @@ export default function VaultsPage() {
           .eq('id', userId)
           .single()
         
-        const subscriptionTier = (userProfile as { subscription_tier?: string } | null)?.subscription_tier ?? 'free'
-        // Lock vaults for free users (non-premium/pro)
-        const isFreeUser = subscriptionTier === 'free'
+        const tier = ((userProfile as { subscription_tier?: string } | null)?.subscription_tier ?? 'free') as 'free' | 'premium' | 'pro'
+        setSubscriptionTier(tier)
+        const isFreeUser = tier === 'free'
+        const isProUser = tier === 'pro'
         
         const vaultsWithCounts = await Promise.all(
           allVaults.map(async (vault: Record<string, unknown>, index: number) => {
@@ -121,11 +99,12 @@ export default function VaultsPage() {
               logger.error('Error loading vault item count', countError, { vaultId: vault.id })
             }
             
-            // Lock vaults for free users:
-            // 1. Lock all vaults after the first one (index > 0)
-            // 2. Lock pro-tier vaults (pro category)
+            // Lock rules:
+            // 1. Free users: only first vault accessible, pro vaults locked
+            // 2. Premium users: unlimited vaults, but pro vaults locked
+            // 3. Pro users: everything accessible
             const isProVault = (vault as { category?: string }).category === 'pro'
-            const shouldLock = isFreeUser && (index > 0 || isProVault)
+            const shouldLock = (isFreeUser && (index > 0 || isProVault)) || (!isProUser && isProVault)
             
             return {
               ...(vault as Record<string, unknown>),
@@ -188,45 +167,35 @@ export default function VaultsPage() {
     const sanitizedDescription = formData.description ? sanitizeInput(formData.description) : null
 
     try {
-      const { error } = await supabase
-        .from('vaults')
-        .insert({
-          user_id: user.id,
-          name: sanitizedName,
-          description: sanitizedDescription,
-          category: formData.category || 'share',
-          is_locked: false,
-          is_shared: false,
-          icon: null, // Default
-          color: null, // Default
-          settings: { // Default settings
-            autoLock: true,
-            autoLockTimeout: 15,
-            twoFactorEnabled: false,
-            maxFailedAttempts: 5
-          },
-          access_control: { // Default access control
-            allowedHeirs: [],
-            allowedUsers: [],
-            requireApproval: true
-          },
-          death_settings: { // Default death settings
-            notifyContacts: true,
-            triggerAfterDays: 30,
-            instructions: '',
-            notifySMS: [],
-            notifyEmail: []
-          },
-          sort_order: 0
-        })
-        .select()
-        .single()
-
-      if (error) {
-        logger.error('Error adding vault', error, { userId: user?.id })
-        toast.error('Failed to add vault', 'Please try again')
-        return
-      }
+      await createVault({
+        user_id: user.id,
+        name: sanitizedName,
+        description: sanitizedDescription,
+        category: formData.category || 'share',
+        is_locked: false,
+        is_shared: false,
+        icon: null,
+        color: null,
+        settings: {
+          autoLock: true,
+          autoLockTimeout: 15,
+          twoFactorEnabled: false,
+          maxFailedAttempts: 5
+        },
+        access_control: {
+          allowedHeirs: [],
+          allowedUsers: [],
+          requireApproval: true
+        },
+        death_settings: {
+          notifyContacts: true,
+          triggerAfterDays: 30,
+          instructions: '',
+          notifySMS: [],
+          notifyEmail: []
+        },
+        sort_order: 0
+      })
 
       if (user) {
         await loadVaults(user.id)
@@ -235,8 +204,14 @@ export default function VaultsPage() {
         toast.success('Vault created successfully')
       }
     } catch (error) {
-      logger.error('Error adding vault', error, { userId: user?.id })
-      toast.error('Failed to add vault', 'Please try again')
+      const message = error instanceof Error ? error.message : ''
+      if (message.includes('Vault limit reached') || message.includes('Storage limit exceeded')) {
+        setUpgradeReason('vault_limit')
+        setShowUpgradeModal(true)
+      } else {
+        logger.error('Error adding vault', error, { userId: user?.id })
+        toast.error('Failed to add vault', message || 'Please try again')
+      }
     }
   }
 
@@ -273,6 +248,12 @@ export default function VaultsPage() {
   }
 
   const handleVaultSelect = (vault: Vault) => {
+    if (vault.is_locked) {
+      const isProVault = vault.category === 'pro'
+      setUpgradeReason(isProVault ? 'pro_feature' : 'vault_limit')
+      setShowUpgradeModal(true)
+      return
+    }
     router.push(`/vaults/${vault.id}`)
   }
 
@@ -426,6 +407,14 @@ export default function VaultsPage() {
           searchTerm={searchTerm}
           onSearchChange={setSearchTerm}
           selectedCategory={selectedCategory}
+        />
+
+        {/* Upgrade Modal */}
+        <UpgradeModal
+          isOpen={showUpgradeModal}
+          onClose={() => setShowUpgradeModal(false)}
+          reason={upgradeReason}
+          currentPlan={subscriptionTier}
         />
     </div>
   )

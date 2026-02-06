@@ -196,26 +196,16 @@ export function ItemList({
           />
         </div>
         
-        {/* Assets and Legal Buttons - Only for Pro Vaults */}
+        {/* Assets Button - Only for Pro Vaults */}
         {vaultCategory === 'pro' && (
-          <>
-            <Button
-              onClick={() => router.push('/assets')}
-              variant="outline"
-              className="h-11 sm:h-10 px-3 flex-shrink-0"
-            >
-              <Package className="h-4 w-4 sm:mr-2" />
-              <span className="hidden sm:inline">Assets</span>
-            </Button>
-            <Button
-              onClick={() => router.push('/Legal')}
-              variant="outline"
-              className="h-11 sm:h-10 px-3 flex-shrink-0"
-            >
-              <Scale className="h-4 w-4 sm:mr-2" />
-              <span className="hidden sm:inline">Legal</span>
-            </Button>
-          </>
+          <Button
+            onClick={() => router.push('/assets')}
+            variant="outline"
+            className="h-11 sm:h-10 px-3 flex-shrink-0"
+          >
+            <Package className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Assets</span>
+          </Button>
         )}
         
         {showAddButton && onAddItem && (

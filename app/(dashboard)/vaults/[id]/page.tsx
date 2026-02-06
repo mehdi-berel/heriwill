@@ -107,6 +107,45 @@ export default function VaultDetailPage() {
         .single()
 
       if (ownedVault) {
+        // Check if this vault is locked for free users
+        const { data: userProfile } = await supabase
+          .from('users')
+          .select('subscription_tier')
+          .eq('id', userId)
+          .single()
+
+        const tier = (userProfile as { subscription_tier?: string } | null)?.subscription_tier ?? 'free'
+        const isFreeUser = tier === 'free'
+        const isProUser = tier === 'pro'
+        const isProVault = (ownedVault as { category?: string }).category === 'pro'
+
+        // Pro vaults only accessible to pro users
+        if (isProVault && !isProUser) {
+          toast.error('Upgrade to Pro to access this vault')
+          router.push('/vaults')
+          return
+        }
+
+        // Free users can only access their first created vault
+        if (isFreeUser) {
+          const { data: olderVaults } = await supabase
+            .from('vaults')
+            .select('id')
+            .eq('user_id', userId)
+            .lte('created_at', (ownedVault as { created_at: string }).created_at)
+            .order('created_at', { ascending: true })
+
+          const vaultIndex = (olderVaults || []).findIndex(
+            (v: { id: string }) => v.id === id
+          )
+
+          if (vaultIndex > 0) {
+            toast.error('Upgrade your plan to access this vault')
+            router.push('/vaults')
+            return
+          }
+        }
+
         setVault({ ...ownedVault, item_count: 0 } as unknown as Vault)
         return
       }
@@ -418,8 +457,22 @@ export default function VaultDetailPage() {
           toast.error('Failed to download file')
           return
         }
+      } else if (item.type === 'note') {
+        // Export notes as .txt
+        const content = (item.metadata as Record<string, string | undefined>)?.content || ''
+        const dataBlob = new Blob([content], { type: 'text/plain' })
+        const url = URL.createObjectURL(dataBlob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `${item.title?.replace(/[^a-z0-9]/gi, '_') || 'note'}.txt`
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+        
+        toast.success('Note exported successfully')
       } else {
-        // For items without files, export as JSON
+        // For other items without files, export as JSON
         const dataStr = JSON.stringify(item, null, 2)
         const dataBlob = new Blob([dataStr], { type: 'application/json' })
         const url = URL.createObjectURL(dataBlob)

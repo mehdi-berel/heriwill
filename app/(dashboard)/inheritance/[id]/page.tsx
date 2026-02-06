@@ -220,8 +220,21 @@ export default function InheritedVaultDetailPage() {
         window.URL.revokeObjectURL(url)
         document.body.removeChild(a)
         toast.success('File downloaded successfully')
+      } else if (item.item_type === 'note') {
+        // Export notes as .txt
+        const content = (item.metadata as Record<string, string | undefined>).content || ''
+        const blob = new Blob([content], { type: 'text/plain' })
+        const url = window.URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `${item.title_encrypted?.replace(/[^a-z0-9]/gi, '_') || 'note'}.txt`
+        document.body.appendChild(a)
+        a.click()
+        window.URL.revokeObjectURL(url)
+        document.body.removeChild(a)
+        toast.success('Note exported successfully')
       } else {
-        // For items without files (passwords, notes, crypto), export as JSON
+        // For other items without files (passwords, crypto), export as JSON
         const downloadData = {
           title: item.title_encrypted,
           type: item.item_type,
@@ -285,8 +298,13 @@ export default function InheritedVaultDetailPage() {
               logger.error('Error downloading file for ZIP', fileError, { itemId: item.id })
             }
           }
+        } else if (item.item_type === 'note') {
+          // Note items: add as .txt
+          const content = (item.metadata as Record<string, string | undefined>).content || ''
+          const fileName = `${item.title_encrypted?.replace(/[^a-z0-9]/gi, '_') || 'note'}.txt`
+          zip.file(fileName, content)
         } else {
-          // Non-file item (password, note, crypto): add as JSON
+          // Other non-file items (password, crypto): add as JSON
           const fileName = `${item.item_type}_${item.title_encrypted?.replace(/[^a-z0-9]/gi, '_') || item.id}.json`
           zip.file(fileName, JSON.stringify({
             title: item.title_encrypted,
