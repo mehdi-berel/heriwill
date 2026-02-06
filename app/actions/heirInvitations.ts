@@ -351,49 +351,65 @@ export async function rejectHeirInvitation(invitationCode: string) {
 /**
  * Get pending and accepted invitations for current user (where they are the heir)
  */
-export async function getPendingInvitations() {
+export async function getPendingInvitations(userId?: string, userEmail?: string) {
   try {
     const supabase = await createServerSupabaseClient()
+
+    // Try cookie-based auth first, fall back to provided params
+    let authenticatedUserId = userId
+    let authenticatedUserEmail = userEmail
+
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
+    if (user) {
+      authenticatedUserId = user.id
+      authenticatedUserEmail = user.email ?? userEmail
+    }
+
+    if (!authenticatedUserId) {
       logger.info('No user found in getPendingInvitations')
       return []
     }
 
-    logger.info('Fetching pending invitations for user', { userId: user.id, email: user.email })
-
-    if (!user.email) {
-      logger.warn('User has no email in getPendingInvitations', { userId: user.id })
+    // If cookie auth succeeded, validate that provided userId matches
+    if (user && userId && userId !== user.id) {
+      logger.warn('User ID mismatch in getPendingInvitations', { provided: userId, actual: user.id })
       return []
     }
 
-    // Sanitize user email to match how it's stored in database
-    const sanitizedUserEmail = sanitizeEmail(user.email)
-    
-    logger.info('Sanitized email for comparison', { original: user.email, sanitized: sanitizedUserEmail })
+    logger.info('Fetching pending invitations for user', { userId: authenticatedUserId, email: authenticatedUserEmail })
 
-    // Query 1: Get pending invitations where user's email matches
-    const { data: pendingByEmail, error: error1 } = await supabase
-      .from('heirs')
-      .select('*')
-      .eq('email_encrypted', sanitizedUserEmail)
-      .eq('invitation_status', 'pending')
-      .order('created_at', { ascending: false })
-
-    if (error1) {
-      logger.error('Error fetching pending invitations by email', error1)
-    }
-
-    // Query 2: Get accepted invitations where heir_user_id matches
+    // Query 1: Get accepted invitations where heir_user_id matches
     const { data: acceptedByUserId, error: error2 } = await supabase
       .from('heirs')
       .select('*')
-      .eq('heir_user_id', user.id)
+      .eq('heir_user_id', authenticatedUserId)
       .eq('invitation_status', 'accepted')
       .order('created_at', { ascending: false })
 
     if (error2) {
       logger.error('Error fetching accepted invitations by user_id', error2)
+    }
+
+    // Query 2: Get pending invitations where user's email matches
+    let pendingByEmail: typeof acceptedByUserId = null
+    if (authenticatedUserEmail) {
+      try {
+        const sanitizedUserEmail = sanitizeEmail(authenticatedUserEmail)
+
+        const { data, error: error1 } = await supabase
+          .from('heirs')
+          .select('*')
+          .eq('email_encrypted', sanitizedUserEmail)
+          .eq('invitation_status', 'pending')
+          .order('created_at', { ascending: false })
+
+        if (error1) {
+          logger.error('Error fetching pending invitations by email', error1)
+        }
+        pendingByEmail = data
+      } catch (emailError) {
+        logger.error('Error sanitizing email for pending invitations', emailError)
+      }
     }
 
     // Combine results and remove duplicates

@@ -88,9 +88,9 @@ export default function HeirsPage() {
     }
   }, [])
 
-  const loadReceivedInvitations = useCallback(async () => {
+  const loadReceivedInvitations = useCallback(async (userId: string, userEmail: string | null) => {
     try {
-      const invitations = await getPendingInvitations()
+      const invitations = await getPendingInvitations(userId, userEmail ?? undefined)
       setReceivedInvitations(invitations as Heir[])
       
       // Check trusted contact status for accepted invitations
@@ -133,7 +133,7 @@ export default function HeirsPage() {
         // Load heirs data and invitations
         await loadHeirs(currentUser.id)
         if (isMounted) {
-          await loadReceivedInvitations()
+          await loadReceivedInvitations(currentUser.id, currentUser.email)
         }
       } catch (error) {
         logger.error('Error initializing heirs page', error)
@@ -254,7 +254,7 @@ export default function HeirsPage() {
   const handleAcceptInvitation = async (invitationCode: string) => {
     try {
       await acceptHeirInvitation(invitationCode)
-      await loadReceivedInvitations()
+      await loadReceivedInvitations(user?.id || '', user?.email ?? null)
       await loadHeirs(user?.id || '')
     } catch (error) {
       logger.error('Error accepting invitation', error, { invitationCode })
@@ -265,7 +265,7 @@ export default function HeirsPage() {
   const handleDeclineInvitation = async (invitationCode: string) => {
     try {
       await rejectHeirInvitation(invitationCode)
-      await loadReceivedInvitations()
+      await loadReceivedInvitations(user?.id || '', user?.email ?? null)
     } catch (error) {
       logger.error('Error declining invitation', error, { invitationCode })
       toast.error('Failed to decline invitation', 'Please try again')
@@ -453,7 +453,7 @@ export default function HeirsPage() {
                     ownerUserId={successor.user_id || ''}
                     isTrustedContact={trustedContactMap[successor.id] || false}
                     onRemove={async () => {
-                      await loadReceivedInvitations()
+                      await loadReceivedInvitations(user?.id || '', user?.email ?? null)
                     }}
                   />
                 )
