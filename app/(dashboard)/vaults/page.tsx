@@ -12,6 +12,7 @@ import { supabase } from "@/lib/supabase"
 import { User } from "@supabase/supabase-js"
 import { createVault } from "@/app/actions/vaults"
 import { UpgradeModal } from "@/components/module/subscription/upgrade-modal"
+import { SUBSCRIPTION_LIMITS } from "@/lib/subscription-limits"
 import { sanitizeInput } from "@/lib/utils/sanitize"
 import { logger } from "@/lib/utils/logger"
 import { toast } from "@/lib/utils/toast"
@@ -165,6 +166,15 @@ export default function VaultsPage() {
     // Sanitize user inputs
     const sanitizedName = sanitizeInput(formData.name)
     const sanitizedDescription = formData.description ? sanitizeInput(formData.description) : null
+
+    // Client-side vault limit pre-check
+    const limits = SUBSCRIPTION_LIMITS[subscriptionTier] || SUBSCRIPTION_LIMITS.free
+    if (vaults.length >= limits.maxVaults) {
+      setShowForm(false)
+      setUpgradeReason('vault_limit')
+      setShowUpgradeModal(true)
+      return
+    }
 
     try {
       await createVault({

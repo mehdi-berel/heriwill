@@ -15,7 +15,7 @@ import { supabase } from "@/lib/supabase"
 import { User } from "@supabase/supabase-js"
 import { Badge } from "@/components/ui/badge"
 import { UpgradeModal } from "@/components/module/subscription/upgrade-modal"
-import { checkHeirLimit } from "@/lib/subscription-limits"
+import { SUBSCRIPTION_LIMITS } from "@/lib/subscription-limits"
 import { logger } from "@/lib/utils/logger"
 import { toast } from "@/lib/utils/toast"
 
@@ -238,9 +238,9 @@ export default function HeirsPage() {
     try {
       logger.info('Starting heir creation', { userId: user.id, email: formData.email })
       
-      // Check heir limit before creating
-      const limitCheck = await checkHeirLimit(user.id)
-      if (!limitCheck.canCreate) {
+      // Check heir limit before creating (client-side using tier from state)
+      const limits = SUBSCRIPTION_LIMITS[userTier] || SUBSCRIPTION_LIMITS.free
+      if (heirs.length >= limits.maxHeirs) {
         setShowForm(false)
         setShowUpgradeModal(true)
         return

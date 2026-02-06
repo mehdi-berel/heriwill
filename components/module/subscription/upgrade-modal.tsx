@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
@@ -17,6 +17,21 @@ interface UpgradeModalProps {
 export function UpgradeModal({ isOpen, onClose, reason = 'pro_feature', currentPlan = 'free' }: UpgradeModalProps) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
+  const [activeSlide, setActiveSlide] = useState(0)
+  const sliderRef = useRef<HTMLDivElement>(null)
+
+  const handleScroll = useCallback(() => {
+    if (!sliderRef.current) return
+    const { scrollLeft, clientWidth } = sliderRef.current
+    const slideIndex = Math.round(scrollLeft / (clientWidth * 0.85))
+    setActiveSlide(Math.min(slideIndex, 1))
+  }, [])
+
+  const scrollToSlide = useCallback((index: number) => {
+    if (!sliderRef.current) return
+    const cardWidth = sliderRef.current.clientWidth * 0.85
+    sliderRef.current.scrollTo({ left: cardWidth * index, behavior: 'smooth' })
+  }, [])
 
   const getReasonMessage = () => {
     switch (reason) {
@@ -33,7 +48,6 @@ export function UpgradeModal({ isOpen, onClose, reason = 'pro_feature', currentP
 
   const handleUpgrade = (plan: 'premium' | 'pro') => {
     setLoading(true)
-    // Navigate to upgrade page with selected plan
     router.push(`/upgrade?plan=${plan}`)
   }
 
@@ -57,20 +71,26 @@ export function UpgradeModal({ isOpen, onClose, reason = 'pro_feature', currentP
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
         <DialogHeader>
-          <DialogTitle className="text-2xl flex items-center gap-2">
-            <Sparkles className="h-6 w-6 text-primary-500" />
+          <DialogTitle className="text-xl sm:text-2xl flex items-center gap-2">
+            <Sparkles className="h-5 w-5 sm:h-6 sm:w-6 text-primary-500" />
             Upgrade Your Plan
           </DialogTitle>
-          <DialogDescription className="text-base">
+          <DialogDescription className="text-sm sm:text-base">
             {getReasonMessage()}
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid md:grid-cols-2 gap-6 mt-6">
+        {/* Mobile: horizontal slider / Desktop: grid */}
+        <div
+          ref={sliderRef}
+          onScroll={handleScroll}
+          className="flex overflow-x-auto snap-x snap-mandatory scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0 sm:overflow-visible sm:snap-none sm:grid sm:grid-cols-2 gap-4 sm:gap-6 mt-4 sm:mt-6"
+          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        >
           {/* Premium Plan */}
-          <div className={`relative border-2 rounded-xl p-6 transition-all ${
+          <div className={`relative border-2 rounded-xl p-5 sm:p-6 transition-all flex-shrink-0 w-[85%] sm:w-auto snap-center ${
             currentPlan === 'premium' 
               ? 'border-primary-500 bg-primary-50 dark:bg-primary-950/30' 
               : 'hover:border-primary-300'
@@ -78,24 +98,24 @@ export function UpgradeModal({ isOpen, onClose, reason = 'pro_feature', currentP
             style={{ borderColor: currentPlan === 'premium' ? undefined : '#232629' }}
           >
             {currentPlan === 'premium' && (
-              <Badge className="absolute top-4 right-4 bg-primary-500">Current Plan</Badge>
+              <Badge className="absolute top-3 right-3 sm:top-4 sm:right-4 bg-primary-500">Current Plan</Badge>
             )}
             
-            <div className="mb-6">
+            <div className="mb-4 sm:mb-6">
               <div className="flex items-center gap-2 mb-2">
-                <Crown className="h-6 w-6 text-amber-500" />
-                <h3 className="text-2xl font-bold">Premium</h3>
+                <Crown className="h-5 w-5 sm:h-6 sm:w-6 text-amber-500" />
+                <h3 className="text-xl sm:text-2xl font-bold">Premium</h3>
               </div>
               <div className="flex items-baseline gap-1">
-                <span className="text-4xl font-bold">€10</span>
+                <span className="text-3xl sm:text-4xl font-bold">€10</span>
                 <span className="text-muted-foreground">/month</span>
               </div>
             </div>
 
-            <ul className="space-y-3 mb-6">
+            <ul className="space-y-2.5 sm:space-y-3 mb-5 sm:mb-6">
               {premiumFeatures.map((feature, index) => (
                 <li key={index} className="flex items-start gap-2">
-                  <Check className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
+                  <Check className="h-4 w-4 sm:h-5 sm:w-5 text-green-500 flex-shrink-0 mt-0.5" />
                   <span className="text-sm">{feature}</span>
                 </li>
               ))}
@@ -111,33 +131,33 @@ export function UpgradeModal({ isOpen, onClose, reason = 'pro_feature', currentP
           </div>
 
           {/* Pro Plan */}
-          <div className={`relative border-2 rounded-xl p-6 transition-all ${
+          <div className={`relative border-2 rounded-xl p-5 sm:p-6 transition-all flex-shrink-0 w-[85%] sm:w-auto snap-center ${
             currentPlan === 'pro'
               ? 'border-primary-500 bg-primary-50 dark:bg-primary-950/30'
               : 'border-primary-500 bg-gradient-to-br from-primary-50/50 to-transparent dark:from-primary-950/20'
           }`}>
             {currentPlan === 'pro' && (
-              <Badge className="absolute top-4 right-4 bg-primary-500">Current Plan</Badge>
+              <Badge className="absolute top-3 right-3 sm:top-4 sm:right-4 bg-primary-500">Current Plan</Badge>
             )}
             {currentPlan !== 'pro' && (
-              <Badge className="absolute top-4 right-4 bg-primary-500">Recommended</Badge>
+              <Badge className="absolute top-3 right-3 sm:top-4 sm:right-4 bg-primary-500">Recommended</Badge>
             )}
             
-            <div className="mb-6">
+            <div className="mb-4 sm:mb-6">
               <div className="flex items-center gap-2 mb-2">
-                <Sparkles className="h-6 w-6 text-primary-500" />
-                <h3 className="text-2xl font-bold">Pro</h3>
+                <Sparkles className="h-5 w-5 sm:h-6 sm:w-6 text-primary-500" />
+                <h3 className="text-xl sm:text-2xl font-bold">Pro</h3>
               </div>
               <div className="flex items-baseline gap-1">
-                <span className="text-4xl font-bold">€20</span>
+                <span className="text-3xl sm:text-4xl font-bold">€20</span>
                 <span className="text-muted-foreground">/month</span>
               </div>
             </div>
 
-            <ul className="space-y-3 mb-6">
+            <ul className="space-y-2.5 sm:space-y-3 mb-5 sm:mb-6">
               {proFeatures.map((feature, index) => (
                 <li key={index} className="flex items-start gap-2">
-                  <Check className="h-5 w-5 text-primary-500 flex-shrink-0 mt-0.5" />
+                  <Check className="h-4 w-4 sm:h-5 sm:w-5 text-primary-500 flex-shrink-0 mt-0.5" />
                   <span className="text-sm font-medium">{feature}</span>
                 </li>
               ))}
@@ -153,7 +173,23 @@ export function UpgradeModal({ isOpen, onClose, reason = 'pro_feature', currentP
           </div>
         </div>
 
-        <div className="mt-6 text-center text-sm text-muted-foreground">
+        {/* Mobile Slide Indicators */}
+        <div className="flex justify-center gap-2 mt-4 sm:hidden">
+          {['Premium', 'Pro'].map((label, index) => (
+            <button
+              key={label}
+              onClick={() => scrollToSlide(index)}
+              className={`transition-all duration-300 rounded-full ${
+                activeSlide === index
+                  ? 'w-8 h-2 bg-primary-500'
+                  : 'w-2 h-2 bg-gray-600 hover:bg-gray-500'
+              }`}
+              aria-label={`Go to ${label} plan`}
+            />
+          ))}
+        </div>
+
+        <div className="mt-4 sm:mt-6 text-center text-xs sm:text-sm text-muted-foreground">
           <p>All plans include a 14-day free trial • Cancel anytime • Secure payment via Stripe</p>
         </div>
 
