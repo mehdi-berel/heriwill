@@ -352,78 +352,83 @@ export async function rejectHeirInvitation(invitationCode: string) {
  * Get pending and accepted invitations for current user (where they are the heir)
  */
 export async function getPendingInvitations() {
-  const supabase = await createServerSupabaseClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
-    logger.info('No user found in getPendingInvitations')
-    return []
-  }
+  try {
+    const supabase = await createServerSupabaseClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      logger.info('No user found in getPendingInvitations')
+      return []
+    }
 
-  logger.info('Fetching pending invitations for user', { userId: user.id, email: user.email })
+    logger.info('Fetching pending invitations for user', { userId: user.id, email: user.email })
 
-  if (!user.email) {
-    logger.warn('User has no email in getPendingInvitations', { userId: user.id })
-    return []
-  }
+    if (!user.email) {
+      logger.warn('User has no email in getPendingInvitations', { userId: user.id })
+      return []
+    }
 
-  // Sanitize user email to match how it's stored in database
-  const sanitizedUserEmail = sanitizeEmail(user.email)
-  
-  logger.info('Sanitized email for comparison', { original: user.email, sanitized: sanitizedUserEmail })
+    // Sanitize user email to match how it's stored in database
+    const sanitizedUserEmail = sanitizeEmail(user.email)
+    
+    logger.info('Sanitized email for comparison', { original: user.email, sanitized: sanitizedUserEmail })
 
-  // Query 1: Get pending invitations where user's email matches
-  const { data: pendingByEmail, error: error1 } = await supabase
-    .from('heirs')
-    .select('*')
-    .eq('email_encrypted', sanitizedUserEmail)
-    .eq('invitation_status', 'pending')
-    .order('created_at', { ascending: false })
+    // Query 1: Get pending invitations where user's email matches
+    const { data: pendingByEmail, error: error1 } = await supabase
+      .from('heirs')
+      .select('*')
+      .eq('email_encrypted', sanitizedUserEmail)
+      .eq('invitation_status', 'pending')
+      .order('created_at', { ascending: false })
 
-  if (error1) {
-    logger.error('Error fetching pending invitations by email', error1)
-  }
+    if (error1) {
+      logger.error('Error fetching pending invitations by email', error1)
+    }
 
-  // Query 2: Get accepted invitations where heir_user_id matches
-  const { data: acceptedByUserId, error: error2 } = await supabase
-    .from('heirs')
-    .select('*')
-    .eq('heir_user_id', user.id)
-    .eq('invitation_status', 'accepted')
-    .order('created_at', { ascending: false })
+    // Query 2: Get accepted invitations where heir_user_id matches
+    const { data: acceptedByUserId, error: error2 } = await supabase
+      .from('heirs')
+      .select('*')
+      .eq('heir_user_id', user.id)
+      .eq('invitation_status', 'accepted')
+      .order('created_at', { ascending: false })
 
-  if (error2) {
-    logger.error('Error fetching accepted invitations by user_id', error2)
-  }
+    if (error2) {
+      logger.error('Error fetching accepted invitations by user_id', error2)
+    }
 
-  // Combine results and remove duplicates
-  const allInvitations = [...(pendingByEmail || []), ...(acceptedByUserId || [])]
-  const uniqueInvitations = allInvitations.filter((inv, index, self) =>
-    index === self.findIndex((t) => t.id === inv.id)
-  )
+    // Combine results and remove duplicates
+    const allInvitations = [...(pendingByEmail || []), ...(acceptedByUserId || [])]
+    const uniqueInvitations = allInvitations.filter((inv, index, self) =>
+      index === self.findIndex((t) => t.id === inv.id)
+    )
 
-  // Fetch owner user data separately to avoid RLS issues with JOINs
-  const invitationsWithOwnerData = await Promise.all(
-    uniqueInvitations.map(async (invitation) => {
-      const { data: ownerData } = await supabase
-        .from('users')
-        .select('full_name, email')
-        .eq('id', invitation.user_id)
-        .single()
-      
-      return {
-        ...invitation,
-        users: ownerData || { full_name: null, email: null }
-      }
+    // Fetch owner user data separately to avoid RLS issues with JOINs
+    const invitationsWithOwnerData = await Promise.all(
+      uniqueInvitations.map(async (invitation) => {
+        const { data: ownerData } = await supabase
+          .from('users')
+          .select('full_name, email')
+          .eq('id', invitation.user_id)
+          .single()
+        
+        return {
+          ...invitation,
+          users: ownerData || { full_name: null, email: null }
+        }
+      })
+    )
+
+    logger.info('Invitations fetched', { 
+      pendingCount: pendingByEmail?.length || 0,
+      acceptedCount: acceptedByUserId?.length || 0,
+      totalUnique: invitationsWithOwnerData.length 
     })
-  )
 
-  logger.info('Invitations fetched', { 
-    pendingCount: pendingByEmail?.length || 0,
-    acceptedCount: acceptedByUserId?.length || 0,
-    totalUnique: invitationsWithOwnerData.length 
-  })
-
-  return invitationsWithOwnerData
+    return invitationsWithOwnerData
+  } catch (error) {
+    logger.error('Error in getPendingInvitations', error)
+    return []
+  }
 }
 
 /**
