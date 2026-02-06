@@ -4,6 +4,18 @@ import { createServerSupabaseClient, createServiceRoleClient } from '../../lib/s
 import type { Database } from '../../lib/database.types'
 import { logger } from '../../lib/utils/logger'
 
+// Get Current Authenticated User
+export async function getCurrentUser() {
+  try {
+    const supabase = await createServerSupabaseClient()
+    const { data: { user }, error } = await supabase.auth.getUser()
+    if (error || !user) return null
+    return { id: user.id, email: user.email ?? null }
+  } catch {
+    return null
+  }
+}
+
 // Removed unused type definitions
 
 interface UserUpdateData {

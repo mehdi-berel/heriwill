@@ -11,10 +11,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { Search, Users, Mail, Heart, Scale } from "lucide-react"
-import { supabase } from "@/lib/supabase"
-import { User } from "@supabase/supabase-js"
 import { Badge } from "@/components/ui/badge"
-import { getUserSubscriptionTier } from "@/app/actions/users"
+import { getCurrentUser, getUserSubscriptionTier } from "@/app/actions/users"
 import { logger } from "@/lib/utils/logger"
 import { toast } from "@/lib/utils/toast"
 import { 
@@ -23,6 +21,11 @@ import {
   rejectHeirInvitation 
 } from "@/app/actions/heirInvitations"
 import { createHeir, updateHeir, deleteHeir, getAllHeirs, getOwnerTrustedContactStatus } from "@/app/actions/heirs"
+
+interface AuthUser {
+  id: string
+  email: string | null
+}
 
 interface Heir {
   id: string
@@ -60,7 +63,7 @@ interface HeirFormData {
 }
 
 export default function HeirsPage() {
-  const [user, setUser] = useState<User | null>(null)
+  const [user, setUser] = useState<AuthUser | null>(null)
   const [heirs, setHeirs] = useState<Heir[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [showForm, setShowForm] = useState(false)
@@ -110,35 +113,38 @@ export default function HeirsPage() {
   }, [])
 
   useEffect(() => {
-    const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
-        router.push("/login")
-        return
+    let isMounted = true
+
+    const initializePage = async () => {
+      try {
+        const currentUser = await getCurrentUser()
+        if (!currentUser) {
+          router.push("/login")
+          return
+        }
+        if (!isMounted) return
+        setUser(currentUser)
+
+        // Get user tier
+        const tier = await getUserSubscriptionTier(currentUser.id)
+        if (!isMounted) return
+        setUserTier(tier)
+
+        // Load heirs data and invitations
+        await loadHeirs(currentUser.id)
+        if (isMounted) {
+          await loadReceivedInvitations()
+        }
+      } catch (error) {
+        logger.error('Error initializing heirs page', error)
       }
-      setUser(user)
-      
-      // Get user tier
-      const tier = await getUserSubscriptionTier(user.id)
-      setUserTier(tier)
-      
-      // Load heirs data and invitations
-      await loadHeirs(user.id)
-      await loadReceivedInvitations()
     }
 
-    getUser()
+    initializePage()
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!session?.user) {
-        router.push("/login")
-      } else {
-        setUser(session.user)
-        loadHeirs(session.user.id)
-      }
-    })
-
-    return () => subscription.unsubscribe()
+    return () => {
+      isMounted = false
+    }
   }, [router, loadHeirs, loadReceivedInvitations])
 
   const handleAddHeir = async (formData: HeirFormData) => {

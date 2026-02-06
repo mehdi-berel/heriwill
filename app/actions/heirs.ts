@@ -147,18 +147,26 @@ export async function deleteHeir(heirId: string) {
 
 // Get Heir by ID
 export async function getHeirById(heirId: string) {
-    const supabase = await createServerSupabaseClient()
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) throw new Error('Not authenticated')
+    try {
+      const supabase = await createServerSupabaseClient()
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+      if (authError || !user) return null
 
-    const { data, error } = await supabase
-      .from('heirs')
-      .select('*')
-      .eq('id', heirId)
-      .single()
+      const { data, error } = await supabase
+        .from('heirs')
+        .select('*')
+        .eq('id', heirId)
+        .single()
 
-  if (error) throw new Error('Heir not found')
-  return data
+      if (error) {
+        logger.error('Error fetching heir by id', error, { heirId })
+        return null
+      }
+      return data
+    } catch (error) {
+      logger.error('Error in getHeirById', error, { heirId })
+      return null
+    }
 }
 
 // Get All Heirs for User
@@ -473,27 +481,35 @@ export async function getOwnerTrustedContactStatus(ownerUserId: string, heirId: 
 
 // Get Heir Activities from audit logs
 export async function getHeirActivities(heirId: string) {
-  const supabase = await createServerSupabaseClient()
-  const { data: { user }, error: authError } = await supabase.auth.getUser()
-  if (authError || !user) throw new Error('Not authenticated')
+  try {
+    const supabase = await createServerSupabaseClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) return []
 
-  const { data, error } = await supabase
-    .from('audit_logs')
-    .select('*')
-    .eq('resource_type', 'heir')
-    .eq('resource_id', heirId)
-    .order('created_at', { ascending: false })
-    .limit(20)
+    const { data, error } = await supabase
+      .from('audit_logs')
+      .select('*')
+      .eq('resource_type', 'heir')
+      .eq('resource_id', heirId)
+      .order('created_at', { ascending: false })
+      .limit(20)
 
-  if (error) throw new Error('Failed to fetch heir activities')
+    if (error) {
+      logger.error('Error fetching heir activities', error, { heirId })
+      return []
+    }
 
-  return (data || []).map((activity: Record<string, unknown>) => ({
-    id: activity.id as string,
-    type: activity.action as string,
-    description: (activity.metadata as Record<string, unknown>)?.description as string || activity.action as string,
-    timestamp: activity.created_at as string,
-    metadata: activity.metadata as Record<string, unknown>
-  }))
+    return (data || []).map((activity: Record<string, unknown>) => ({
+      id: activity.id as string,
+      type: activity.action as string,
+      description: (activity.metadata as Record<string, unknown>)?.description as string || activity.action as string,
+      timestamp: activity.created_at as string,
+      metadata: activity.metadata as Record<string, unknown>
+    }))
+  } catch (error) {
+    logger.error('Error in getHeirActivities', error, { heirId })
+    return []
+  }
 }
 
 // Helper Functions

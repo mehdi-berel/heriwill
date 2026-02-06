@@ -5,7 +5,7 @@ import { useRouter, useParams } from "next/navigation"
 import { HeirDetail } from "@/components/module/heirs/heir-detail"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft, Edit, Trash2 } from "lucide-react"
-import { supabase } from "@/lib/supabase"
+import { getCurrentUser } from "@/app/actions/users"
 import { getHeirById, deleteHeir, revokeAccess, getHeirActivities } from "@/app/actions/heirs"
 import { logger } from "@/lib/utils/logger"
 import { toast } from "@/lib/utils/toast"
@@ -105,34 +105,32 @@ export default function HeirDetailPage() {
       return
     }
 
-    const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
-        router.push("/login")
-        return
+    let isMounted = true
+
+    const initializePage = async () => {
+      try {
+        const currentUser = await getCurrentUser()
+        if (!currentUser) {
+          router.push("/login")
+          return
+        }
+        if (!isMounted) return
+
+        // Load heir data
+        await Promise.all([
+          loadHeir(heirId),
+          loadHeirActivities(heirId)
+        ])
+      } catch (error) {
+        logger.error('Error initializing heir detail page', error)
       }
-      
-      // Load heir data
-      await Promise.all([
-        loadHeir(heirId),
-        loadHeirActivities(heirId)
-      ])
     }
 
-    getUser()
+    initializePage()
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!session?.user) {
-        router.push("/login")
-      } else {
-        if (heirId) {
-          loadHeir(heirId)
-          loadHeirActivities(heirId)
-        }
-      }
-    })
-
-    return () => subscription.unsubscribe()
+    return () => {
+      isMounted = false
+    }
   }, [router, heirId, loadHeir, loadHeirActivities])
 
   const handleEdit = () => {
