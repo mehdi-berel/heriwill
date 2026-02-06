@@ -440,5 +440,83 @@ export async function getVaultItemsByType(vaultId: string, type: string) {
     return items.filter((item: VaultItemRow) => item.item_type === type)
 }
 
+// Generate a signed URL for a vault file (for previewing images/videos/documents)
+export async function getVaultFileSignedUrl(storagePath: string, bucket = 'vault-files', expiresIn = 3600) {
+  const supabase = await createServerSupabaseClient()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+  if (authError || !user) {
+    throw new Error('Not authenticated')
+  }
+
+  const { data, error } = await supabase.storage
+    .from(bucket)
+    .createSignedUrl(storagePath, expiresIn)
+
+  if (error) {
+    logger.error('Error creating signed URL', error, { storagePath, bucket, userId: user.id })
+    throw new Error('Failed to generate file URL')
+  }
+
+  return data.signedUrl
+}
+
+// Download a vault file and return as base64 (for client-side download)
+export async function downloadVaultFile(storagePath: string, bucket = 'vault-files') {
+  const supabase = await createServerSupabaseClient()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+  if (authError || !user) {
+    throw new Error('Not authenticated')
+  }
+
+  const { data, error } = await supabase.storage
+    .from(bucket)
+    .download(storagePath)
+
+  if (error) {
+    logger.error('Error downloading file', error, { storagePath, bucket, userId: user.id })
+    throw new Error('Failed to download file')
+  }
+
+  const arrayBuffer = await data.arrayBuffer()
+  const base64 = Buffer.from(arrayBuffer).toString('base64')
+  const mimeType = data.type || 'application/octet-stream'
+
+  return { base64, mimeType }
+}
+
+// Upload a vault item file to storage (server-side)
+export async function uploadVaultItemFile(formData: FormData) {
+  const supabase = await createServerSupabaseClient()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) throw new Error('Not authenticated')
+
+  const file = formData.get('file') as File
+  const folder = (formData.get('folder') as string) || 'documents'
+  if (!file) throw new Error('No file provided')
+
+  // Validate file size (100MB max)
+  const MAX_FILE_SIZE = 100 * 1024 * 1024
+  if (file.size > MAX_FILE_SIZE) {
+    throw new Error(`File size exceeds maximum limit of ${MAX_FILE_SIZE / (1024 * 1024)}MB`)
+  }
+
+  const timestamp = Date.now()
+  const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_')
+  const filePath = `${user.id}/${folder}/${timestamp}_${sanitizedFileName}`
+
+  const { data, error } = await supabase.storage
+    .from('vault-files')
+    .upload(filePath, file, { cacheControl: '3600', upsert: false })
+
+  if (error) {
+    logger.error('Vault file upload error', error, { userId: user.id })
+    throw new Error('Failed to upload file')
+  }
+
+  return { filePath: data.path, fileSize: file.size }
+}
+
 // NOTE: updateVaultItemCount removed - item_count field doesn't exist in vaults table schema
 // To get item counts, query vault_items table with count aggregation

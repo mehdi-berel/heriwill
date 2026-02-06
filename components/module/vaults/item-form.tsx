@@ -174,31 +174,20 @@ export function ItemForm({ isOpen, onClose, onSave, initialData, vaultCategory }
     setUploadError('')
 
     try {
-      // Import storage utilities
-      const { uploadFile } = await import('@/lib/storage')
-      const { supabase } = await import('@/lib/supabase')
-      
-      // Get current user
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
-        throw new Error('User not authenticated')
-      }
+      const { uploadVaultItemFile } = await import('@/app/actions/vaults')
 
-      // Upload file to Supabase Storage
-      const result = await uploadFile(selectedFile, 'VAULT_ITEMS', user.id, 'documents')
-      
-      if (!result.success) {
-        throw new Error(result.error || 'Upload failed')
-      }
-      
-      const fileSize = selectedFile.size
+      const formDataUpload = new FormData()
+      formDataUpload.append('file', selectedFile)
+      formDataUpload.append('folder', 'documents')
+
+      const { filePath, fileSize } = await uploadVaultItemFile(formDataUpload)
       
       setFormData(prev => ({
         ...prev,
         metadata: {
           ...prev.metadata,
-          fileUrl: result.fileUrl,
-          filePath: result.filePath,
+          fileUrl: filePath,
+          filePath: filePath,
           fileSize: formatFileSize(fileSize),
           fileSizeBytes: fileSize
         }

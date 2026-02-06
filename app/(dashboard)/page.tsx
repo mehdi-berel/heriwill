@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { DashboardOverview } from "@/components/module/dashboard/dashboard-overview"
+import { getDashboardStats, getDashboardProfile } from "@/app/actions/users"
 import { supabase } from "@/lib/supabase"
 
 interface UserProfile {
@@ -15,7 +16,7 @@ interface UserProfile {
   is_active?: boolean
 }
 
-interface DashboardStats {
+interface DashboardStatsState {
   totalAssets: number
   totalBeneficiaries: number
   completedSections: number
@@ -26,7 +27,7 @@ interface DashboardStats {
 
 export default function HomePage() {
   const [profile, setProfile] = useState<UserProfile | null>(null)
-  const [stats, setStats] = useState<DashboardStats>({
+  const [stats, setStats] = useState<DashboardStatsState>({
     totalAssets: 0,
     totalBeneficiaries: 0,
     completedSections: 0,
@@ -35,27 +36,6 @@ export default function HomePage() {
     pendingTasks: 2
   })
   const router = useRouter()
-
-  const loadProfile = useCallback(async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('id, full_name, email, avatar_url, subscription_tier, subscription_status, is_active')
-        .eq('id', userId)
-        .single()
-      
-      if (error) {
-        throw error
-      }
-      
-      if (data) {
-        setProfile(data as UserProfile)
-      }
-    } catch {
-      // Silent error - user can still use dashboard with limited profile data
-      setProfile(null)
-    }
-  }, [])
 
   const calculateSecurityScore = useCallback((
     vaultsCount: number,
@@ -82,29 +62,23 @@ export default function HomePage() {
     return Math.min(100, score)
   }, [])
 
-  const loadStats = useCallback(async (userId: string) => {
+  const loadData = useCallback(async () => {
     try {
-      const [vaultsResult, heirsResult, assetsResult] = await Promise.all([
-        supabase.from('vaults').select('id', { count: 'exact' }).eq('user_id', userId),
-        supabase.from('heirs').select('id', { count: 'exact' }).eq('user_id', userId),
-        supabase.from('assets').select('id', { count: 'exact' }).eq('user_id', userId)
+      const [profileData, statsData] = await Promise.all([
+        getDashboardProfile(),
+        getDashboardStats()
       ])
 
-      const vaultsCount = vaultsResult.count || 0
-      const heirsCount = heirsResult.count || 0
-      const assetsCount = assetsResult.count || 0
+      setProfile(profileData as UserProfile)
 
+      const { vaultsCount, heirsCount, assetsCount } = statsData
       const completedSections = [
         vaultsCount > 0,
         heirsCount > 0,
         assetsCount > 0
       ].filter(Boolean).length
 
-      const securityScore = calculateSecurityScore(
-        vaultsCount,
-        heirsCount,
-        assetsCount
-      )
+      const securityScore = calculateSecurityScore(vaultsCount, heirsCount, assetsCount)
 
       setStats({
         totalAssets: assetsCount,
@@ -115,7 +89,7 @@ export default function HomePage() {
         pendingTasks: 6 - completedSections
       })
     } catch {
-      // Set default stats on error
+      setProfile(null)
       setStats({
         totalAssets: 0,
         totalBeneficiaries: 0,
@@ -128,33 +102,29 @@ export default function HomePage() {
   }, [calculateSecurityScore])
 
   useEffect(() => {
-    const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
+    let mounted = true
+
+    supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) {
         router.push("/login")
-        return
+      } else if (mounted) {
+        loadData()
       }
-      
-      // Load user data
-      await Promise.all([
-        loadProfile(user.id),
-        loadStats(user.id)
-      ])
-    }
-
-    getUser()
+    })
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!session?.user) {
         router.push("/login")
       } else {
-        loadProfile(session.user.id)
-        loadStats(session.user.id)
+        loadData()
       }
     })
 
-    return () => subscription.unsubscribe()
-  }, [router, loadProfile, loadStats, calculateSecurityScore])
+    return () => {
+      mounted = false
+      subscription.unsubscribe()
+    }
+  }, [router, loadData])
 
   return (
     <DashboardOverview 

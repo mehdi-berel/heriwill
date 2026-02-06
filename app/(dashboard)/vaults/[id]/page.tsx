@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { ArrowLeft, Edit, Trash2, Users, Scale } from "lucide-react"
 import { supabase } from "@/lib/supabase"
-import { updateVault, deleteVault, createVaultItem, updateVaultItem, deleteVaultItem, getVaultItems } from "@/app/actions/vaults"
+import { updateVault, deleteVault, createVaultItem, updateVaultItem, deleteVaultItem, downloadVaultFile } from "@/app/actions/vaults"
 import { User } from "@supabase/supabase-js"
 import { toast } from "@/lib/utils/toast"
 import { logger } from "@/lib/utils/logger"
@@ -82,6 +82,7 @@ interface VaultItem {
   createdAt?: string
   updatedAt?: string
   storage_path?: string
+  storage_bucket?: string
 }
 
 export default function VaultDetailPage() {
@@ -169,6 +170,8 @@ export default function VaultDetailPage() {
         updated_at: string
         tags?: string[] | null
         metadata?: Record<string, unknown> | null
+        storage_path?: string | null
+        storage_bucket?: string | null
       }
       
       // Valid item types
@@ -190,7 +193,9 @@ export default function VaultDetailPage() {
           isEncrypted: true,
           tags: item.tags || [],
           createdAt: item.created_at,
-          updatedAt: item.updated_at
+          updatedAt: item.updated_at,
+          storage_path: item.storage_path || undefined,
+          storage_bucket: item.storage_bucket || undefined
         }
       })
       
@@ -386,29 +391,33 @@ export default function VaultDetailPage() {
         return
       }
 
-      // If item has a storage_path, download from Supabase Storage
-      if (item.storage_path) {
-        const { data, error } = await supabase.storage
-          .from('vault-files')
-          .download(item.storage_path)
-        
-        if (error) {
-          logger.error('Download error', error, { itemId: item.id, storagePath: item.storage_path })
+      // metadata.filePath contains the actual uploaded file path in storage
+      const filePath = (item.metadata as Record<string, unknown>)?.filePath as string | undefined
+      if (filePath) {
+        try {
+          const { base64, mimeType } = await downloadVaultFile(filePath, item.storage_bucket || 'vault-files')
+          const byteCharacters = atob(base64)
+          const byteNumbers = new Array(byteCharacters.length)
+          for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i)
+          }
+          const byteArray = new Uint8Array(byteNumbers)
+          const blob = new Blob([byteArray], { type: mimeType })
+          const url = URL.createObjectURL(blob)
+          const a = document.createElement('a')
+          a.href = url
+          a.download = item.title || 'download'
+          document.body.appendChild(a)
+          a.click()
+          document.body.removeChild(a)
+          URL.revokeObjectURL(url)
+          
+          toast.success('File downloaded successfully')
+        } catch (downloadError) {
+          logger.error('Download error', downloadError, { itemId: item.id, filePath })
           toast.error('Failed to download file')
           return
         }
-        
-        // Create download link
-        const url = URL.createObjectURL(data)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = item.title || 'download'
-        document.body.appendChild(a)
-        a.click()
-        document.body.removeChild(a)
-        URL.revokeObjectURL(url)
-        
-        toast.success('File downloaded successfully')
       } else {
         // For items without files, export as JSON
         const dataStr = JSON.stringify(item, null, 2)

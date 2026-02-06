@@ -241,3 +241,57 @@ export async function getAssetsWithoutHeirs(userId: string) {
   
   return assets.filter((asset: AssetRow) => !asset.heir_ids || asset.heir_ids.length === 0)
 }
+
+// Upload Asset Document to storage
+export async function uploadAssetDocument(assetId: string, formData: FormData) {
+  const supabase = await createServerSupabaseClient()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) throw new Error('Not authenticated')
+
+  const file = formData.get('file') as File
+  if (!file) throw new Error('No file provided')
+
+  const fileExt = file.name.split('.').pop()
+  const fileName = `${assetId}/${Date.now()}.${fileExt}`
+  const filePath = `asset-documents/${fileName}`
+
+  const { error: uploadError } = await supabase.storage
+    .from('documents')
+    .upload(filePath, file, { cacheControl: '3600', upsert: false })
+
+  if (uploadError) throw new Error('Failed to upload document')
+
+  return filePath
+}
+
+// Download Asset Document from storage (returns base64)
+export async function downloadAssetDocument(docPath: string) {
+  const supabase = await createServerSupabaseClient()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) throw new Error('Not authenticated')
+
+  const { data, error } = await supabase.storage
+    .from('documents')
+    .download(docPath)
+
+  if (error) throw new Error('Failed to download document')
+
+  const arrayBuffer = await data.arrayBuffer()
+  const base64 = Buffer.from(arrayBuffer).toString('base64')
+  const mimeType = data.type || 'application/octet-stream'
+
+  return { base64, mimeType, fileName: docPath.split('/').pop() || 'document' }
+}
+
+// Delete Asset Document from storage
+export async function deleteAssetDocument(docPath: string) {
+  const supabase = await createServerSupabaseClient()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) throw new Error('Not authenticated')
+
+  const { error } = await supabase.storage
+    .from('documents')
+    .remove([docPath])
+
+  if (error) throw new Error('Failed to delete document')
+}

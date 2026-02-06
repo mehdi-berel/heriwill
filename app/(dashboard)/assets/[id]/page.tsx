@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { ArrowLeft, Edit, Trash2 } from "lucide-react"
 import { supabase } from "@/lib/supabase"
-import { getDigitalAssetById, updateDigitalAsset, deleteDigitalAsset } from "@/app/actions/assets"
+import { getDigitalAssetById, updateDigitalAsset, deleteDigitalAsset, uploadAssetDocument, downloadAssetDocument, deleteAssetDocument } from "@/app/actions/assets"
 import { toast } from "@/lib/utils/toast"
 import { logger } from "@/lib/utils/logger"
 
@@ -190,28 +190,20 @@ export default function AssetDetailPage() {
     if (!asset || files.length === 0) return
 
     try {
-      // Upload files to Supabase Storage
       for (const file of files) {
-        const fileExt = file.name.split('.').pop()
-        const fileName = `${asset.id}/${Date.now()}.${fileExt}`
-        const filePath = `asset-documents/${fileName}`
+        const formData = new FormData()
+        formData.append('file', file)
 
-        const { error: uploadError } = await supabase.storage
-          .from('documents')
-          .upload(filePath, file)
-
-        if (uploadError) {
-          logger.error('Error uploading file', uploadError, { fileName: file.name })
+        try {
+          const filePath = await uploadAssetDocument(asset.id, formData)
+          const currentDocs = asset.documents || []
+          await updateDigitalAsset(asset.id, { documents: [...currentDocs, filePath] })
+        } catch (error) {
+          logger.error('Error uploading file', error, { fileName: file.name })
           continue
         }
-
-        // Add document reference to asset
-        // Update asset with new document path
-        const currentDocs = asset.documents || []
-        await updateDigitalAsset(asset.id, { documents: [...currentDocs, filePath] })
       }
 
-      // Reload asset to get updated documents
       await loadAsset(asset.id)
       toast.success('Documents uploaded successfully')
     } catch (error) {
@@ -222,21 +214,18 @@ export default function AssetDetailPage() {
 
   const handleDownloadDocument = async (docPath: string) => {
     try {
-      const { data, error } = await supabase.storage
-        .from('documents')
-        .download(docPath)
-
-      if (error) {
-        logger.error('Error downloading document', error, { docPath })
-        toast.error('Failed to download document')
-        return
+      const { base64, mimeType, fileName } = await downloadAssetDocument(docPath)
+      const byteCharacters = atob(base64)
+      const byteNumbers = new Array(byteCharacters.length)
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i)
       }
-
-      // Create download link
-      const url = URL.createObjectURL(data)
+      const byteArray = new Uint8Array(byteNumbers)
+      const blob = new Blob([byteArray], { type: mimeType })
+      const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = docPath.split('/').pop() || 'document'
+      a.download = fileName
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
@@ -251,21 +240,11 @@ export default function AssetDetailPage() {
     if (!asset) return
 
     try {
-      // Delete from storage
-      const { error: deleteError } = await supabase.storage
-        .from('documents')
-        .remove([docPath])
+      await deleteAssetDocument(docPath)
 
-      if (deleteError) {
-        logger.error('Error deleting document', deleteError, { docPath })
-      }
-
-      // Remove reference from asset
-      // Remove document from asset
       const currentDocs = asset.documents || []
       await updateDigitalAsset(asset.id, { documents: currentDocs.filter(d => d !== docPath) })
 
-      // Reload asset
       await loadAsset(asset.id)
       toast.success('Document deleted successfully')
     } catch (error) {

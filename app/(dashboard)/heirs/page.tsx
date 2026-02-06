@@ -14,7 +14,7 @@ import { Search, Users, Mail, Heart, Scale } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { User } from "@supabase/supabase-js"
 import { Badge } from "@/components/ui/badge"
-import { getUserTier } from "@/lib/middleware/tierEnforcement"
+import { getUserSubscriptionTier } from "@/app/actions/users"
 import { logger } from "@/lib/utils/logger"
 import { toast } from "@/lib/utils/toast"
 import { 
@@ -119,7 +119,7 @@ export default function HeirsPage() {
       setUser(user)
       
       // Get user tier
-      const tier = await getUserTier(user.id)
+      const tier = await getUserSubscriptionTier(user.id)
       setUserTier(tier)
       
       // Load heirs data and invitations

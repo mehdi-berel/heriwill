@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { supabase } from "@/lib/supabase"
 import { Mail, Lock, Eye, EyeOff, AlertCircle } from "lucide-react"
 import { sanitizeEmail } from "@/lib/utils/sanitize"
+import { updateLoginTimestamps } from "@/app/actions/users"
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
@@ -54,12 +55,9 @@ export default function LoginPage() {
 
       if (error) throw error
 
-      // Update last_activity and last_login timestamps
+      // Update last_activity and last_login timestamps via server action
       if (data.user) {
-        await supabase.from('users').update({
-          last_activity: new Date().toISOString(),
-          last_login: new Date().toISOString()
-        }).eq('id', data.user.id)
+        updateLoginTimestamps().catch(() => {})
       }
 
       // Reset attempt count on successful login

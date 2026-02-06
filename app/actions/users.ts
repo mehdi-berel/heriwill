@@ -248,6 +248,80 @@ export async function deleteGlobalTriggerSettings(userId: string) {
   logger.info('Global trigger deleted successfully', { userId })
 }
 
+// Get User Subscription Tier
+export async function getUserSubscriptionTier(userId: string): Promise<'free' | 'premium' | 'pro'> {
+  try {
+    const supabase = await createServerSupabaseClient()
+    const { data, error } = await supabase
+      .from('users')
+      .select('subscription_tier')
+      .eq('id', userId)
+      .single()
+
+    if (error || !data) {
+      return 'free'
+    }
+
+    const tier = (data as Record<string, unknown>).subscription_tier as string
+    return (tier === 'premium' || tier === 'pro') ? tier : 'free'
+  } catch (error) {
+    logger.error('Error getting user tier', error, { userId })
+    return 'free'
+  }
+}
+
+// Get Dashboard Stats (counts for vaults, heirs, assets)
+export async function getDashboardStats() {
+  const supabase = await createServerSupabaseClient()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) throw new Error('Not authenticated')
+
+  const [vaultsResult, heirsResult, assetsResult] = await Promise.all([
+    supabase.from('vaults').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
+    supabase.from('heirs').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
+    supabase.from('assets').select('id', { count: 'exact', head: true }).eq('user_id', user.id)
+  ])
+
+  return {
+    vaultsCount: vaultsResult.count || 0,
+    heirsCount: heirsResult.count || 0,
+    assetsCount: assetsResult.count || 0
+  }
+}
+
+// Get Dashboard Profile
+export async function getDashboardProfile() {
+  const supabase = await createServerSupabaseClient()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) throw new Error('Not authenticated')
+
+  const { data, error } = await supabase
+    .from('users')
+    .select('id, full_name, email, avatar_url, subscription_tier, subscription_status, is_active')
+    .eq('id', user.id)
+    .single()
+
+  if (error) throw new Error(error.message)
+  return data
+}
+
+// Update Login Timestamps (called after successful login)
+export async function updateLoginTimestamps() {
+  const supabase = await createServerSupabaseClient()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) throw new Error('Not authenticated')
+
+  const now = new Date().toISOString()
+  await supabase
+    .from('users')
+    .update({
+      last_activity: now,
+      last_login: now,
+      updated_at: now
+    })
+    .eq('id', user.id)
+}
+
 // Get User Statistics
 export async function getUserStats(userId: string) {
   const supabase = await createServerSupabaseClient()

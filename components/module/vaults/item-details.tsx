@@ -1,7 +1,8 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import Image from "next/image"
+import { getVaultFileSignedUrl, downloadVaultFile } from "@/app/actions/vaults"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -56,6 +57,7 @@ interface VaultItem {
   createdAt?: string
   updatedAt?: string
   storage_path?: string
+  storage_bucket?: string
 }
 
 interface ItemDetailsProps {
@@ -94,25 +96,51 @@ const formatDate = (dateString?: string) => {
 export function ItemDetails({ item, isOpen, onClose, onEdit, onDelete }: ItemDetailsProps) {
   const [showSensitive, setShowSensitive] = useState(false)
   const [fileUrl, setFileUrl] = useState<string | null>(null)
+  const [videoBlobUrl, setVideoBlobUrl] = useState<string | null>(null)
+  const videoBlobUrlRef = useRef<string | null>(null)
   
-  // Generate file URL from storage_path if needed
+  // Generate signed file URL for private bucket files
   useEffect(() => {
     if (!item) return
     
     const generateFileUrl = async () => {
-      if (item.storage_path && !item.metadata.fileUrl) {
-        const { supabase } = await import('@/lib/supabase')
-        const { data: { publicUrl } } = supabase.storage
-          .from('vault-files')
-          .getPublicUrl(item.storage_path)
-        setFileUrl(publicUrl)
-      } else if (item.metadata.fileUrl) {
-        setFileUrl(item.metadata.fileUrl)
+      const filePath = (item.metadata as Record<string, unknown>).filePath as string | undefined
+      if (!filePath) return
+
+      try {
+        if (item.type === 'video') {
+          // Videos need blob URLs to support range requests for playback
+          const { base64, mimeType } = await downloadVaultFile(filePath, item.storage_bucket || 'vault-files')
+          const byteCharacters = atob(base64)
+          const byteNumbers = new Array(byteCharacters.length)
+          for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i)
+          }
+          const byteArray = new Uint8Array(byteNumbers)
+          const blob = new Blob([byteArray], { type: mimeType })
+          const url = URL.createObjectURL(blob)
+          videoBlobUrlRef.current = url
+          setVideoBlobUrl(url)
+        } else {
+          // Images and documents work with signed URLs
+          const signedUrl = await getVaultFileSignedUrl(filePath, item.storage_bucket || 'vault-files')
+          setFileUrl(signedUrl)
+        }
+      } catch {
+        setFileUrl(null)
+        setVideoBlobUrl(null)
       }
     }
     
     if (item.type === 'image' || item.type === 'video' || item.type === 'document') {
       generateFileUrl()
+    }
+
+    return () => {
+      if (videoBlobUrlRef.current) {
+        URL.revokeObjectURL(videoBlobUrlRef.current)
+        videoBlobUrlRef.current = null
+      }
     }
   }, [item])
   
@@ -123,16 +151,17 @@ export function ItemDetails({ item, isOpen, onClose, onEdit, onDelete }: ItemDet
 
   const handleDownload = async () => {
     try {
-      if (item.storage_path) {
-        // Download from Supabase Storage
-        const { supabase } = await import('@/lib/supabase')
-        const { data, error } = await supabase.storage
-          .from('vault-files')
-          .download(item.storage_path)
-        
-        if (error) throw error
-        
-        const url = URL.createObjectURL(data)
+      const filePath = (item.metadata as Record<string, unknown>).filePath as string | undefined
+      if (filePath) {
+        const { base64, mimeType } = await downloadVaultFile(filePath, item.storage_bucket || 'vault-files')
+        const byteCharacters = atob(base64)
+        const byteNumbers = new Array(byteCharacters.length)
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i)
+        }
+        const byteArray = new Uint8Array(byteNumbers)
+        const blob = new Blob([byteArray], { type: mimeType })
+        const url = URL.createObjectURL(blob)
         const link = document.createElement('a')
         link.href = url
         link.download = item.metadata.fileName || item.title || 'download'
@@ -141,7 +170,6 @@ export function ItemDetails({ item, isOpen, onClose, onEdit, onDelete }: ItemDet
         document.body.removeChild(link)
         URL.revokeObjectURL(url)
       } else if (item.metadata.fileUrl) {
-        // Fallback to direct URL download
         const link = document.createElement('a')
         link.href = item.metadata.fileUrl
         link.download = item.metadata.fileName || 'download'
@@ -151,7 +179,8 @@ export function ItemDetails({ item, isOpen, onClose, onEdit, onDelete }: ItemDet
         document.body.removeChild(link)
       }
     } catch (error) {
-      console.error('Download error:', error)
+      const { logger } = await import('@/lib/utils/logger')
+      logger.error('Download error', error)
     }
   }
 
@@ -268,13 +297,13 @@ export function ItemDetails({ item, isOpen, onClose, onEdit, onDelete }: ItemDet
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-text-primary">File Details</h3>
             
-            {(fileUrl || item.metadata.fileUrl) && (
+            {(fileUrl || videoBlobUrl) && (
               <Card>
                 <CardContent className="p-4">
-                  {item.type === 'image' && (
+                  {item.type === 'image' && fileUrl && (
                     <div className="mb-4 relative w-full" style={{ minHeight: '200px' }}>
                       <Image 
-                        src={fileUrl || item.metadata.fileUrl || ''}
+                        src={fileUrl}
                         alt={item.metadata.fileName || 'Image'}
                         width={800}
                         height={600}
@@ -283,22 +312,24 @@ export function ItemDetails({ item, isOpen, onClose, onEdit, onDelete }: ItemDet
                     </div>
                   )}
                   
-                  {item.type === 'video' && (
+                  {item.type === 'video' && videoBlobUrl && (
                     <div className="mb-4">
                       <video 
-                        src={fileUrl || item.metadata.fileUrl || ''}
+                        src={videoBlobUrl}
                         controls
                         className="w-full max-h-96 rounded-lg"
                       />
                     </div>
                   )}
                   
-                  {item.type === 'document' && (
-                    <div className="flex items-center justify-center p-8 bg-gray-50 dark:bg-gray-900 rounded-lg mb-4">
-                      <div className="text-center">
-                        <FileText className="h-16 w-16 text-primary-500 mx-auto mb-2" />
-                        <p className="text-sm text-text-secondary">Document Preview</p>
-                      </div>
+                  {item.type === 'document' && fileUrl && (
+                    <div className="mb-4 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
+                      <iframe
+                        src={fileUrl}
+                        className="w-full rounded-lg"
+                        style={{ height: '500px' }}
+                        title={item.metadata.fileName || 'Document Preview'}
+                      />
                     </div>
                   )}
                   
