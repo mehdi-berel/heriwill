@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase'
+import { createServerSupabaseClient } from '@/lib/supabase'
 import { logger } from '@/lib/utils/logger'
 import type { Json } from '@/lib/database.types'
 
@@ -49,6 +49,7 @@ export interface CreateNotificationParams {
  */
 export async function createNotification(params: CreateNotificationParams): Promise<string | null> {
   try {
+    const supabase = await createServerSupabaseClient()
     const { data, error } = await supabase.rpc('create_notification', {
       p_user_id: params.userId,
       p_type: params.type,
@@ -76,11 +77,20 @@ export async function createNotification(params: CreateNotificationParams): Prom
 /**
  * Get all notifications for current user
  */
-export async function getUserNotifications(includeRead = false, includeArchived = false): Promise<Notification[]> {
+export async function getUserNotifications(
+  includeRead = false,
+  includeArchived = false,
+  page = 1,
+  pageSize = 50
+): Promise<{ data: Notification[]; total: number; page: number; pageSize: number }> {
   try {
+    const supabase = await createServerSupabaseClient()
+    const from = (page - 1) * pageSize
+    const to = from + pageSize - 1
+
     let query = supabase
       .from('notifications')
-      .select('*')
+      .select('*', { count: 'exact' })
       .order('created_at', { ascending: false })
 
     if (!includeRead) {
@@ -91,17 +101,17 @@ export async function getUserNotifications(includeRead = false, includeArchived 
       query = query.eq('is_archived', false)
     }
 
-    const { data, error } = await query
+    const { data, error, count } = await query.range(from, to)
 
     if (error) {
       logger.error('Error fetching notifications', error)
-      return []
+      return { data: [], total: 0, page, pageSize }
     }
 
-    return (data || []) as Notification[]
+    return { data: (data || []) as Notification[], total: count ?? 0, page, pageSize }
   } catch (error) {
     logger.error('Error fetching notifications', error)
-    return []
+    return { data: [], total: 0, page, pageSize }
   }
 }
 
@@ -110,6 +120,7 @@ export async function getUserNotifications(includeRead = false, includeArchived 
  */
 export async function getUnreadCount(): Promise<number> {
   try {
+    const supabase = await createServerSupabaseClient()
     const { count, error } = await supabase
       .from('notifications')
       .select('*', { count: 'exact', head: true })
@@ -133,6 +144,7 @@ export async function getUnreadCount(): Promise<number> {
  */
 export async function markAsRead(notificationId: string): Promise<boolean> {
   try {
+    const supabase = await createServerSupabaseClient()
     const { error } = await supabase.rpc('mark_notification_read', {
       p_notification_id: notificationId
     })
@@ -154,6 +166,7 @@ export async function markAsRead(notificationId: string): Promise<boolean> {
  */
 export async function markAllAsRead(): Promise<boolean> {
   try {
+    const supabase = await createServerSupabaseClient()
     const { error } = await supabase
       .from('notifications')
       .update({ is_read: true, read_at: new Date().toISOString() })
@@ -176,6 +189,7 @@ export async function markAllAsRead(): Promise<boolean> {
  */
 export async function archiveNotification(notificationId: string): Promise<boolean> {
   try {
+    const supabase = await createServerSupabaseClient()
     const { error } = await supabase.rpc('archive_notification', {
       p_notification_id: notificationId
     })
@@ -197,6 +211,7 @@ export async function archiveNotification(notificationId: string): Promise<boole
  */
 export async function deleteNotification(notificationId: string): Promise<boolean> {
   try {
+    const supabase = await createServerSupabaseClient()
     const { error } = await supabase
       .from('notifications')
       .delete()

@@ -1,5 +1,8 @@
-import { supabase } from '../../lib/supabase'
+'use server'
+
+import { createServerSupabaseClient, createServiceRoleClient } from '../../lib/supabase'
 import type { Database } from '../../lib/database.types'
+import { logger } from '../../lib/utils/logger'
 
 // Removed unused type definitions
 
@@ -18,8 +21,6 @@ interface TriggerData {
   settings?: Record<string, unknown>
   scheduledDate?: string
   trustedContactHeirId?: string
-  trustedContactEmail?: string
-  trustedContactPhone?: string
 }
 
 interface EmergencyContactData {
@@ -31,6 +32,7 @@ interface EmergencyContactData {
 export const userActions = {
   // Get User Profile
   getUserProfile: async (userId: string) => {
+    const supabase = await createServerSupabaseClient()
     const { data, error } = await supabase
       .from('users')
       .select('*')
@@ -43,6 +45,7 @@ export const userActions = {
 
   // Update User Profile
   updateUserProfile: async (userId: string, updateData: UserUpdateData) => {
+    const supabase = await createServerSupabaseClient()
     const { data, error } = await supabase
       .from('users')
       .update({
@@ -59,6 +62,7 @@ export const userActions = {
 
   // Update Last Activity
   updateLastActivity: async (userId: string) => {
+    const supabase = await createServerSupabaseClient()
     await supabase
       .from('users')
       .update({
@@ -74,6 +78,7 @@ export const userActions = {
 
   // Update Subscription
   updateSubscription: async (userId: string, subscriptionData: SubscriptionData) => {
+    const supabase = await createServerSupabaseClient()
     await supabase
       .from('users')
       .update({
@@ -91,14 +96,13 @@ export const userActions = {
 
   // Update Global Trigger Settings
   updateGlobalTrigger: async (userId: string, triggerData: TriggerData) => {
+    const supabase = await createServerSupabaseClient()
     await supabase
       .from('users')
       .update({
         global_trigger_method: triggerData.method,
         global_trigger_settings: triggerData.settings as unknown as Database['public']['Tables']['users']['Update']['global_trigger_settings'],
         global_scheduled_date: triggerData.scheduledDate,
-        trusted_contact_email: triggerData.trustedContactEmail,
-        trusted_contact_phone: triggerData.trustedContactPhone,
         trusted_contact_heir_id: triggerData.trustedContactHeirId,
         updated_at: new Date().toISOString()
       })
@@ -111,6 +115,7 @@ export const userActions = {
 
   // Update Emergency Contact
   updateEmergencyContact: async (userId: string, contactData: EmergencyContactData) => {
+    const supabase = await createServerSupabaseClient()
     await supabase
       .from('users')
       .update({
@@ -127,6 +132,7 @@ export const userActions = {
 
   // Lock/Unlock Account
   toggleAccountLock: async (userId: string, isLocked: boolean) => {
+    const supabase = await createServerSupabaseClient()
     await supabase
       .from('users')
       .update({
@@ -142,6 +148,7 @@ export const userActions = {
 
   // Update Email Verification
   updateEmailVerification: async (userId: string, isVerified: boolean) => {
+    const supabase = await createServerSupabaseClient()
     await supabase
       .from('users')
       .update({
@@ -157,6 +164,7 @@ export const userActions = {
 
   // Update Last Login
   updateLastLogin: async (userId: string) => {
+    const supabase = await createServerSupabaseClient()
     await supabase
       .from('users')
       .update({
@@ -173,6 +181,7 @@ export const userActions = {
 
   // Update Last Reminder Sent
   updateLastReminderSent: async (userId: string) => {
+    const supabase = await createServerSupabaseClient()
     await supabase
       .from('users')
       .update({
@@ -188,6 +197,7 @@ export const userActions = {
 
   // Get Inheritance Status
   getInheritanceStatus: async (userId: string) => {
+    const supabase = await createServerSupabaseClient()
     const { data, error } = await supabase
       .from('users')
       .select('inheritance_triggered, inheritance_triggered_at, account_deactivation_date')
@@ -198,20 +208,36 @@ export const userActions = {
     return data
   },
 
+  // Get Global Trigger Settings
+  getGlobalTriggerSettings: async (userId: string) => {
+    const supabase = await createServerSupabaseClient()
+    const { data, error } = await supabase
+      .from('users')
+      .select('global_trigger_method, global_trigger_settings, global_scheduled_date, trusted_contact_heir_id, last_activity')
+      .eq('id', userId)
+      .single()
+
+    if (error) throw new Error(error.message)
+    
+    return {
+      global_trigger_method: data.global_trigger_method,
+      global_trigger_settings: data.global_trigger_settings || { inactivity_days: 90 },
+      global_scheduled_date: data.global_scheduled_date,
+      trusted_contact_heir_id: data.trusted_contact_heir_id,
+      last_activity: data.last_activity,
+    }
+  },
+
   // Get User Statistics
   getUserStats: async (userId: string) => {
+    const supabase = await createServerSupabaseClient()
     const user = await userActions.getUserProfile(userId)
     
     // Get counts from related tables
-    const { data: vaults } = await supabase
-      .from('vaults')
-      .select('count')
-      .eq('user_id', userId)
-
-    const { data: heirs } = await supabase
-      .from('heirs')
-      .select('count')
-      .eq('user_id', userId)
+    const [{ data: vaults }, { data: heirs }] = await Promise.all([
+      supabase.from('vaults').select('count').eq('user_id', userId),
+      supabase.from('heirs').select('count').eq('user_id', userId)
+    ])
 
     const userData = user as Record<string, unknown>
     const stats = {
@@ -229,5 +255,100 @@ export const userActions = {
     }
 
     return stats
+  },
+
+  // Delete Account (uses service role for admin.deleteUser)
+  deleteAccount: async (confirmationCode: string) => {
+    if (confirmationCode !== 'DELETE') {
+      throw new Error('Invalid confirmation code')
+    }
+
+    const supabase = await createServerSupabaseClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+      throw new Error('Not authenticated')
+    }
+
+    const userId = user.id
+    logger.info('Starting account deletion process', { userId })
+
+    // Execute DB function to delete all user data
+    const { error: rpcError } = await supabase.rpc('delete_user_account', {
+      user_id_to_delete: userId,
+    })
+
+    if (rpcError) {
+      logger.error('Error deleting user data', rpcError, { userId })
+      throw new Error('Failed to delete account data')
+    }
+
+    // Delete auth user via service role client
+    const serviceClient = createServiceRoleClient()
+    const { error: deleteAuthError } = await serviceClient.auth.admin.deleteUser(userId)
+
+    if (deleteAuthError) {
+      logger.error('Error deleting auth user', deleteAuthError, { userId })
+      throw new Error('Failed to delete auth account')
+    }
+
+    logger.info('Account deleted successfully', { userId })
+  },
+
+  // Sync subscription from RevenueCat
+  syncSubscription: async () => {
+    const supabase = await createServerSupabaseClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+      throw new Error('Not authenticated')
+    }
+
+    const { getCustomerInfo, getSubscriptionTier } = await import('@/lib/revenuecat')
+
+    const [customerInfo, tier] = await Promise.all([
+      getCustomerInfo(),
+      getSubscriptionTier(),
+    ])
+
+    if (!customerInfo) {
+      throw new Error('Failed to fetch subscription info from RevenueCat')
+    }
+
+    const hasActiveSubscription = Object.keys(customerInfo.entitlements).length > 0
+    const subscriptionStatus = hasActiveSubscription ? 'active' : 'inactive'
+
+    let expirationDate = null
+    const entitlements = customerInfo.entitlements as unknown as Record<string, unknown>
+    const entitlementKeys = Object.keys(entitlements)
+    if (entitlementKeys.length > 0) {
+      const firstEntitlement = entitlements[entitlementKeys[0]] as { expirationDate?: string }
+      expirationDate = firstEntitlement.expirationDate || null
+    }
+
+    const { error } = await supabase
+      .from('users')
+      .update({
+        subscription_tier: tier,
+        subscription_status: subscriptionStatus,
+        subscription_expires_at: expirationDate,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', user.id)
+
+    if (error) {
+      throw new Error('Failed to update subscription in database')
+    }
+
+    logger.info('Subscription synced successfully', { userId: user.id, tier, status: subscriptionStatus })
+
+    return {
+      success: true,
+      subscription: {
+        tier,
+        status: subscriptionStatus,
+        expiresAt: expirationDate,
+      },
+    }
   }
 }

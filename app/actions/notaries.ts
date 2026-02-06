@@ -10,9 +10,15 @@ type NotaryUpdate = Database['public']['Tables']['notaries']['Update']
 // Create Notary
 export async function createNotary(notaryData: NotaryInsert) {
   const supabase = await createServerSupabaseClient()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) throw new Error('Not authenticated')
+
+  // Verify user is creating notary for themselves
+  if (notaryData.user_id !== user.id) throw new Error('Unauthorized: Cannot create notary for another user')
+
   const { data, error } = await supabase
     .from('notaries')
-    .insert(notaryData)
+    .insert({ ...notaryData, user_id: user.id })
     .select()
     .single()
 
@@ -24,25 +30,16 @@ export async function createNotary(notaryData: NotaryInsert) {
 export async function updateNotary(notaryId: string, updateData: NotaryUpdate) {
   const supabase = await createServerSupabaseClient()
   const { data: { user }, error: authError } = await supabase.auth.getUser()
-  
-  if (authError || !user) {
-    throw new Error('Not authenticated')
-  }
+  if (authError || !user) throw new Error('Not authenticated')
 
-  // Verify ownership before update
+  // Verify ownership
   const { data: existingNotary, error: fetchError } = await supabase
     .from('notaries')
     .select('user_id')
     .eq('id', notaryId)
     .single()
-
-  if (fetchError || !existingNotary) {
-    throw new Error('Notary not found')
-  }
-
-  if (existingNotary.user_id !== user.id) {
-    throw new Error('Unauthorized: You do not own this notary')
-  }
+  if (fetchError || !existingNotary) throw new Error('Notary not found')
+  if (existingNotary.user_id !== user.id) throw new Error('Unauthorized: You do not own this notary')
 
   const { data, error } = await supabase
     .from('notaries')
@@ -60,25 +57,16 @@ export async function updateNotary(notaryId: string, updateData: NotaryUpdate) {
 export async function deleteNotary(notaryId: string) {
   const supabase = await createServerSupabaseClient()
   const { data: { user }, error: authError } = await supabase.auth.getUser()
-  
-  if (authError || !user) {
-    throw new Error('Not authenticated')
-  }
+  if (authError || !user) throw new Error('Not authenticated')
 
-  // Verify ownership before delete
+  // Verify ownership
   const { data: existingNotary, error: fetchError } = await supabase
     .from('notaries')
     .select('user_id')
     .eq('id', notaryId)
     .single()
-
-  if (fetchError || !existingNotary) {
-    throw new Error('Notary not found')
-  }
-
-  if (existingNotary.user_id !== user.id) {
-    throw new Error('Unauthorized: You do not own this notary')
-  }
+  if (fetchError || !existingNotary) throw new Error('Notary not found')
+  if (existingNotary.user_id !== user.id) throw new Error('Unauthorized: You do not own this notary')
 
   const { error } = await supabase
     .from('notaries')
@@ -103,16 +91,20 @@ export async function getNotaryById(notaryId: string): Promise<NotaryRow> {
 }
 
 // Get All Notaries for User
-export async function getAllNotaries(userId: string): Promise<NotaryRow[]> {
+export async function getAllNotaries(userId: string, page = 1, pageSize = 50): Promise<{ data: NotaryRow[]; total: number; page: number; pageSize: number }> {
   const supabase = await createServerSupabaseClient()
-  const { data, error } = await supabase
+  const from = (page - 1) * pageSize
+  const to = from + pageSize - 1
+
+  const { data, error, count } = await supabase
     .from('notaries')
-    .select('*')
+    .select('*', { count: 'exact' })
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
+    .range(from, to)
 
   if (error) throw new Error(error.message)
-  return data || []
+  return { data: data || [], total: count ?? 0, page, pageSize }
 }
 
 // Set Primary Notary

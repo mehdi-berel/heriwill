@@ -3,7 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { RevenueCatProvider } from "@/contexts/RevenueCatContext";
 import { Toaster } from "sonner";
-import { GoogleAnalytics } from "@/components/analytics/GoogleAnalytics";
+import { GoogleAnalytics } from "@next/third-parties/google";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -11,7 +11,10 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Heriwill Pro - Digital Legacy Planning",
+  title: {
+    default: "Heriwill | Digital Legacy Planning",
+    template: "%s | Heriwill",
+  },
   description: "Plan your digital legacy and preserve your memories for future generations.",
 };
 
@@ -25,7 +28,7 @@ export default function RootLayout({
       <body
         className={`${inter.variable} antialiased`}
       >
-        <GoogleAnalytics />
+        <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || ''} />
         <RevenueCatProvider>
           {children}
         </RevenueCatProvider>

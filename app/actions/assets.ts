@@ -1,4 +1,6 @@
-import { supabase, createServerSupabaseClient } from '@/lib/supabase'
+'use server'
+
+import { createServerSupabaseClient } from '@/lib/supabase'
 import type { Database } from '../../lib/database.types'
 
 type AssetRow = Database['public']['Tables']['assets']['Row']
@@ -24,10 +26,17 @@ interface DigitalAssetUpdateData {
 export const digitalAssetActions = {
   // Create Digital Asset
   createDigitalAsset: async (assetData: DigitalAssetData) => {
+    const supabase = await createServerSupabaseClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) throw new Error('Not authenticated')
+
+    // Verify user is creating asset for themselves
+    if (assetData.user_id !== user.id) throw new Error('Unauthorized: Cannot create asset for another user')
+
     const { data, error } = await supabase
       .from('assets')
       .insert({
-        user_id: assetData.user_id,
+        user_id: user.id,
         name: assetData.name,
         type: assetData.type || 'other',
         notes: assetData.notes,
@@ -46,25 +55,16 @@ export const digitalAssetActions = {
   updateDigitalAsset: async (assetId: string, updateData: DigitalAssetUpdateData) => {
     const supabase = await createServerSupabaseClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
-    
-    if (authError || !user) {
-      throw new Error('Not authenticated')
-    }
+    if (authError || !user) throw new Error('Not authenticated')
 
-    // Verify ownership before update
+    // Verify ownership
     const { data: existingAsset, error: fetchError } = await supabase
       .from('assets')
       .select('user_id')
       .eq('id', assetId)
       .single()
-
-    if (fetchError || !existingAsset) {
-      throw new Error('Asset not found')
-    }
-
-    if (existingAsset.user_id !== user.id) {
-      throw new Error('Unauthorized: You do not own this asset')
-    }
+    if (fetchError || !existingAsset) throw new Error('Asset not found')
+    if (existingAsset.user_id !== user.id) throw new Error('Unauthorized: You do not own this asset')
 
     const { data, error } = await supabase
       .from('assets')
@@ -85,25 +85,16 @@ export const digitalAssetActions = {
   deleteDigitalAsset: async (assetId: string) => {
     const supabase = await createServerSupabaseClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
-    
-    if (authError || !user) {
-      throw new Error('Not authenticated')
-    }
+    if (authError || !user) throw new Error('Not authenticated')
 
-    // Verify ownership before delete
+    // Verify ownership
     const { data: existingAsset, error: fetchError } = await supabase
       .from('assets')
       .select('user_id')
       .eq('id', assetId)
       .single()
-
-    if (fetchError || !existingAsset) {
-      throw new Error('Asset not found')
-    }
-
-    if (existingAsset.user_id !== user.id) {
-      throw new Error('Unauthorized: You do not own this asset')
-    }
+    if (fetchError || !existingAsset) throw new Error('Asset not found')
+    if (existingAsset.user_id !== user.id) throw new Error('Unauthorized: You do not own this asset')
 
     const { error } = await supabase
       .from('assets')
@@ -116,6 +107,7 @@ export const digitalAssetActions = {
 
   // Get Digital Asset by ID
   getDigitalAssetById: async (assetId: string) => {
+    const supabase = await createServerSupabaseClient()
     const { data, error } = await supabase
       .from('assets')
       .select('*')
@@ -127,19 +119,25 @@ export const digitalAssetActions = {
   },
 
   // Get All Digital Assets for User
-  getAllDigitalAssets: async (userId: string): Promise<AssetRow[]> => {
-    const { data, error } = await supabase
+  getAllDigitalAssets: async (userId: string, page = 1, pageSize = 50): Promise<{ data: AssetRow[]; total: number; page: number; pageSize: number }> => {
+    const supabase = await createServerSupabaseClient()
+    const from = (page - 1) * pageSize
+    const to = from + pageSize - 1
+
+    const { data, error, count } = await supabase
       .from('assets')
-      .select('*')
+      .select('*', { count: 'exact' })
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
+      .range(from, to)
 
     if (error) throw new Error(error.message)
-    return data || []
+    return { data: data || [], total: count ?? 0, page, pageSize }
   },
 
   // Update Asset Status
   updateAssetStatus: async (assetId: string) => {
+    const supabase = await createServerSupabaseClient()
     const { data } = await supabase
       .from('assets')
       .update({ 
@@ -154,6 +152,7 @@ export const digitalAssetActions = {
 
   // Assign Beneficiary
   assignBeneficiary: async (assetId: string) => {
+    const supabase = await createServerSupabaseClient()
     const { data } = await supabase
       .from('assets')
       .update({ 
@@ -168,6 +167,7 @@ export const digitalAssetActions = {
 
   // Update Instructions
   updateInstructions: async (assetId: string) => {
+    const supabase = await createServerSupabaseClient()
     const { data } = await supabase
       .from('assets')
       .update({ 
@@ -182,7 +182,7 @@ export const digitalAssetActions = {
 
   // Get Digital Asset Statistics
   getDigitalAssetStats: async (userId: string) => {
-    const assets = await digitalAssetActions.getAllDigitalAssets(userId)
+    const { data: assets } = await digitalAssetActions.getAllDigitalAssets(userId, 1, 1000)
     
     const stats = {
       totalAssets: assets.length,
@@ -204,7 +204,7 @@ export const digitalAssetActions = {
 
   // Search Digital Assets
   searchDigitalAssets: async (userId: string, searchTerm: string) => {
-    const assets = await digitalAssetActions.getAllDigitalAssets(userId)
+    const { data: assets } = await digitalAssetActions.getAllDigitalAssets(userId, 1, 1000)
     
     const filteredAssets = assets.filter((asset: AssetRow) =>
       asset.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -218,28 +218,28 @@ export const digitalAssetActions = {
 
   // Filter by Type
   getDigitalAssetsByType: async (userId: string, type: string) => {
-    const assets = await digitalAssetActions.getAllDigitalAssets(userId)
+    const { data: assets } = await digitalAssetActions.getAllDigitalAssets(userId, 1, 1000)
     
     return assets.filter((asset: AssetRow) => asset.type === type)
   },
 
   // Filter by Ownership Type
   getDigitalAssetsByOwnership: async (userId: string, ownershipType: string) => {
-    const assets = await digitalAssetActions.getAllDigitalAssets(userId)
+    const { data: assets } = await digitalAssetActions.getAllDigitalAssets(userId, 1, 1000)
     
     return assets.filter((asset: AssetRow) => asset.ownership_type === ownershipType)
   },
 
   // Filter by Heir
   getDigitalAssetsByHeir: async (userId: string, heirId: string) => {
-    const assets = await digitalAssetActions.getAllDigitalAssets(userId)
+    const { data: assets } = await digitalAssetActions.getAllDigitalAssets(userId, 1, 1000)
     
     return assets.filter((asset: AssetRow) => asset.heir_ids?.includes(heirId))
   },
 
   // Get Assets Without Heirs
   getAssetsWithoutHeirs: async (userId: string) => {
-    const assets = await digitalAssetActions.getAllDigitalAssets(userId)
+    const { data: assets } = await digitalAssetActions.getAllDigitalAssets(userId, 1, 1000)
     
     return assets.filter((asset: AssetRow) => !asset.heir_ids || asset.heir_ids.length === 0)
   }

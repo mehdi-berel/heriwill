@@ -1,9 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@supabase/supabase-js'
 import { logger } from '@/lib/utils/logger'
 import { Database } from '@/lib/database.types'
 import { rateLimit, RateLimitPresets } from '@/lib/middleware/rateLimit'
 import { sanitizeApiError } from '@/lib/utils/error-handler'
+
+function createServiceRoleClient() {
+  return createClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { autoRefreshToken: false, persistSession: false } }
+  )
+}
 
 /**
  * Vercel Cron Job - Check Sign-Off Trigger Conditions
@@ -60,6 +68,7 @@ export async function GET(request: NextRequest) {
 
 async function checkInactivityTriggers() {
   try {
+    const supabase = createServiceRoleClient()
     // Get all users with inactivity trigger enabled
     const { data, error } = await supabase
       .from('users')
@@ -106,7 +115,8 @@ async function checkInactivityTriggers() {
             [warningKey]: new Date().toISOString()
           }
           
-          await supabase
+          const supabaseUpdate = createServiceRoleClient()
+          await supabaseUpdate
             .from('users')
             .update({ global_trigger_settings: updatedSettings })
             .eq('id', user.id)
@@ -129,6 +139,7 @@ async function checkInactivityTriggers() {
 
 async function checkScheduledTriggers() {
   try {
+    const supabase = createServiceRoleClient()
     const now = new Date().toISOString()
 
     // Get all users with scheduled trigger enabled and date passed
@@ -158,6 +169,7 @@ async function checkScheduledTriggers() {
 
 async function checkVerificationTimeouts() {
   try {
+    const supabase = createServiceRoleClient()
     // Get pending triggers that have timed out
     const { data, error } = await supabase
       .from('inheritance_triggers')
@@ -185,6 +197,7 @@ async function checkVerificationTimeouts() {
 
 async function checkAccountDeactivations() {
   try {
+    const supabase = createServiceRoleClient()
     const now = new Date().toISOString()
 
     // Get all users with deactivation date passed and inheritance still triggered
@@ -230,21 +243,28 @@ async function triggerPlan(userId: string, reason: string) {
   try {
     logger.info(`Triggering inheritance plan for user ${userId}, reason: ${reason}`)
     
-    // Call the trigger-inheritance endpoint
-    const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'https://app.heriwill.com'}/api/trigger-inheritance`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId, reason })
-    })
+    const supabase = createServiceRoleClient()
 
-    if (!response.ok) {
-      const errorData = await response.json()
-      logger.error(`Failed to trigger inheritance for user ${userId}`, errorData)
+    // Calculate 30-day deactivation date
+    const deactivationDate = new Date()
+    deactivationDate.setDate(deactivationDate.getDate() + 30)
+
+    // Call the trigger_inheritance_transaction RPC directly with service role
+    const { data, error } = await (supabase.rpc as unknown as (name: string, params: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }>)(
+      'trigger_inheritance_transaction',
+      {
+        p_user_id: userId,
+        p_trigger_reason: reason,
+        p_deactivation_date: deactivationDate.toISOString()
+      }
+    )
+
+    if (error) {
+      logger.error(`Failed to trigger inheritance for user ${userId}`, error)
       return
     }
 
-    const result = await response.json()
-    logger.info(`Successfully triggered inheritance for user ${userId}`, result)
+    logger.info(`Successfully triggered inheritance for user ${userId}`, { data })
   } catch (error) {
     logger.error(`Error triggering inheritance for user ${userId}`, error)
   }

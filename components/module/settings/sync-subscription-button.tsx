@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { RefreshCw, CheckCircle, AlertCircle } from "lucide-react"
-import { supabase } from "@/lib/supabase"
+import { userActions } from "@/app/actions/users"
 
 export function SyncSubscriptionButton() {
   const [syncing, setSyncing] = useState(false)
@@ -14,43 +14,16 @@ export function SyncSubscriptionButton() {
     setResult(null)
 
     try {
-      // Get current user
-      const { data: { user } } = await supabase.auth.getUser()
-      
-      if (!user) {
-        setResult({ success: false, message: 'Not authenticated' })
-        setSyncing(false)
-        return
-      }
-
-      // Call sync endpoint
-      const response = await fetch('/api/sync-subscription', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ userId: user.id }),
+      const data = await userActions.syncSubscription()
+      setResult({ 
+        success: true, 
+        message: `Synced! Tier: ${data.subscription.tier}` 
       })
-
-      const data = await response.json()
-
-      if (response.ok && data.success) {
-        setResult({ 
-          success: true, 
-          message: `Synced! Tier: ${data.subscription.tier}` 
-        })
-        // Reload page to reflect changes
-        setTimeout(() => window.location.reload(), 1500)
-      } else {
-        setResult({ 
-          success: false, 
-          message: data.error || 'Sync failed' 
-        })
-      }
-    } catch {
+      setTimeout(() => window.location.reload(), 1500)
+    } catch (error) {
       setResult({ 
         success: false, 
-        message: 'Network error' 
+        message: error instanceof Error ? error.message : 'Sync failed' 
       })
     } finally {
       setSyncing(false)

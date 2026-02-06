@@ -19,7 +19,11 @@ interface LegalDocument {
   is_active: boolean
   created_at: string
   updated_at: string
-  user_id: string
+  created_by?: string | null
+  category?: string | null
+  is_system_template?: boolean | null
+  template_content?: string | null
+  template_fields?: unknown
   metadata?: {
     content?: string
     [key: string]: unknown

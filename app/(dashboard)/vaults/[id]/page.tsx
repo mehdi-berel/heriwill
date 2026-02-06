@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { ArrowLeft, Edit, Trash2, Users, Scale } from "lucide-react"
 import { supabase } from "@/lib/supabase"
-import { vaultActions } from "@/app/actions/vaults"
+import { vaultActions, vaultItemActions } from "@/app/actions/vaults"
 import { User } from "@supabase/supabase-js"
 import { toast } from "@/lib/utils/toast"
 import { logger } from "@/lib/utils/logger"
@@ -336,21 +336,12 @@ export default function VaultDetailPage() {
       
       if (itemData.id) {
         // Update existing item
-        const response = await fetch('/api/vault-items/update', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            itemId: itemData.id,
-            title_encrypted: itemData.title,
-            item_type: itemData.type,
-            tags: itemData.tags,
-            metadata: JSON.parse(JSON.stringify(metadata))
-          })
+        await vaultItemActions.updateVaultItem(itemData.id, {
+          title_encrypted: itemData.title,
+          item_type: itemData.type as 'password' | 'document' | 'video' | 'image' | 'note' | 'crypto' | 'other' | 'legal' | 'assets',
+          tags: itemData.tags,
+          metadata: JSON.parse(JSON.stringify(metadata))
         })
-
-        if (!response.ok) {
-          throw new Error('Failed to update item')
-        }
       } else {
         // Get vault owner's user_id from the vault
         const { data: vaultData } = await supabase
@@ -364,22 +355,14 @@ export default function VaultDetailPage() {
         }
         
         // Create new item with vault owner's user_id (allows shared users to add items)
-        const response = await fetch('/api/vault-items/create', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            user_id: vaultData.user_id,
-            vault_id: vaultId,
-            title_encrypted: itemData.title,
-            item_type: itemData.type,
-            tags: itemData.tags || [],
-            metadata: JSON.parse(JSON.stringify(metadata))
-          })
+        await vaultItemActions.createVaultItem({
+          user_id: vaultData.user_id,
+          vault_id: vaultId,
+          title_encrypted: itemData.title,
+          item_type: itemData.type as 'password' | 'document' | 'video' | 'image' | 'note' | 'crypto' | 'other' | 'legal' | 'assets',
+          tags: itemData.tags || [],
+          metadata: JSON.parse(JSON.stringify(metadata))
         })
-
-        if (!response.ok) {
-          throw new Error('Failed to create item')
-        }
       }
       
       // Reload items
@@ -445,16 +428,7 @@ export default function VaultDetailPage() {
 
   const handleDeleteItem = async (itemId: string) => {
     try {
-      const response = await fetch('/api/vault-items/delete', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ itemId })
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to delete item')
-      }
-
+      await vaultItemActions.deleteVaultItem(itemId)
       await loadVaultItems(vaultId)
       toast.success('Item deleted successfully')
     } catch (error) {

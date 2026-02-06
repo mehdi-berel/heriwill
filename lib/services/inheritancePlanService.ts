@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase'
+import { createServerSupabaseClient } from '@/lib/supabase'
 import { logger } from '@/lib/utils/logger'
 import type { Database } from '@/lib/database.types'
 
@@ -70,6 +70,7 @@ export async function executeInheritancePlan(userId: string): Promise<void> {
  * Mark user as deceased in the database
  */
 async function markUserAsDeceased(userId: string): Promise<void> {
+  const supabase = await createServerSupabaseClient()
   const { error } = await supabase
     .from('users')
     .update({
@@ -91,6 +92,7 @@ async function markUserAsDeceased(userId: string): Promise<void> {
  * Get all vaults and their assigned heirs
  */
 async function getVaultActions(userId: string): Promise<VaultAction[]> {
+  const supabase = await createServerSupabaseClient()
   // Get all vaults for the user with access_control
   const { data: vaults, error: vaultsError } = await supabase
     .from('vaults')
@@ -124,6 +126,7 @@ async function getVaultActions(userId: string): Promise<VaultAction[]> {
  * Get all heirs for the user
  */
 async function getHeirs(userId: string): Promise<Array<{ id: string; email: string; full_name: string }>> {
+  const supabase = await createServerSupabaseClient()
   const { data: heirs, error } = await supabase
     .from('heirs')
     .select('id, email_encrypted, full_name_encrypted')
@@ -176,6 +179,7 @@ async function shareVaultWithHeirs(vaultId: string, heirIds: string[]): Promise<
     return
   }
 
+  const supabase = await createServerSupabaseClient()
   // Get vault owner
   const { data: vault } = await supabase
     .from('vaults')
@@ -188,37 +192,36 @@ async function shareVaultWithHeirs(vaultId: string, heirIds: string[]): Promise<
     return
   }
 
-  // Create shared_vaults records to grant access
-  // Use upsert to handle cases where records might already exist
-  for (const heirId of heirIds) {
-    const { error } = await supabase
-      .from('shared_vaults')
-      .upsert({
-        vault_id: vaultId,
-        owner_id: vault.user_id,
-        shared_with_user_id: heirId,
-        accepted: true,
-        accepted_at: new Date().toISOString(),
-        is_active: true,
-        shared_at: new Date().toISOString()
-      }, {
-        onConflict: 'vault_id,shared_with_user_id'
-      })
+  // Batch upsert all shared_vaults records in a single query
+  const now = new Date().toISOString()
+  const records = heirIds.map(heirId => ({
+    vault_id: vaultId,
+    owner_id: vault.user_id,
+    shared_with_user_id: heirId,
+    accepted: true,
+    accepted_at: now,
+    is_active: true,
+    shared_at: now
+  }))
 
-    if (error) {
-      logger.error('Error granting vault access to heir', error, { heirId, vaultId })
-    } else {
-      logger.info('Granted vault access to heir', { heirId, vaultId })
-    }
+  const { error } = await supabase
+    .from('shared_vaults')
+    .upsert(records, {
+      onConflict: 'vault_id,shared_with_user_id'
+    })
+
+  if (error) {
+    logger.error('Error granting vault access to heirs', error, { vaultId, heirCount: heirIds.length })
+  } else {
+    logger.info('Granted vault access to heirs', { vaultId, heirCount: heirIds.length })
   }
-
-  logger.info('Granted vault access to heirs', { vaultId, heirCount: heirIds.length })
 }
 
 /**
  * Delete vault and all its items
  */
 async function deleteVault(vaultId: string): Promise<void> {
+  const supabase = await createServerSupabaseClient()
   // Delete vault items first
   const { error: itemsError } = await supabase
     .from('vault_items')
@@ -247,6 +250,7 @@ async function deleteVault(vaultId: string): Promise<void> {
  * Notify notary for sign-off vault
  */
 async function notifyNotaryForSignOff(userId: string, vaultId: string): Promise<void> {
+  const supabase = await createServerSupabaseClient()
   // Get primary notary for the user
   const { data: notary, error } = await supabase
     .from('notaries')
@@ -316,6 +320,7 @@ async function createAuditLog(
   action: string,
   metadata: Record<string, unknown>
 ): Promise<void> {
+  const supabase = await createServerSupabaseClient()
   const { error } = await supabase
     .from('audit_logs')
     .insert({

@@ -1,8 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@supabase/supabase-js'
+import crypto from 'crypto'
 import { logger } from '@/lib/utils/logger'
 import { rateLimit, RateLimitPresets } from '@/lib/middleware/rateLimit'
 import { REVENUECAT_PRODUCTS } from '@/lib/revenuecat-config'
+import type { Database } from '@/lib/database.types'
+
+function createServiceRoleClient() {
+  return createClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { autoRefreshToken: false, persistSession: false } }
+  )
+}
+
+function verifyWebhookSignature(body: string, signature: string, secret: string): boolean {
+  const hmac = crypto.createHmac('sha256', secret)
+  hmac.update(body)
+  const expectedSignature = hmac.digest('hex')
+  return crypto.timingSafeEqual(
+    Buffer.from(signature),
+    Buffer.from(expectedSignature)
+  )
+}
 
 // RevenueCat webhook handler
 // Handles subscription events from RevenueCat
@@ -15,20 +35,29 @@ export async function POST(request: NextRequest) {
       return rateLimitResult
     }
 
-    // Verify webhook signature (recommended for production)
+    // Verify webhook signature
     const signature = request.headers.get('x-revenuecat-signature')
     const webhookSecret = process.env.REVENUECAT_WEBHOOK_SECRET
-    
-    if (webhookSecret && signature) {
-      // TODO: Implement signature verification
-      // const body = await request.text()
-      // const isValid = verifyWebhookSignature(body, signature, webhookSecret)
-      // if (!isValid) {
-      //   return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
-      // }
+    const rawBody = await request.text()
+
+    if (webhookSecret) {
+      if (!signature) {
+        return NextResponse.json({ error: 'Missing signature' }, { status: 401 })
+      }
+      try {
+        const isValid = verifyWebhookSignature(rawBody, signature, webhookSecret)
+        if (!isValid) {
+          return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
+        }
+      } catch {
+        return NextResponse.json({ error: 'Signature verification failed' }, { status: 401 })
+      }
+    } else if (process.env.NODE_ENV === 'production') {
+      logger.error('REVENUECAT_WEBHOOK_SECRET is not set in production')
+      return NextResponse.json({ error: 'Server misconfiguration' }, { status: 500 })
     }
 
-    const event = await request.json()
+    const event = JSON.parse(rawBody)
     
     logger.info('RevenueCat webhook received', { eventType: event.type })
 
@@ -92,7 +121,7 @@ export async function POST(request: NextRequest) {
         if (appUserId) {
           await updateUserSubscription(appUserId, {
             subscription_tier: 'free',
-            subscription_status: 'expired',
+            subscription_status: 'inactive',
             subscription_expires_at: null,
           })
         }
@@ -133,10 +162,10 @@ async function updateUserSubscription(
   }
 ) {
   try {
-    const { error } = await (supabase.from('users') as unknown as { 
-      update: (data: unknown) => { eq: (column: string, value: string) => Promise<{ error: unknown }> } 
-    })
-      .update(updates)
+    const supabase = createServiceRoleClient()
+    const { error } = await supabase
+      .from('users')
+      .update(updates as never)
       .eq('id', userId)
 
     if (error) {

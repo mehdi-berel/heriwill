@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Power, AlertCircle, CheckCircle } from "lucide-react"
 import { logger } from "@/lib/utils/logger"
 import { toast } from "@/lib/utils/toast"
+import { triggerInheritancePlan } from "@/app/actions/inheritance"
 
 interface ManualTriggerSectionProps{
   userId: string
@@ -17,24 +18,10 @@ export function ManualTriggerSection({ userId }: ManualTriggerSectionProps) {
   const handleTrigger = async () => {
     setSaving(true)
     try {
-      const response = await fetch('/api/trigger-inheritance', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, reason: 'manual_trigger' })
-      })
-      
-      const data = await response.json()
-      
-      if (response.ok) {
-        setShowModal(false)
-        toast.success('Inheritance plan triggered successfully', 'Your heirs have been notified and granted access to your vaults')
-        // Reload the page data without navigation
-        window.location.reload()
-      } else {
-        const errorMsg = data.error || 'Failed to trigger inheritance plan'
-        logger.error('API Error triggering inheritance', { data })
-        throw new Error(errorMsg)
-      }
+      await triggerInheritancePlan(userId, 'manual_trigger')
+      setShowModal(false)
+      toast.success('Inheritance plan triggered successfully', 'Your heirs have been notified and granted access to your vaults')
+      window.location.reload()
     } catch (error) {
       logger.error('Error triggering plan', error)
       const errorMessage = error instanceof Error ? error.message : 'Failed to trigger inheritance plan. Please try again.'

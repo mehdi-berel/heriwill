@@ -5,36 +5,19 @@ import { Card, CardContent } from "@/components/ui/card"
 import { AlertTriangle, RefreshCcw, CheckCircle } from "lucide-react"
 import { logger } from "@/lib/utils/logger"
 import { toast } from "@/lib/utils/toast"
+import { declareFalseAlarm } from "@/app/actions/inheritance"
 
-interface FalseAlarmSectionProps {
-  userId: string
-}
-
-export function FalseAlarmSection({ userId }: FalseAlarmSectionProps) {
+export function FalseAlarmSection() {
   const [showModal, setShowModal] = useState(false)
   const [saving, setSaving] = useState(false)
 
   const handleFalseAlarm = async () => {
     setSaving(true)
     try {
-      const response = await fetch('/api/false-alarm', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId })
-      })
-      
-      const data = await response.json()
-      
-      if (response.ok) {
-        setShowModal(false)
-        toast.success('False alarm declared successfully', 'Your account has been restored and heirs have been notified')
-        // Reload the page data without navigation
-        window.location.reload()
-      } else {
-        const errorMsg = data.error || 'Failed to declare false alarm'
-        logger.error('API Error declaring false alarm', { data })
-        throw new Error(errorMsg)
-      }
+      await declareFalseAlarm()
+      setShowModal(false)
+      toast.success('False alarm declared successfully', 'Your account has been restored and heirs have been notified')
+      window.location.reload()
     } catch (error) {
       logger.error('Error declaring false alarm', error)
       const errorMessage = error instanceof Error ? error.message : 'Failed to declare false alarm. Please try again.'

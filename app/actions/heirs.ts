@@ -104,7 +104,7 @@ export async function deleteHeir(heirId: string) {
     // Verify ownership before delete
     const { data: existingHeir, error: fetchError } = await supabase
       .from('heirs')
-      .select('user_id')
+      .select('user_id, heir_user_id')
       .eq('id', heirId)
       .single()
 
@@ -116,6 +116,22 @@ export async function deleteHeir(heirId: string) {
       throw new Error('Unauthorized: You do not own this heir')
     }
 
+    // Clear trusted_contact_heir_id if it references this heir
+    await supabase
+      .from('users')
+      .update({ trusted_contact_heir_id: null })
+      .eq('trusted_contact_heir_id', heirId)
+
+    // Remove shared_vaults records for this heir
+    if (existingHeir.heir_user_id) {
+      await supabase
+        .from('shared_vaults')
+        .delete()
+        .eq('shared_with_user_id', existingHeir.heir_user_id)
+        .eq('owner_id', user.id)
+    }
+
+    // Delete the heir record
     const { error } = await supabase
       .from('heirs')
       .delete()
@@ -139,16 +155,20 @@ export async function getHeirById(heirId: string) {
 }
 
 // Get All Heirs for User
-export async function getAllHeirs(userId: string): Promise<HeirRow[]> {
+export async function getAllHeirs(userId: string, page = 1, pageSize = 50): Promise<{ data: HeirRow[]; total: number; page: number; pageSize: number }> {
     const supabase = await createServerSupabaseClient()
-    const { data, error } = await supabase
+    const from = (page - 1) * pageSize
+    const to = from + pageSize - 1
+
+    const { data, error, count } = await supabase
       .from('heirs')
-      .select('*')
+      .select('*', { count: 'exact' })
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
+      .range(from, to)
 
   if (error) throw new Error(error.message)
-  return data || []
+  return { data: data || [], total: count ?? 0, page, pageSize }
 }
 
 // Invitation Management
@@ -199,9 +219,15 @@ export async function updateVerificationStatus(heirId: string, status: string) {
 
 // Get Heir Statistics
 export async function getHeirStats(userId: string) {
-  const heirs = await getAllHeirs(userId)
-    
-    const stats = {
+  const supabase = await createServerSupabaseClient()
+  
+  // Single SQL query with aggregation instead of fetching all and filtering in JS
+  const { data, error } = await supabase.rpc('get_heir_stats', { p_user_id: userId })
+  
+  if (error) {
+    // Fallback to old method if RPC doesn't exist yet
+    const { data: heirs } = await getAllHeirs(userId, 1, 1000)
+    return {
       totalHeirs: heirs.length,
       acceptedHeirs: heirs.filter((h: HeirRow) => h.invitation_status === 'accepted').length,
       pendingHeirs: heirs.filter((h: HeirRow) => h.invitation_status === 'pending').length,
@@ -215,13 +241,14 @@ export async function getHeirStats(userId: string) {
       professionalHeirs: heirs.filter((h: HeirRow) => h.heir_type === 'professional').length,
       organizationHeirs: heirs.filter((h: HeirRow) => h.heir_type === 'organization').length
     }
-
-  return stats
+  }
+  
+  return data
 }
 
 // Search and Filter
 export async function searchHeirs(userId: string, searchTerm: string) {
-  const heirs = await getAllHeirs(userId)
+  const { data: heirs } = await getAllHeirs(userId, 1, 1000)
     
     const filteredHeirs = heirs.filter((heir: HeirRow) =>
       heir.full_name_encrypted?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -234,16 +261,74 @@ export async function searchHeirs(userId: string, searchTerm: string) {
 
 // Filter by Status
 export async function getHeirsByStatus(userId: string, status: string) {
-  const heirs = await getAllHeirs(userId)
-    
-  return heirs.filter((heir: HeirRow) => heir.invitation_status === status)
+  const supabase = await createServerSupabaseClient()
+  const { data, error } = await supabase
+    .from('heirs')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('invitation_status', status)
+    .order('created_at', { ascending: false })
+  
+  if (error) throw new Error(error.message)
+  return data || []
 }
 
 // Filter by Heir Type
 export async function getHeirsByType(userId: string, heirType: string) {
-  const heirs = await getAllHeirs(userId)
+  const supabase = await createServerSupabaseClient()
+  const { data, error } = await supabase
+    .from('heirs')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('heir_type', heirType)
+    .order('created_at', { ascending: false })
   
-  return heirs.filter((heir: HeirRow) => heir.heir_type === heirType)
+  if (error) throw new Error(error.message)
+  return data || []
+}
+
+// Remove Successor Role (heir-side: heir removes themselves from an owner's heir list)
+export async function removeSuccessorRole(heirId: string) {
+  const supabase = await createServerSupabaseClient()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+  if (authError || !user) {
+    throw new Error('Not authenticated')
+  }
+
+  // Verify the current user is the heir (heir_user_id matches)
+  const { data: heirData, error: heirError } = await supabase
+    .from('heirs')
+    .select('id, user_id, heir_user_id')
+    .eq('id', heirId)
+    .eq('heir_user_id', user.id)
+    .single()
+
+  if (heirError || !heirData) {
+    throw new Error('Successor role not found or unauthorized')
+  }
+
+  // Clear trusted_contact_heir_id if it references this heir
+  await supabase
+    .from('users')
+    .update({ trusted_contact_heir_id: null })
+    .eq('trusted_contact_heir_id', heirId)
+
+  // Remove shared_vaults records granted to this heir
+  await supabase
+    .from('shared_vaults')
+    .delete()
+    .eq('shared_with_user_id', user.id)
+    .eq('owner_id', heirData.user_id)
+
+  // Delete the heir record
+  const { error } = await supabase
+    .from('heirs')
+    .delete()
+    .eq('id', heirId)
+    .eq('heir_user_id', user.id)
+
+  if (error) throw new Error(error.message)
 }
 
 // Helper Functions

@@ -168,16 +168,20 @@ export const vaultActions = {
   },
 
   // Get All Vaults for User
-  getAllVaults: async (userId: string) => {
+  getAllVaults: async (userId: string, page = 1, pageSize = 50) => {
     const supabase = await createServerSupabaseClient()
-    const { data, error } = await supabase
+    const from = (page - 1) * pageSize
+    const to = from + pageSize - 1
+
+    const { data, error, count } = await supabase
       .from('vaults')
-      .select('*')
+      .select('*', { count: 'exact' })
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
+      .range(from, to)
 
     if (error) throw new Error(error.message)
-    return data || []
+    return { data: data || [], total: count ?? 0, page, pageSize }
   },
 
   // Update Last Accessed
@@ -228,7 +232,7 @@ export const vaultActions = {
 
   // Get Vault Statistics
   getVaultStats: async (userId: string) => {
-    const vaults = await vaultActions.getAllVaults(userId)
+    const { data: vaults } = await vaultActions.getAllVaults(userId, 1, 1000)
     
     const stats = {
       totalVaults: vaults.length,
@@ -244,7 +248,7 @@ export const vaultActions = {
 
   // Search and Filter
   searchVaults: async (userId: string, searchTerm: string) => {
-    const vaults = await vaultActions.getAllVaults(userId)
+    const { data: vaults } = await vaultActions.getAllVaults(userId, 1, 1000)
     
     const filteredVaults = vaults.filter((vault: VaultRow) =>
       vault.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -256,7 +260,7 @@ export const vaultActions = {
 
   // Filter by Category
   getVaultsByCategory: async (userId: string, category: string) => {
-    const vaults = await vaultActions.getAllVaults(userId)
+    const { data: vaults } = await vaultActions.getAllVaults(userId, 1, 1000)
     
     return vaults.filter((vault: VaultRow) => vault.category === category)
   },
@@ -264,7 +268,7 @@ export const vaultActions = {
   // Filter by Status - removed getFavoriteVaults and getEncryptedVaults as these properties don't exist on vaults table
 
   getSharedVaults: async (userId: string) => {
-    const vaults = await vaultActions.getAllVaults(userId)
+    const { data: vaults } = await vaultActions.getAllVaults(userId, 1, 1000)
     
     return vaults.filter((vault: VaultRow) => vault.is_shared)
   }
@@ -274,12 +278,24 @@ export const vaultActions = {
 export const vaultItemActions = {
   // Create Vault Item
   createVaultItem: async (itemData: VaultItemData) => {
+    const supabase = await createServerSupabaseClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) throw new Error('Not authenticated')
+
+    // Verify user owns the vault
+    const { data: vault, error: vaultError } = await supabase
+      .from('vaults')
+      .select('user_id')
+      .eq('id', itemData.vault_id)
+      .single()
+    if (vaultError || !vault) throw new Error('Vault not found')
+    if (vault.user_id !== user.id) throw new Error('Unauthorized: You do not own this vault')
+
     // Generate unique storage path (required and must be unique)
     const timestamp = Date.now()
     const randomId = Math.random().toString(36).substring(2, 15)
-    const storagePath = itemData.storage_path || `${itemData.user_id}/${itemData.vault_id}/${timestamp}-${randomId}`
+    const storagePath = itemData.storage_path || `${user.id}/${itemData.vault_id}/${timestamp}-${randomId}`
     
-    const supabase = await createServerSupabaseClient()
     const { data, error } = await supabase
       .from('vault_items')
       .insert({
@@ -306,6 +322,19 @@ export const vaultItemActions = {
 
   // Update Vault Item
   updateVaultItem: async (itemId: string, updateData: VaultItemUpdate) => {
+    const supabase = await createServerSupabaseClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) throw new Error('Not authenticated')
+
+    // Verify ownership
+    const { data: existingItem, error: fetchError } = await supabase
+      .from('vault_items')
+      .select('user_id')
+      .eq('id', itemId)
+      .single()
+    if (fetchError || !existingItem) throw new Error('Item not found')
+    if (existingItem.user_id !== user.id) throw new Error('Unauthorized: You do not own this item')
+
     const updatePayload: VaultItemUpdate = {}
     if (updateData.title_encrypted) updatePayload.title_encrypted = updateData.title_encrypted
     if (updateData.item_type) updatePayload.item_type = updateData.item_type
@@ -316,11 +345,11 @@ export const vaultItemActions = {
     if (updateData.password_last_changed) updatePayload.password_last_changed = updateData.password_last_changed
     if (updateData.requires_password_change !== undefined) updatePayload.requires_password_change = updateData.requires_password_change
 
-    const supabase = await createServerSupabaseClient()
     const { data, error } = await supabase
       .from('vault_items')
       .update(updatePayload)
       .eq('id', itemId)
+      .eq('user_id', user.id)
       .select()
       .single()
 
@@ -331,25 +360,42 @@ export const vaultItemActions = {
   // Delete Vault Item
   deleteVaultItem: async (itemId: string) => {
     const supabase = await createServerSupabaseClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) throw new Error('Not authenticated')
+
+    // Verify ownership
+    const { data: existingItem, error: fetchError } = await supabase
+      .from('vault_items')
+      .select('user_id')
+      .eq('id', itemId)
+      .single()
+    if (fetchError || !existingItem) throw new Error('Item not found')
+    if (existingItem.user_id !== user.id) throw new Error('Unauthorized: You do not own this item')
+
     const { error } = await supabase
       .from('vault_items')
       .delete()
       .eq('id', itemId)
+      .eq('user_id', user.id)
 
     if (error) throw new Error(error.message)
   },
 
   // Get Vault Items
-  getVaultItems: async (vaultId: string) => {
+  getVaultItems: async (vaultId: string, page = 1, pageSize = 50) => {
     const supabase = await createServerSupabaseClient()
-    const { data, error } = await supabase
+    const from = (page - 1) * pageSize
+    const to = from + pageSize - 1
+
+    const { data, error, count } = await supabase
       .from('vault_items')
-      .select('*')
+      .select('*', { count: 'exact' })
       .eq('vault_id', vaultId)
       .order('created_at', { ascending: false })
+      .range(from, to)
 
     if (error) throw new Error(error.message)
-    return data || []
+    return { data: data || [], total: count ?? 0, page, pageSize }
   },
 
   // Get Vault Item by ID
@@ -367,7 +413,7 @@ export const vaultItemActions = {
 
   // Search Vault Items
   searchVaultItems: async (vaultId: string, searchTerm: string) => {
-    const items = await vaultItemActions.getVaultItems(vaultId)
+    const { data: items } = await vaultItemActions.getVaultItems(vaultId, 1, 1000)
     
     const filteredItems = items.filter((item: VaultItemRow) =>
       item.title_encrypted?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -379,7 +425,7 @@ export const vaultItemActions = {
 
   // Filter by Type
   getVaultItemsByType: async (vaultId: string, type: string) => {
-    const items = await vaultItemActions.getVaultItems(vaultId)
+    const { data: items } = await vaultItemActions.getVaultItems(vaultId, 1, 1000)
     
     return items.filter((item: VaultItemRow) => item.item_type === type)
   },

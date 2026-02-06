@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase';
+import { createServerSupabaseClient } from '@/lib/supabase';
 import type { Database } from '@/lib/database.types';
 import { logger } from '@/lib/utils/logger';
 
@@ -51,6 +51,7 @@ export async function saveGlobalTrigger(
       updateData.trusted_contact_heir_id = settings.trusted_contact_heir_id;
     }
 
+    const supabase = await createServerSupabaseClient();
     const { error } = await supabase
       .from('users')
       .update(updateData)
@@ -75,6 +76,7 @@ export async function getGlobalTrigger(
   userId: string
 ): Promise<GlobalTriggerSettings | null> {
   try {
+    const supabase = await createServerSupabaseClient();
     const { data, error } = await supabase
       .from('users')
       .select('global_trigger_method, global_trigger_settings, global_scheduled_date, trusted_contact_heir_id, last_activity')
@@ -116,6 +118,7 @@ export async function getGlobalTrigger(
  */
 export async function deleteGlobalTrigger(userId: string): Promise<void> {
   try {
+    const supabase = await createServerSupabaseClient();
     const { error } = await supabase
     .from('users')
     .update({ 
@@ -189,6 +192,7 @@ export async function checkGlobalTriggerConditions(userId: string): Promise<bool
  */
 export async function updateLastActivity(userId: string): Promise<void> {
   try {
+    const supabase = await createServerSupabaseClient();
     const { error } = await supabase
       .from('users')
       .update({ last_activity: new Date().toISOString() })
@@ -227,6 +231,7 @@ export async function recordHeirDeathConfirmation(
     }
 
     // Get total number of active heirs who have accepted
+    const supabase = await createServerSupabaseClient();
     const { data: heirsData } = await supabase
       .from('heirs')
       .select('id')
@@ -270,6 +275,7 @@ export async function confirmTrustedContactDeath(
 ): Promise<{ success: boolean; triggered: boolean; message?: string }> {
   try {
     // Get the heir's user_id
+    const supabase = await createServerSupabaseClient();
     const { data: heirData } = await supabase
       .from('heirs')
       .select('user_id')

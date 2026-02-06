@@ -829,6 +829,7 @@ export type Database = {
         Returns: Json
       }
       generate_invitation_code: { Args: never; Returns: string }
+      get_heir_stats: { Args: { p_user_id: string }; Returns: Json }
       get_heir_vaults: {
         Args: { heir_uuid: string }
         Returns: {

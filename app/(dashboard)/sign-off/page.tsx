@@ -17,7 +17,8 @@ import { Label } from "@/components/ui/label"
 import { toast } from "@/lib/utils/toast"
 import { logger } from "@/lib/utils/logger"
 import { supabase } from "@/lib/supabase"
-import { getGlobalTrigger, deleteGlobalTrigger } from "@/lib/services/globalTriggerService"
+import { deleteGlobalTrigger } from "@/lib/services/globalTriggerService"
+import { userActions } from "@/app/actions/users"
 import { User } from "@supabase/supabase-js"
 import { LucideIcon } from "lucide-react"
 
@@ -125,7 +126,7 @@ export default function SignOffPage() {
         setInheritanceTriggered(triggered)
       }
 
-      const globalTrigger = await getGlobalTrigger(userId)
+      const globalTrigger = await userActions.getGlobalTriggerSettings(userId)
 
       if (globalTrigger) {
         let method = globalTrigger.global_trigger_method
@@ -158,7 +159,7 @@ export default function SignOffPage() {
     <div className="p-4 md:p-6 space-y-4 md:space-y-6 max-w-4xl mx-auto">
         {/* Show False Alarm Section if inheritance is triggered */}
         {inheritanceTriggered && user ? (
-          <FalseAlarmSection userId={user.id} />
+          <FalseAlarmSection />
         ) : (
           <>
             {/* Activation Toggle Card */}

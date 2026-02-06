@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase'
+import { createServerSupabaseClient } from '@/lib/supabase'
 import { logger } from '@/lib/utils/logger'
 
 /**
@@ -13,6 +13,7 @@ export async function sendFalseAlarmEmail(params: {
   try {
     const { heirEmail, heirName, ownerName } = params
 
+    const supabase = await createServerSupabaseClient()
     // Use Supabase Auth to send email
     // Note: Email template is configured in Supabase
     // Note: This requires proper email configuration in Supabase

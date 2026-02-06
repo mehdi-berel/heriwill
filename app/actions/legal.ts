@@ -1,6 +1,6 @@
 "use server"
 
-import { supabase } from '@/lib/supabase'
+import { createServerSupabaseClient } from '@/lib/supabase'
 import { logger } from '@/lib/utils/logger'
 import { Database } from '@/lib/database.types'
 
@@ -12,6 +12,7 @@ type LegalTemplateInsert = Database['public']['Tables']['legal']['Insert']
  */
 export async function getLegalTemplates(): Promise<LegalTemplate[]> {
   try {
+    const supabase = await createServerSupabaseClient()
     const query = supabase
       .from('legal')
       .select('*')
@@ -38,6 +39,7 @@ export async function getLegalTemplates(): Promise<LegalTemplate[]> {
  */
 export async function getLegalTemplate(templateId: string): Promise<LegalTemplate | null> {
   try {
+    const supabase = await createServerSupabaseClient()
     const { data, error } = await supabase
       .from('legal')
       .select('*')
@@ -71,6 +73,11 @@ export async function createLegalTemplate(
   }
 ): Promise<LegalTemplate | null> {
   try {
+    const supabase = await createServerSupabaseClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) throw new Error('Not authenticated')
+    if (userId !== user.id) throw new Error('Unauthorized: Cannot create template for another user')
+
     const { data, error } = await supabase
       .from('legal')
       .insert({
@@ -112,6 +119,11 @@ export async function createLegalDocumentFromTemplate(
   documentTitle: string
 ): Promise<{ vaultItemId: string | null; error?: string }> {
   try {
+    const supabase = await createServerSupabaseClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) throw new Error('Not authenticated')
+    if (userId !== user.id) throw new Error('Unauthorized: Cannot create document for another user')
+
     // 1. Get the template
     const template = await getLegalTemplate(templateId)
     if (!template) {
@@ -178,6 +190,11 @@ export async function updateLegalTemplate(
   updates: Partial<LegalTemplateInsert>
 ): Promise<boolean> {
   try {
+    const supabase = await createServerSupabaseClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) throw new Error('Not authenticated')
+    if (userId !== user.id) throw new Error('Unauthorized: Cannot update template for another user')
+
     const { error } = await supabase
       .from('legal')
       .update({
@@ -206,6 +223,11 @@ export async function updateLegalTemplate(
  */
 export async function deleteLegalTemplate(templateId: string, userId: string): Promise<boolean> {
   try {
+    const supabase = await createServerSupabaseClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) throw new Error('Not authenticated')
+    if (userId !== user.id) throw new Error('Unauthorized: Cannot delete template for another user')
+
     const { error } = await supabase
       .from('legal')
       .delete()
@@ -229,11 +251,20 @@ export async function deleteLegalTemplate(templateId: string, userId: string): P
 /**
  * Get legal documents (vault items with type 'legal') for a user
  */
-export async function getUserLegalDocuments(userId: string, vaultId?: string): Promise<Array<Database['public']['Tables']['vault_items']['Row']>> {
+export async function getUserLegalDocuments(
+  userId: string,
+  vaultId?: string,
+  page = 1,
+  pageSize = 50
+): Promise<{ data: Array<Database['public']['Tables']['vault_items']['Row']>; total: number; page: number; pageSize: number }> {
   try {
+    const supabase = await createServerSupabaseClient()
+    const from = (page - 1) * pageSize
+    const to = from + pageSize - 1
+
     let query = supabase
       .from('vault_items')
-      .select('*')
+      .select('*', { count: 'exact' })
       .eq('user_id', userId)
       .eq('item_type', 'legal')
       .order('created_at', { ascending: false })
@@ -242,16 +273,16 @@ export async function getUserLegalDocuments(userId: string, vaultId?: string): P
       query = query.eq('vault_id', vaultId)
     }
 
-    const { data, error } = await query
+    const { data, error, count } = await query.range(from, to)
 
     if (error) {
       logger.error('Error fetching legal documents', error, { userId, vaultId })
-      return []
+      return { data: [], total: 0, page, pageSize }
     }
 
-    return data || []
+    return { data: data || [], total: count ?? 0, page, pageSize }
   } catch (error) {
     logger.error('Error fetching legal documents', error, { userId, vaultId })
-    return []
+    return { data: [], total: 0, page, pageSize }
   }
 }

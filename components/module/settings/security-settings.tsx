@@ -8,6 +8,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Key, AlertTriangle } from "lucide-react"
 import { logger } from "@/lib/utils/logger"
 import { toast } from "@/lib/utils/toast"
+import { userActions } from "@/app/actions/users"
+import { supabase } from "@/lib/supabase"
 
 export function SecuritySettings() {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
@@ -22,22 +24,7 @@ export function SecuritySettings() {
 
     setIsDeleting(true)
     try {
-      const { supabase } = await import('@/lib/supabase')
-      const { data: { user } } = await supabase.auth.getUser()
-      
-      if (!user) {
-        throw new Error('Not authenticated')
-      }
-
-      // Call delete account API
-      const response = await fetch('/api/user/delete-account', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' }
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to delete account')
-      }
+      await userActions.deleteAccount(deleteConfirmText)
 
       // Sign out and redirect
       await supabase.auth.signOut()

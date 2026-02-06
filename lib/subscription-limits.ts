@@ -1,4 +1,4 @@
-import { supabase } from './supabase'
+import { createServerSupabaseClient } from './supabase'
 import { logger } from './utils/logger'
 
 export interface SubscriptionLimits {
@@ -31,6 +31,7 @@ export const SUBSCRIPTION_LIMITS: Record<'free' | 'premium' | 'pro', Subscriptio
 
 export async function checkVaultLimit(userId: string): Promise<{ canCreate: boolean; currentCount: number; limit: number; tier: string }> {
   try {
+    const supabase = await createServerSupabaseClient()
     // Get user's subscription tier
     const { data: userData } = await supabase
       .from('users')
@@ -64,6 +65,7 @@ export async function checkVaultLimit(userId: string): Promise<{ canCreate: bool
 
 export async function checkHeirLimit(userId: string): Promise<{ canCreate: boolean; currentCount: number; limit: number; tier: string }> {
   try {
+    const supabase = await createServerSupabaseClient()
     // Get user's subscription tier
     const { data: userData } = await supabase
       .from('users')
@@ -103,6 +105,7 @@ export async function checkStorageLimit(userId: string, additionalSizeBytes: num
   remainingGB: number
 }> {
   try {
+    const supabase = await createServerSupabaseClient()
     // Get user's subscription tier
     const { data: userData } = await supabase
       .from('users')

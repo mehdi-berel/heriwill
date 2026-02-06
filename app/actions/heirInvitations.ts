@@ -366,24 +366,43 @@ export async function getPendingInvitations() {
   
   logger.info('Sanitized email for comparison', { original: user.email, sanitized: sanitizedUserEmail })
 
-  // Get invitations where user's email matches (pending) OR where heir_user_id matches (accepted)
-  const { data: heirs, error } = await supabase
+  // Query 1: Get pending invitations where user's email matches
+  const { data: pendingByEmail, error: error1 } = await supabase
     .from('heirs')
     .select('*, users!heirs_user_id_fkey(full_name, email)')
-    .or(`and(email_encrypted.eq.${sanitizedUserEmail},invitation_status.eq.pending),and(heir_user_id.eq.${user.id},invitation_status.eq.accepted)`)
+    .eq('email_encrypted', sanitizedUserEmail)
+    .eq('invitation_status', 'pending')
     .order('created_at', { ascending: false })
 
-  if (error) {
-    logger.error('Error fetching invitations', error, { 
-      errorCode: error.code,
-      errorMessage: error.message 
-    })
-    return []
+  if (error1) {
+    logger.error('Error fetching pending invitations by email', error1)
   }
 
-  logger.info('Invitations fetched', { count: heirs?.length || 0 })
+  // Query 2: Get accepted invitations where heir_user_id matches
+  const { data: acceptedByUserId, error: error2 } = await supabase
+    .from('heirs')
+    .select('*, users!heirs_user_id_fkey(full_name, email)')
+    .eq('heir_user_id', user.id)
+    .eq('invitation_status', 'accepted')
+    .order('created_at', { ascending: false })
 
-  return heirs || []
+  if (error2) {
+    logger.error('Error fetching accepted invitations by user_id', error2)
+  }
+
+  // Combine results and remove duplicates
+  const allInvitations = [...(pendingByEmail || []), ...(acceptedByUserId || [])]
+  const uniqueInvitations = allInvitations.filter((inv, index, self) =>
+    index === self.findIndex((t) => t.id === inv.id)
+  )
+
+  logger.info('Invitations fetched', { 
+    pendingCount: pendingByEmail?.length || 0,
+    acceptedCount: acceptedByUserId?.length || 0,
+    totalUnique: uniqueInvitations.length 
+  })
+
+  return uniqueInvitations
 }
 
 /**

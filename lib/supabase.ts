@@ -1,5 +1,6 @@
 import { createBrowserClient } from '@supabase/ssr'
 import { createServerClient } from '@supabase/ssr'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import type { Database } from './database.types'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -53,6 +54,21 @@ export async function createServerSupabaseClient(): Promise<SupabaseClient> {
       },
     }
   )
+}
+
+// Service role client for admin operations (server-only, never expose to client)
+export function createServiceRoleClient() {
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!serviceRoleKey) {
+    throw new Error('Missing SUPABASE_SERVICE_ROLE_KEY environment variable')
+  }
+
+  return createSupabaseClient<Database>(supabaseUrl!, serviceRoleKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  })
 }
 
 // Legacy export for backward compatibility (browser client)

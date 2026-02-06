@@ -21,6 +21,8 @@ import {
 import { logger } from "@/lib/utils/logger"
 import { toast } from "@/lib/utils/toast"
 import { supabase } from "@/lib/supabase"
+import { removeSuccessorRole } from "@/app/actions/heirs"
+import { confirmDeathAsHeir, confirmDeathAsTrustedContact } from "@/app/actions/inheritance"
 
 interface Successor {
   id: string
@@ -138,36 +140,23 @@ export function SuccessorCard({
   const handleConfirmDeath = async () => {
     setConfirming(true)
     try {
-      const endpoint = isTrustedContact ? '/api/confirm-death/trusted-contact' : '/api/confirm-death/heir'
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          heirId: successor.id,
-          ownerUserId,
-          confirmed: true
-        })
-      })
+      const result = isTrustedContact
+        ? await confirmDeathAsTrustedContact(successor.id, ownerUserId)
+        : await confirmDeathAsHeir(successor.id, ownerUserId, true)
 
-      const data = await response.json()
+      toast.success(result.message || 'Death confirmation submitted successfully')
+      setShowConfirmModal(false)
 
-      if (response.ok && data.success) {
-        toast.success(data.message || 'Death confirmation submitted successfully')
-        setShowConfirmModal(false)
-        
-        // Update local state
-        setDeathNotification(prev => ({
-          ...prev,
-          confirmedHeirs: prev.confirmedHeirs + 1,
-          confirmationProgress: prev.totalHeirs > 0 ? ((prev.confirmedHeirs + 1) / prev.totalHeirs) * 100 : 0,
-          alreadyConfirmed: true
-        }))
-        
-        if (data.triggered) {
-          toast.info('Inheritance plan has been triggered')
-        }
-      } else {
-        toast.error(data.message || 'Failed to confirm death')
+      // Update local state
+      setDeathNotification(prev => ({
+        ...prev,
+        confirmedHeirs: prev.confirmedHeirs + 1,
+        confirmationProgress: prev.totalHeirs > 0 ? ((prev.confirmedHeirs + 1) / prev.totalHeirs) * 100 : 0,
+        alreadyConfirmed: true
+      }))
+
+      if (result.triggered) {
+        toast.info('Inheritance plan has been triggered')
       }
     } catch (error) {
       logger.error('Error confirming death', error)
@@ -180,24 +169,9 @@ export function SuccessorCard({
   const handleDenyDeath = async () => {
     setConfirming(true)
     try {
-      const response = await fetch('/api/confirm-death/heir', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          heirId: successor.id,
-          ownerUserId,
-          confirmed: false
-        })
-      })
-
-      const data = await response.json()
-
-      if (response.ok && data.success) {
-        toast.success(data.message || 'Response recorded')
-        setDeathNotification(prev => ({ ...prev, hasNotification: false }))
-      } else {
-        toast.error(data.message || 'Failed to process response')
-      }
+      const result = await confirmDeathAsHeir(successor.id, ownerUserId, false)
+      toast.success(result.message || 'Response recorded')
+      setDeathNotification(prev => ({ ...prev, hasNotification: false }))
     } catch (error) {
       logger.error('Error denying death', error)
       toast.error('Failed to submit response')
@@ -209,22 +183,11 @@ export function SuccessorCard({
   const handleRemoveSuccessor = async () => {
     setRemoving(true)
     try {
-      const response = await fetch('/api/successor/remove', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ heirId: successor.id })
-      })
-
-      const data = await response.json()
-
-      if (response.ok && data.success) {
-        toast.success('Successor role removed successfully')
-        setShowRemoveModal(false)
-        if (onRemove) {
-          onRemove()
-        }
-      } else {
-        toast.error(data.message || 'Failed to remove successor role')
+      await removeSuccessorRole(successor.id)
+      toast.success('Successor role removed successfully')
+      setShowRemoveModal(false)
+      if (onRemove) {
+        onRemove()
       }
     } catch (error) {
       logger.error('Error removing successor', error)

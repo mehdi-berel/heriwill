@@ -60,8 +60,8 @@ export function NotificationList({ onNotificationRead }: NotificationListProps) 
 
   const loadNotifications = async () => {
     try {
-      const data = await getUserNotifications(false, false)
-      setNotifications(data)
+      const result = await getUserNotifications(false, false)
+      setNotifications(result.data)
     } catch (error) {
       logger.error('Error loading notifications', error)
     } finally {
