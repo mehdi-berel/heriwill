@@ -2,6 +2,7 @@
 
 import { createServerSupabaseClient, createServiceRoleClient } from '@/lib/supabase'
 import type { Database } from '@/lib/database.types'
+import { logger } from '@/lib/utils/logger'
 
 type HeirRow = Database['public']['Tables']['heirs']['Row']
 type HeirUpdate = Database['public']['Tables']['heirs']['Update']
@@ -162,23 +163,33 @@ export async function getHeirById(heirId: string) {
 
 // Get All Heirs for User
 export async function getAllHeirs(userId: string, page = 1, pageSize = 50): Promise<{ data: HeirRow[]; total: number; page: number; pageSize: number }> {
-    const supabase = await createServerSupabaseClient()
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) throw new Error('Not authenticated')
-    if (userId !== user.id) throw new Error('Unauthorized')
+    const emptyResult = { data: [] as HeirRow[], total: 0, page, pageSize }
 
-    const from = (page - 1) * pageSize
-    const to = from + pageSize - 1
+    try {
+      const supabase = await createServerSupabaseClient()
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+      if (authError || !user) return emptyResult
+      if (userId !== user.id) return emptyResult
 
-    const { data, error, count } = await supabase
-      .from('heirs')
-      .select('*', { count: 'exact' })
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
-      .range(from, to)
+      const from = (page - 1) * pageSize
+      const to = from + pageSize - 1
 
-  if (error) throw new Error('Failed to fetch heirs')
-  return { data: data || [], total: count ?? 0, page, pageSize }
+      const { data, error, count } = await supabase
+        .from('heirs')
+        .select('*', { count: 'exact' })
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .range(from, to)
+
+      if (error) {
+        logger.error('Error fetching heirs', error, { userId })
+        return emptyResult
+      }
+      return { data: data || [], total: count ?? 0, page, pageSize }
+    } catch (error) {
+      logger.error('Error in getAllHeirs', error, { userId })
+      return emptyResult
+    }
 }
 
 // Invitation Management
@@ -390,62 +401,74 @@ export async function removeSuccessorRole(heirId: string) {
 
 // Get Death Notification Status for a successor card
 export async function getDeathNotificationStatus(ownerUserId: string, heirId: string) {
-  const supabase = await createServerSupabaseClient()
-  const { data: { user }, error: authError } = await supabase.auth.getUser()
-  if (authError || !user) throw new Error('Not authenticated')
-
-  const { data: ownerData } = await supabase
-    .from('users')
-    .select('global_trigger_method, global_trigger_settings')
-    .eq('id', ownerUserId)
-    .single()
-
-  if (ownerData?.global_trigger_method !== 'heir_notification') {
-    return {
-      hasNotification: false,
-      totalHeirs: 0,
-      confirmedHeirs: 0,
-      confirmationProgress: 0,
-      alreadyConfirmed: false
-    }
+  const defaultResult = {
+    hasNotification: false,
+    totalHeirs: 0,
+    confirmedHeirs: 0,
+    confirmationProgress: 0,
+    alreadyConfirmed: false
   }
 
-  const settings = ownerData.global_trigger_settings as { confirmed_heir_ids?: string[] } | null
-  const confirmedHeirIds = settings?.confirmed_heir_ids || []
+  try {
+    const supabase = await createServerSupabaseClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) return defaultResult
 
-  const { data: heirsData } = await supabase
-    .from('heirs')
-    .select('id')
-    .eq('user_id', ownerUserId)
-    .eq('is_active', true)
-    .eq('has_accepted', true)
+    const { data: ownerData } = await supabase
+      .from('users')
+      .select('global_trigger_method, global_trigger_settings')
+      .eq('id', ownerUserId)
+      .single()
 
-  const totalHeirs = heirsData?.length || 0
-  const confirmedHeirs = confirmedHeirIds.length
+    if (ownerData?.global_trigger_method !== 'heir_notification') {
+      return defaultResult
+    }
 
-  return {
-    hasNotification: true,
-    totalHeirs,
-    confirmedHeirs,
-    confirmationProgress: totalHeirs > 0 ? (confirmedHeirs / totalHeirs) * 100 : 0,
-    alreadyConfirmed: confirmedHeirIds.includes(heirId)
+    const settings = ownerData.global_trigger_settings as { confirmed_heir_ids?: string[] } | null
+    const confirmedHeirIds = settings?.confirmed_heir_ids || []
+
+    const { data: heirsData } = await supabase
+      .from('heirs')
+      .select('id')
+      .eq('user_id', ownerUserId)
+      .eq('is_active', true)
+      .eq('has_accepted', true)
+
+    const totalHeirs = heirsData?.length || 0
+    const confirmedHeirs = confirmedHeirIds.length
+
+    return {
+      hasNotification: true,
+      totalHeirs,
+      confirmedHeirs,
+      confirmationProgress: totalHeirs > 0 ? (confirmedHeirs / totalHeirs) * 100 : 0,
+      alreadyConfirmed: confirmedHeirIds.includes(heirId)
+    }
+  } catch (error) {
+    logger.error('Error in getDeathNotificationStatus', error, { ownerUserId, heirId })
+    return defaultResult
   }
 }
 
 // Check if a heir is the trusted contact for an owner
 export async function getOwnerTrustedContactStatus(ownerUserId: string, heirId: string) {
-  const supabase = await createServerSupabaseClient()
-  const { data: { user }, error: authError } = await supabase.auth.getUser()
-  if (authError || !user) throw new Error('Not authenticated')
+  try {
+    const supabase = await createServerSupabaseClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) return false
 
-  const { data: ownerData } = await supabase
-    .from('users')
-    .select('trusted_contact_heir_id')
-    .eq('id', ownerUserId)
-    .single()
+    const { data: ownerData } = await supabase
+      .from('users')
+      .select('trusted_contact_heir_id')
+      .eq('id', ownerUserId)
+      .single()
 
-  const owner = ownerData as { trusted_contact_heir_id?: string | null } | null
-  return owner?.trusted_contact_heir_id === heirId
+    const owner = ownerData as { trusted_contact_heir_id?: string | null } | null
+    return owner?.trusted_contact_heir_id === heirId
+  } catch (error) {
+    logger.error('Error in getOwnerTrustedContactStatus', error, { ownerUserId, heirId })
+    return false
+  }
 }
 
 // Get Heir Activities from audit logs
