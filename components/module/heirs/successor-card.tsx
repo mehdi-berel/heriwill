@@ -20,8 +20,7 @@ import {
 } from "lucide-react"
 import { logger } from "@/lib/utils/logger"
 import { toast } from "@/lib/utils/toast"
-import { supabase } from "@/lib/supabase"
-import { removeSuccessorRole } from "@/app/actions/heirs"
+import { removeSuccessorRole, getDeathNotificationStatus } from "@/app/actions/heirs"
 import { confirmDeathAsHeir, confirmDeathAsTrustedContact } from "@/app/actions/inheritance"
 
 interface Successor {
@@ -97,36 +96,8 @@ export function SuccessorCard({
   useEffect(() => {
     const checkDeathNotification = async () => {
       try {
-        const { data: ownerData } = await supabase
-          .from('users')
-          .select('global_trigger_method, global_trigger_settings')
-          .eq('id', ownerUserId)
-          .single()
-
-        if (ownerData?.global_trigger_method === 'heir_notification') {
-          const settings = ownerData.global_trigger_settings as { confirmed_heir_ids?: string[] } | null
-          const confirmedHeirIds = settings?.confirmed_heir_ids || []
-          
-          // Get total number of heirs
-          const { data: heirsData } = await supabase
-            .from('heirs')
-            .select('id')
-            .eq('user_id', ownerUserId)
-            .eq('is_active', true)
-            .eq('has_accepted', true)
-
-          const totalHeirs = heirsData?.length || 0
-          const confirmedHeirs = confirmedHeirIds.length
-          const alreadyConfirmed = confirmedHeirIds.includes(successor.id)
-
-          setDeathNotification({
-            hasNotification: true,
-            totalHeirs,
-            confirmedHeirs,
-            confirmationProgress: totalHeirs > 0 ? (confirmedHeirs / totalHeirs) * 100 : 0,
-            alreadyConfirmed
-          })
-        }
+        const status = await getDeathNotificationStatus(ownerUserId, successor.id)
+        setDeathNotification(status)
       } catch (error) {
         logger.error('Error checking death notification', error)
       } finally {

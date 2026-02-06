@@ -9,7 +9,7 @@ import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Save, X } from "lucide-react"
 import { supabase } from "@/lib/supabase"
-import { getGlobalTrigger, saveGlobalTrigger } from "@/lib/services/globalTriggerService"
+import { getGlobalTriggerSettings, updateGlobalTrigger } from "@/app/actions/users"
 import { logger } from "@/lib/utils/logger"
 import { toast } from "@/lib/utils/toast"
 
@@ -66,19 +66,20 @@ export function SignOffSettingsModal({
 
   const loadSettings = useCallback(async () => {
     try {
-      const globalTrigger = await getGlobalTrigger(userId)
+      const globalTrigger = await getGlobalTriggerSettings(userId)
 
       if (globalTrigger) {
-        const { global_trigger_settings, trusted_contact_heir_id, global_scheduled_date } = globalTrigger
+        const { trusted_contact_heir_id, global_scheduled_date } = globalTrigger
+        const settings = globalTrigger.global_trigger_settings as Record<string, unknown> | null
         
-        if (global_trigger_settings?.inactivity_days) {
-          setInactivityDays(global_trigger_settings.inactivity_days.toString())
+        if (settings?.inactivity_days) {
+          setInactivityDays(String(settings.inactivity_days))
         }
-        if (global_trigger_settings?.reminder_enabled) {
-          setReminderEnabled(global_trigger_settings.reminder_enabled)
+        if (settings?.reminder_enabled) {
+          setReminderEnabled(settings.reminder_enabled as boolean)
         }
-        if (global_trigger_settings?.reminder_days_before) {
-          setReminderDays(global_trigger_settings.reminder_days_before.toString())
+        if (settings?.reminder_days_before) {
+          setReminderDays(String(settings.reminder_days_before))
         }
         if (trusted_contact_heir_id) {
           setTrustedContactHeirId(trusted_contact_heir_id)
@@ -86,11 +87,11 @@ export function SignOffSettingsModal({
         if (global_scheduled_date) {
           setScheduledDate(new Date(global_scheduled_date))
         }
-        if (global_trigger_settings?.heir_notification_frequency) {
-          setHeirNotificationFrequency(global_trigger_settings.heir_notification_frequency.toString())
+        if (settings?.heir_notification_frequency) {
+          setHeirNotificationFrequency(String(settings.heir_notification_frequency))
         }
-        if (global_trigger_settings?.heir_verification_threshold) {
-          setHeirVerificationThreshold(global_trigger_settings.heir_verification_threshold.toString())
+        if (settings?.heir_verification_threshold) {
+          setHeirVerificationThreshold(String(settings.heir_verification_threshold))
         }
       }
     } catch (error) {
@@ -197,7 +198,12 @@ export function SignOffSettingsModal({
         }
       }
 
-      await saveGlobalTrigger(userId, settingsToSave as Parameters<typeof saveGlobalTrigger>[1])
+      await updateGlobalTrigger(userId, {
+        method: settingsToSave.global_trigger_method,
+        settings: settingsToSave.global_trigger_settings,
+        scheduledDate: settingsToSave.global_scheduled_date,
+        trustedContactHeirId: settingsToSave.trusted_contact_heir_id,
+      })
 
       toast.success('Sign-off settings saved successfully', `${methodTitle} has been configured`)
       onSave()

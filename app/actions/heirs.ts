@@ -1,6 +1,6 @@
 "use server"
 
-import { createServerSupabaseClient } from '@/lib/supabase'
+import { createServerSupabaseClient, createServiceRoleClient } from '@/lib/supabase'
 import type { Database } from '@/lib/database.types'
 
 type HeirRow = Database['public']['Tables']['heirs']['Row']
@@ -116,22 +116,25 @@ export async function deleteHeir(heirId: string) {
       throw new Error('Unauthorized: You do not own this heir')
     }
 
+    // Use service role client for foreign key cleanup to bypass RLS
+    const serviceClient = createServiceRoleClient()
+
     // Clear trusted_contact_heir_id if it references this heir
-    await supabase
+    await serviceClient
       .from('users')
       .update({ trusted_contact_heir_id: null })
       .eq('trusted_contact_heir_id', heirId)
 
     // Remove shared_vaults records for this heir
     if (existingHeir.heir_user_id) {
-      await supabase
+      await serviceClient
         .from('shared_vaults')
         .delete()
         .eq('shared_with_user_id', existingHeir.heir_user_id)
         .eq('owner_id', user.id)
     }
 
-    // Delete the heir record
+    // Delete the heir record using regular client (respects RLS)
     const { error } = await supabase
       .from('heirs')
       .delete()
@@ -329,6 +332,85 @@ export async function removeSuccessorRole(heirId: string) {
     .eq('heir_user_id', user.id)
 
   if (error) throw new Error(error.message)
+}
+
+// Get Death Notification Status for a successor card
+export async function getDeathNotificationStatus(ownerUserId: string, heirId: string) {
+  const supabase = await createServerSupabaseClient()
+
+  const { data: ownerData } = await supabase
+    .from('users')
+    .select('global_trigger_method, global_trigger_settings')
+    .eq('id', ownerUserId)
+    .single()
+
+  if (ownerData?.global_trigger_method !== 'heir_notification') {
+    return {
+      hasNotification: false,
+      totalHeirs: 0,
+      confirmedHeirs: 0,
+      confirmationProgress: 0,
+      alreadyConfirmed: false
+    }
+  }
+
+  const settings = ownerData.global_trigger_settings as { confirmed_heir_ids?: string[] } | null
+  const confirmedHeirIds = settings?.confirmed_heir_ids || []
+
+  const { data: heirsData } = await supabase
+    .from('heirs')
+    .select('id')
+    .eq('user_id', ownerUserId)
+    .eq('is_active', true)
+    .eq('has_accepted', true)
+
+  const totalHeirs = heirsData?.length || 0
+  const confirmedHeirs = confirmedHeirIds.length
+
+  return {
+    hasNotification: true,
+    totalHeirs,
+    confirmedHeirs,
+    confirmationProgress: totalHeirs > 0 ? (confirmedHeirs / totalHeirs) * 100 : 0,
+    alreadyConfirmed: confirmedHeirIds.includes(heirId)
+  }
+}
+
+// Check if a heir is the trusted contact for an owner
+export async function getOwnerTrustedContactStatus(ownerUserId: string, heirId: string) {
+  const supabase = await createServerSupabaseClient()
+
+  const { data: ownerData } = await supabase
+    .from('users')
+    .select('trusted_contact_heir_id')
+    .eq('id', ownerUserId)
+    .single()
+
+  const owner = ownerData as { trusted_contact_heir_id?: string | null } | null
+  return owner?.trusted_contact_heir_id === heirId
+}
+
+// Get Heir Activities from audit logs
+export async function getHeirActivities(heirId: string) {
+  const supabase = await createServerSupabaseClient()
+
+  const { data, error } = await supabase
+    .from('audit_logs')
+    .select('*')
+    .eq('resource_type', 'heir')
+    .eq('resource_id', heirId)
+    .order('created_at', { ascending: false })
+    .limit(20)
+
+  if (error) throw new Error(error.message)
+
+  return (data || []).map((activity: Record<string, unknown>) => ({
+    id: activity.id as string,
+    type: activity.action as string,
+    description: (activity.metadata as Record<string, unknown>)?.description as string || activity.action as string,
+    timestamp: activity.created_at as string,
+    metadata: activity.metadata as Record<string, unknown>
+  }))
 }
 
 // Helper Functions

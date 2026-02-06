@@ -9,7 +9,7 @@ import { Switch } from "@/components/ui/switch"
 import { Select, SelectItem } from "@/components/ui/select"
 import { Save, X } from "lucide-react"
 import { supabase } from "@/lib/supabase"
-import type { Database } from '@/lib/database.types'
+import { getGlobalTriggerSettings, updateGlobalTrigger } from "@/app/actions/users"
 import { logger } from "@/lib/utils/logger"
 import { toast } from "@/lib/utils/toast"
 
@@ -61,35 +61,32 @@ export function SignOffSettings({ method, userId, onSave, onCancel }: SignOffSet
 
   const loadSettings = useCallback(async () => {
     try {
-      const { data } = await supabase
-        .from('users')
-        .select('global_trigger_method, global_trigger_settings, global_scheduled_date, trusted_contact_heir_id')
-        .eq('id', userId)
-        .single()
+      const globalTrigger = await getGlobalTriggerSettings(userId)
 
-      if (data) {
-        const userData = data as Record<string, unknown>
-        const settings = userData.global_trigger_settings as Record<string, unknown> | null
+      if (globalTrigger) {
+        const { trusted_contact_heir_id, global_scheduled_date } = globalTrigger
+        const settings = globalTrigger.global_trigger_settings as Record<string, unknown> | null
+        
         if (settings?.inactivity_days) {
-          setInactivityDays(settings.inactivity_days.toString())
+          setInactivityDays(String(settings.inactivity_days))
         }
         if (settings?.reminder_enabled !== undefined) {
           setReminderEnabled(settings.reminder_enabled as boolean)
         }
         if (settings?.reminder_days_before) {
-          setReminderDays(settings.reminder_days_before.toString())
+          setReminderDays(String(settings.reminder_days_before))
         }
-        if (userData.trusted_contact_heir_id) {
-          setTrustedContactHeirId(userData.trusted_contact_heir_id as string)
+        if (trusted_contact_heir_id) {
+          setTrustedContactHeirId(trusted_contact_heir_id)
         }
-        if (userData.global_scheduled_date) {
-          setScheduledDate(new Date(userData.global_scheduled_date as string))
+        if (global_scheduled_date) {
+          setScheduledDate(new Date(global_scheduled_date))
         }
         if (settings?.heir_notification_frequency) {
-          setHeirNotificationFrequency(settings.heir_notification_frequency.toString())
+          setHeirNotificationFrequency(String(settings.heir_notification_frequency))
         }
         if (settings?.heir_verification_threshold) {
-          setHeirVerificationThreshold(settings.heir_verification_threshold.toString())
+          setHeirVerificationThreshold(String(settings.heir_verification_threshold))
         }
       }
     } catch (error) {
@@ -197,16 +194,12 @@ export function SignOffSettings({ method, userId, onSave, onCancel }: SignOffSet
         settingsToSave.global_trigger_settings = {}
       }
 
-      // Update the settings in users table
-      const { error } = await supabase
-        .from('users')
-        .update({
-          ...settingsToSave,
-          global_trigger_settings: settingsToSave.global_trigger_settings as unknown as Database['public']['Tables']['users']['Update']['global_trigger_settings']
-        })
-        .eq('id', userId)
-
-      if (error) throw error
+      await updateGlobalTrigger(userId, {
+        method: settingsToSave.global_trigger_method,
+        settings: settingsToSave.global_trigger_settings,
+        scheduledDate: settingsToSave.global_scheduled_date ?? undefined,
+        trustedContactHeirId: settingsToSave.trusted_contact_heir_id ?? undefined,
+      })
 
       onSave()
     } catch (error) {

@@ -369,7 +369,7 @@ export async function getPendingInvitations() {
   // Query 1: Get pending invitations where user's email matches
   const { data: pendingByEmail, error: error1 } = await supabase
     .from('heirs')
-    .select('*, users!heirs_user_id_fkey(full_name, email)')
+    .select('*')
     .eq('email_encrypted', sanitizedUserEmail)
     .eq('invitation_status', 'pending')
     .order('created_at', { ascending: false })
@@ -381,7 +381,7 @@ export async function getPendingInvitations() {
   // Query 2: Get accepted invitations where heir_user_id matches
   const { data: acceptedByUserId, error: error2 } = await supabase
     .from('heirs')
-    .select('*, users!heirs_user_id_fkey(full_name, email)')
+    .select('*')
     .eq('heir_user_id', user.id)
     .eq('invitation_status', 'accepted')
     .order('created_at', { ascending: false })
@@ -396,13 +396,29 @@ export async function getPendingInvitations() {
     index === self.findIndex((t) => t.id === inv.id)
   )
 
+  // Fetch owner user data separately to avoid RLS issues with JOINs
+  const invitationsWithOwnerData = await Promise.all(
+    uniqueInvitations.map(async (invitation) => {
+      const { data: ownerData } = await supabase
+        .from('users')
+        .select('full_name, email')
+        .eq('id', invitation.user_id)
+        .single()
+      
+      return {
+        ...invitation,
+        users: ownerData || { full_name: null, email: null }
+      }
+    })
+  )
+
   logger.info('Invitations fetched', { 
     pendingCount: pendingByEmail?.length || 0,
     acceptedCount: acceptedByUserId?.length || 0,
-    totalUnique: uniqueInvitations.length 
+    totalUnique: invitationsWithOwnerData.length 
   })
 
-  return uniqueInvitations
+  return invitationsWithOwnerData
 }
 
 /**

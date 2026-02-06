@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { ArrowLeft, Edit, Trash2, Users, Scale } from "lucide-react"
 import { supabase } from "@/lib/supabase"
-import { vaultActions, vaultItemActions } from "@/app/actions/vaults"
+import { updateVault, deleteVault, createVaultItem, updateVaultItem, deleteVaultItem, getVaultItems } from "@/app/actions/vaults"
 import { User } from "@supabase/supabase-js"
 import { toast } from "@/lib/utils/toast"
 import { logger } from "@/lib/utils/logger"
@@ -247,7 +247,7 @@ export default function VaultDetailPage() {
 
   const handleEditSubmit = async (formData: VaultFormData) => {
     try {
-      await vaultActions.updateVault(vaultId, formData)
+      await updateVault(vaultId, formData)
       
       if (user) {
         await loadVault(vaultId, user.id)
@@ -264,7 +264,7 @@ export default function VaultDetailPage() {
     if (!vault) return
 
     try {
-      await vaultActions.deleteVault(vault.id)
+      await deleteVault(vault.id)
       toast.success('Vault deleted successfully')
       router.push("/vaults")
     } catch (error) {
@@ -289,12 +289,16 @@ export default function VaultDetailPage() {
       })
 
       // Update vault with assigned heir IDs using server action
-      const updatedVault = await vaultActions.updateVault(vault.id, {
-        access_control: {
-          allowedHeirs: heirIds,
-          requireApproval: vault.access_control?.requireApproval || false
-        } as never
-      })
+      const updatedVault = await supabase
+        .from('vaults')
+        .update({
+          access_control: {
+            allowedHeirs: heirIds,
+            requireApproval: vault.access_control?.requireApproval || false
+          } as never
+        })
+        .eq('id', vaultId)
+        .single()
 
       logger.info('Vault updated successfully', { vaultId: vault.id, updatedVault })
 
@@ -336,7 +340,7 @@ export default function VaultDetailPage() {
       
       if (itemData.id) {
         // Update existing item
-        await vaultItemActions.updateVaultItem(itemData.id, {
+        await updateVaultItem(itemData.id, {
           title_encrypted: itemData.title,
           item_type: itemData.type as 'password' | 'document' | 'video' | 'image' | 'note' | 'crypto' | 'other' | 'legal' | 'assets',
           tags: itemData.tags,
@@ -355,7 +359,7 @@ export default function VaultDetailPage() {
         }
         
         // Create new item with vault owner's user_id (allows shared users to add items)
-        await vaultItemActions.createVaultItem({
+        await createVaultItem({
           user_id: vaultData.user_id,
           vault_id: vaultId,
           title_encrypted: itemData.title,
@@ -428,7 +432,7 @@ export default function VaultDetailPage() {
 
   const handleDeleteItem = async (itemId: string) => {
     try {
-      await vaultItemActions.deleteVaultItem(itemId)
+      await deleteVaultItem(itemId)
       await loadVaultItems(vaultId)
       toast.success('Item deleted successfully')
     } catch (error) {

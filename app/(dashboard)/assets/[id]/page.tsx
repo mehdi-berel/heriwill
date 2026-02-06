@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { ArrowLeft, Edit, Trash2 } from "lucide-react"
 import { supabase } from "@/lib/supabase"
-import { digitalAssetActions as physicalAssetActions } from "@/app/actions/assets"
+import { getDigitalAssetById, updateDigitalAsset, deleteDigitalAsset } from "@/app/actions/assets"
 import { toast } from "@/lib/utils/toast"
 import { logger } from "@/lib/utils/logger"
 
@@ -78,7 +78,7 @@ export default function AssetDetailPage() {
 
   const loadAsset = useCallback(async (id: string) => {
     try {
-      const data = await physicalAssetActions.getDigitalAssetById(id)
+      const data = await getDigitalAssetById(id)
       setAsset(data as Asset)
     } catch (error) {
       logger.error('Error loading asset', error, { assetId: id })
@@ -163,7 +163,7 @@ export default function AssetDetailPage() {
     if (!asset) return
 
     try {
-      const updatedAsset = await physicalAssetActions.updateDigitalAsset(asset.id, assetData as unknown as Record<string, unknown>)
+      const updatedAsset = await updateDigitalAsset(asset.id, assetData as unknown as Record<string, unknown>)
       setAsset(updatedAsset as Asset)
       setShowEditModal(false)
       toast.success('Asset updated successfully')
@@ -177,7 +177,7 @@ export default function AssetDetailPage() {
     if (!asset) return
 
     try {
-      await physicalAssetActions.deleteDigitalAsset(asset.id)
+      await deleteDigitalAsset(asset.id)
       toast.success('Asset deleted successfully')
       router.push("/assets")
     } catch (error) {
@@ -208,7 +208,7 @@ export default function AssetDetailPage() {
         // Add document reference to asset
         // Update asset with new document path
         const currentDocs = asset.documents || []
-        await physicalAssetActions.updateDigitalAsset(asset.id, { documents: [...currentDocs, filePath] })
+        await updateDigitalAsset(asset.id, { documents: [...currentDocs, filePath] })
       }
 
       // Reload asset to get updated documents
@@ -263,7 +263,7 @@ export default function AssetDetailPage() {
       // Remove reference from asset
       // Remove document from asset
       const currentDocs = asset.documents || []
-      await physicalAssetActions.updateDigitalAsset(asset.id, { documents: currentDocs.filter(d => d !== docPath) })
+      await updateDigitalAsset(asset.id, { documents: currentDocs.filter(d => d !== docPath) })
 
       // Reload asset
       await loadAsset(asset.id)

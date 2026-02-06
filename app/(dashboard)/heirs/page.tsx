@@ -22,7 +22,7 @@ import {
   acceptHeirInvitation, 
   rejectHeirInvitation 
 } from "@/app/actions/heirInvitations"
-import { updateHeir, deleteHeir } from "@/app/actions/heirs"
+import { createHeir, updateHeir, deleteHeir, getAllHeirs, getOwnerTrustedContactStatus } from "@/app/actions/heirs"
 
 interface Heir {
   id: string
@@ -77,18 +77,8 @@ export default function HeirsPage() {
 
   const loadHeirs = useCallback(async (userId: string) => {
     try {
-      const { data, error } = await supabase
-        .from('heirs')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-
-      if (error) {
-        logger.error('Error loading heirs', error, { userId })
-        return
-      }
-
-      setHeirs((data || []) as Heir[])
+      const result = await getAllHeirs(userId)
+      setHeirs((result.data || []) as Heir[])
     } catch (error) {
       logger.error('Error loading heirs', error, { userId })
       toast.error('Failed to load heirs', 'Please refresh the page')
@@ -106,15 +96,8 @@ export default function HeirsPage() {
       
       for (const invitation of acceptedInvitations) {
         if (invitation.user_id) {
-          // Check if this heir is the trusted contact for the owner
-          const { data: ownerData } = await supabase
-            .from('users')
-            .select('trusted_contact_heir_id')
-            .eq('id', invitation.user_id)
-            .single()
-          
-          const owner = ownerData as { trusted_contact_heir_id?: string | null } | null
-          if (owner && owner.trusted_contact_heir_id === invitation.id) {
+          const isTrusted = await getOwnerTrustedContactStatus(invitation.user_id, invitation.id)
+          if (isTrusted) {
             trustedMap[invitation.id] = true
           }
         }
@@ -168,52 +151,18 @@ export default function HeirsPage() {
     try {
       logger.info('Starting heir creation', { userId: user.id, email: formData.email })
       
-      // Generate unique invitation code
-      const generateCode = () => {
-        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
-        let code = ''
-        for (let i = 0; i < 8; i++) {
-          if (i === 4) code += '-'
-          else code += chars.charAt(Math.floor(Math.random() * chars.length))
-        }
-        return code
-      }
-      
-      const invitationCode = generateCode()
       const expirationDate = new Date()
       expirationDate.setDate(expirationDate.getDate() + 7)
-      
-      // Direct insert like vaults do
-      const { data: newHeir, error } = await supabase
-        .from('heirs')
-        .insert({
-          user_id: user.id,
-          full_name_encrypted: formData.full_name,
-          email_encrypted: formData.email.toLowerCase().trim(),
-          phone_encrypted: formData.phone || null,
-          relationship: formData.relationship || null,
-          heir_type: formData.heir_type || 'family',
-          invitation_code: invitationCode,
-          invitation_status: 'pending',
-          invitation_expires_at: expirationDate.toISOString(),
-          invited_at: new Date().toISOString(),
-          is_active: false,
-          has_accepted: false,
-          notify_on_activation: true,
-          notification_delay_days: 0,
-        })
-        .select()
-        .single()
 
-      if (error) {
-        logger.error('Database error creating heir', error, {
-          errorCode: error.code,
-          errorMessage: error.message,
-          errorDetails: error.details,
-          userId: user.id
-        })
-        throw new Error(`Failed to create heir: ${error.message}`)
-      }
+      const newHeir = await createHeir({
+        user_id: user.id,
+        full_name: formData.full_name,
+        email: formData.email.toLowerCase().trim(),
+        phone: formData.phone || null,
+        relationship: formData.relationship || null,
+        heir_type: formData.heir_type || 'family',
+        invitation_expires_at: expirationDate.toISOString(),
+      })
 
       logger.info('Heir created successfully', { heirId: newHeir.id })
       

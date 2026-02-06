@@ -31,7 +31,7 @@ export function Header() {
 
   const tierConfig = {
     free: {
-      label: 'Classic',
+      label: 'Free',
       icon: CheckCircle,
       className: 'bg-gray-700/50 text-gray-300 border-gray-600',
     },

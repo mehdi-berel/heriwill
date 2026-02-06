@@ -34,9 +34,8 @@ interface VaultItemData {
 }
 
 // Vault Management Actions
-export const vaultActions = {
-  // Create Vault
-  createVault: async (vaultData: VaultInsert) => {
+// Create Vault
+export async function createVault(vaultData: VaultInsert) {
     // Check vault limit
     if (vaultData.user_id) {
       const vaultLimitCheck = await checkVaultLimit(vaultData.user_id)
@@ -64,10 +63,10 @@ export const vaultActions = {
 
     if (error) throw new Error(error.message)
     return data
-  },
+}
 
-  // Update Vault
-  updateVault: async (vaultId: string, updateData: VaultUpdate) => {
+// Update Vault
+export async function updateVault(vaultId: string, updateData: VaultUpdate) {
     const supabase = await createServerSupabaseClient()
     
     // Get authenticated user
@@ -110,10 +109,10 @@ export const vaultActions = {
     
     logger.info('Vault updated successfully', { vaultId, userId: user.id })
     return data
-  },
+}
 
-  // Delete Vault
-  deleteVault: async (vaultId: string) => {
+// Delete Vault
+export async function deleteVault(vaultId: string) {
     const supabase = await createServerSupabaseClient()
     
     // Get authenticated user
@@ -140,6 +139,18 @@ export const vaultActions = {
       throw new Error('You do not have permission to delete this vault')
     }
 
+    // Delete associated assets first (they have SET NULL on delete, so we need to delete them manually)
+    const { error: assetsError } = await supabase
+      .from('assets')
+      .delete()
+      .eq('vault_id', vaultId)
+
+    if (assetsError) {
+      logger.error('Error deleting vault assets', assetsError, { vaultId, userId: user.id })
+      // Continue with vault deletion even if assets deletion fails
+    }
+
+    // Delete the vault (vault_items and shared_vaults will cascade automatically)
     const { error } = await supabase
       .from('vaults')
       .delete()
@@ -152,10 +163,10 @@ export const vaultActions = {
     }
     
     logger.info('Vault deleted successfully', { vaultId, userId: user.id })
-  },
+}
 
-  // Get Vault by ID
-  getVaultById: async (vaultId: string) => {
+// Get Vault by ID
+export async function getVaultById(vaultId: string) {
     const supabase = await createServerSupabaseClient()
     const { data, error } = await supabase
       .from('vaults')
@@ -165,10 +176,10 @@ export const vaultActions = {
 
     if (error) throw new Error(error.message)
     return data
-  },
+}
 
-  // Get All Vaults for User
-  getAllVaults: async (userId: string, page = 1, pageSize = 50) => {
+// Get All Vaults for User
+export async function getAllVaults(userId: string, page = 1, pageSize = 50) {
     const supabase = await createServerSupabaseClient()
     const from = (page - 1) * pageSize
     const to = from + pageSize - 1
@@ -182,10 +193,10 @@ export const vaultActions = {
 
     if (error) throw new Error(error.message)
     return { data: data || [], total: count ?? 0, page, pageSize }
-  },
+}
 
-  // Update Last Accessed
-  updateLastAccessed: async (vaultId: string) => {
+// Update Last Accessed
+export async function updateLastAccessed(vaultId: string) {
     const supabase = await createServerSupabaseClient()
     const { data } = await supabase
       .from('vaults')
@@ -195,17 +206,17 @@ export const vaultActions = {
       .single()
 
     return data
-  },
+}
 
-  // Toggle Favorite - Note: is_favorite column doesn't exist in vaults table
-  toggleFavorite: async (vaultId: string, isFavorite: boolean) => {
+// Toggle Favorite - Note: is_favorite column doesn't exist in vaults table
+export async function toggleFavorite(vaultId: string, isFavorite: boolean) {
     // This function is deprecated as is_favorite doesn't exist in the vaults schema
     logger.warn('toggleFavorite is deprecated - is_favorite column does not exist')
     return { id: vaultId, is_favorite: isFavorite }
-  },
+}
 
-  // Lock/Unlock Vault
-  toggleLock: async (vaultId: string, isLocked: boolean) => {
+// Lock/Unlock Vault
+export async function toggleLock(vaultId: string, isLocked: boolean) {
     const supabase = await createServerSupabaseClient()
     const { data } = await supabase
       .from('vaults')
@@ -215,10 +226,10 @@ export const vaultActions = {
       .single()
 
     return data
-  },
+}
 
-  // Share/Unshare Vault
-  toggleShare: async (vaultId: string, isShared: boolean) => {
+// Share/Unshare Vault
+export async function toggleShare(vaultId: string, isShared: boolean) {
     const supabase = await createServerSupabaseClient()
     const { data } = await supabase
       .from('vaults')
@@ -228,11 +239,11 @@ export const vaultActions = {
       .single()
 
     return data
-  },
+}
 
-  // Get Vault Statistics
-  getVaultStats: async (userId: string) => {
-    const { data: vaults } = await vaultActions.getAllVaults(userId, 1, 1000)
+// Get Vault Statistics
+export async function getVaultStats(userId: string) {
+    const { data: vaults } = await getAllVaults(userId, 1, 1000)
     
     const stats = {
       totalVaults: vaults.length,
@@ -244,11 +255,11 @@ export const vaultActions = {
     }
 
     return stats
-  },
+}
 
-  // Search and Filter
-  searchVaults: async (userId: string, searchTerm: string) => {
-    const { data: vaults } = await vaultActions.getAllVaults(userId, 1, 1000)
+// Search and Filter
+export async function searchVaults(userId: string, searchTerm: string) {
+    const { data: vaults } = await getAllVaults(userId, 1, 1000)
     
     const filteredVaults = vaults.filter((vault: VaultRow) =>
       vault.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -256,28 +267,27 @@ export const vaultActions = {
     )
 
     return filteredVaults
-  },
+}
 
-  // Filter by Category
-  getVaultsByCategory: async (userId: string, category: string) => {
-    const { data: vaults } = await vaultActions.getAllVaults(userId, 1, 1000)
+// Filter by Category
+export async function getVaultsByCategory(userId: string, category: string) {
+    const { data: vaults } = await getAllVaults(userId, 1, 1000)
     
     return vaults.filter((vault: VaultRow) => vault.category === category)
-  },
+}
 
-  // Filter by Status - removed getFavoriteVaults and getEncryptedVaults as these properties don't exist on vaults table
+// Filter by Status - removed getFavoriteVaults and getEncryptedVaults as these properties don't exist on vaults table
 
-  getSharedVaults: async (userId: string) => {
-    const { data: vaults } = await vaultActions.getAllVaults(userId, 1, 1000)
+// Get Shared Vaults
+export async function getSharedVaults(userId: string) {
+    const { data: vaults } = await getAllVaults(userId, 1, 1000)
     
     return vaults.filter((vault: VaultRow) => vault.is_shared)
-  }
 }
 
 // Vault Items Actions
-export const vaultItemActions = {
-  // Create Vault Item
-  createVaultItem: async (itemData: VaultItemData) => {
+// Create Vault Item
+export async function createVaultItem(itemData: VaultItemData) {
     const supabase = await createServerSupabaseClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) throw new Error('Not authenticated')
@@ -318,10 +328,10 @@ export const vaultItemActions = {
 
     if (error) throw new Error(error.message)
     return data
-  },
+}
 
-  // Update Vault Item
-  updateVaultItem: async (itemId: string, updateData: VaultItemUpdate) => {
+// Update Vault Item
+export async function updateVaultItem(itemId: string, updateData: VaultItemUpdate) {
     const supabase = await createServerSupabaseClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) throw new Error('Not authenticated')
@@ -355,10 +365,10 @@ export const vaultItemActions = {
 
     if (error) throw new Error(error.message)
     return data
-  },
+}
 
-  // Delete Vault Item
-  deleteVaultItem: async (itemId: string) => {
+// Delete Vault Item
+export async function deleteVaultItem(itemId: string) {
     const supabase = await createServerSupabaseClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) throw new Error('Not authenticated')
@@ -379,10 +389,10 @@ export const vaultItemActions = {
       .eq('user_id', user.id)
 
     if (error) throw new Error(error.message)
-  },
+}
 
-  // Get Vault Items
-  getVaultItems: async (vaultId: string, page = 1, pageSize = 50) => {
+// Get Vault Items
+export async function getVaultItems(vaultId: string, page = 1, pageSize = 50) {
     const supabase = await createServerSupabaseClient()
     const from = (page - 1) * pageSize
     const to = from + pageSize - 1
@@ -396,10 +406,10 @@ export const vaultItemActions = {
 
     if (error) throw new Error(error.message)
     return { data: data || [], total: count ?? 0, page, pageSize }
-  },
+}
 
-  // Get Vault Item by ID
-  getVaultItemById: async (itemId: string) => {
+// Get Vault Item by ID
+export async function getVaultItemById(itemId: string) {
     const supabase = await createServerSupabaseClient()
     const { data, error } = await supabase
       .from('vault_items')
@@ -409,11 +419,11 @@ export const vaultItemActions = {
 
     if (error) throw new Error(error.message)
     return data
-  },
+}
 
-  // Search Vault Items
-  searchVaultItems: async (vaultId: string, searchTerm: string) => {
-    const { data: items } = await vaultItemActions.getVaultItems(vaultId, 1, 1000)
+// Search Vault Items
+export async function searchVaultItems(vaultId: string, searchTerm: string) {
+    const { data: items } = await getVaultItems(vaultId, 1, 1000)
     
     const filteredItems = items.filter((item: VaultItemRow) =>
       item.title_encrypted?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -421,15 +431,14 @@ export const vaultItemActions = {
     )
 
     return filteredItems
-  },
+}
 
-  // Filter by Type
-  getVaultItemsByType: async (vaultId: string, type: string) => {
-    const { data: items } = await vaultItemActions.getVaultItems(vaultId, 1, 1000)
+// Filter by Type
+export async function getVaultItemsByType(vaultId: string, type: string) {
+    const { data: items } = await getVaultItems(vaultId, 1, 1000)
     
     return items.filter((item: VaultItemRow) => item.item_type === type)
-  },
-
-  // NOTE: updateVaultItemCount removed - item_count field doesn't exist in vaults table schema
-  // To get item counts, query vault_items table with count aggregation
 }
+
+// NOTE: updateVaultItemCount removed - item_count field doesn't exist in vaults table schema
+// To get item counts, query vault_items table with count aggregation

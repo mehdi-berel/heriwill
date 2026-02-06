@@ -6,6 +6,7 @@ import { HeirDetail } from "@/components/module/heirs/heir-detail"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft, Edit, Trash2 } from "lucide-react"
 import { supabase } from "@/lib/supabase"
+import { getHeirById, deleteHeir, revokeAccess, getHeirActivities } from "@/app/actions/heirs"
 import { logger } from "@/lib/utils/logger"
 import { toast } from "@/lib/utils/toast"
 
@@ -54,17 +55,9 @@ export default function HeirDetailPage() {
 
   const loadHeir = useCallback(async (id: string) => {
     try {
-      const { data, error } = await supabase
-        .from('heirs')
-        .select('*')
-        .eq('id', id)
-        .single()
-
-      if (error) throw error
+      const data = await getHeirById(id)
       if (!data) throw new Error('Heir not found')
 
-      // Map database fields to component interface
-      // Type assertion needed due to Supabase's dynamic typing
       const heirData = data as Record<string, unknown>
       const mappedHeir: Heir = {
         id: heirData.id as string,
@@ -98,29 +91,8 @@ export default function HeirDetailPage() {
 
   const loadHeirActivities = useCallback(async (id: string) => {
     try {
-      const { data, error } = await supabase
-        .from('audit_logs')
-        .select('*')
-        .eq('resource_type', 'heir')
-        .eq('resource_id', id)
-        .order('created_at', { ascending: false })
-        .limit(20)
-      
-      if (error) {
-        logger.error('Error fetching heir activities', error, { heirId: id })
-        setActivities([])
-        return
-      }
-      
-      const activities: HeirActivity[] = (data || []).map((activity: Record<string, unknown>) => ({
-        id: activity.id as string,
-        type: activity.action as HeirActivity['type'],
-        description: (activity.metadata as Record<string, unknown>)?.description as string || activity.action as string,
-        timestamp: activity.created_at as string,
-        metadata: activity.metadata as Record<string, unknown>
-      }))
-      
-      setActivities(activities)
+      const activities = await getHeirActivities(id)
+      setActivities(activities as HeirActivity[])
     } catch (error) {
       logger.error('Error loading heir activities', error, { heirId: id })
       setActivities([])
@@ -173,11 +145,7 @@ export default function HeirDetailPage() {
     }
 
     try {
-      await supabase
-        .from('heirs')
-        .delete()
-        .eq('id', heirId)
-      
+      await deleteHeir(heirId)
       router.push("/heirs")
     } catch (error) {
       logger.error('Error deleting heir', error, { heirId })
@@ -198,11 +166,7 @@ export default function HeirDetailPage() {
 
   const handleRevokeAccess = async () => {
     try {
-      await supabase
-        .from('heirs')
-        .update({ invitation_status: 'rejected' })
-        .eq('id', heirId)
-      
+      await revokeAccess(heirId)
       if (heir) {
         setHeir({ ...heir, invitation_status: 'rejected' })
       }

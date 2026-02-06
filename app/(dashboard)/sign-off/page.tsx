@@ -17,8 +17,7 @@ import { Label } from "@/components/ui/label"
 import { toast } from "@/lib/utils/toast"
 import { logger } from "@/lib/utils/logger"
 import { supabase } from "@/lib/supabase"
-import { deleteGlobalTrigger } from "@/lib/services/globalTriggerService"
-import { userActions } from "@/app/actions/users"
+import { getGlobalTriggerSettings, deleteGlobalTriggerSettings, getInheritanceStatus } from "@/app/actions/users"
 import { User } from "@supabase/supabase-js"
 import { LucideIcon } from "lucide-react"
 
@@ -114,19 +113,12 @@ export default function SignOffPage() {
   const loadSignOffSettings = async (userId: string) => {
     try {
       // Check if inheritance has been triggered
-      const { data: userData } = await supabase
-        .from('users')
-        .select('inheritance_triggered')
-        .eq('id', userId)
-        .single()
-      
-      if (userData) {
-        const userDataTyped = userData as { inheritance_triggered?: boolean }
-        const triggered = userDataTyped.inheritance_triggered || false
-        setInheritanceTriggered(triggered)
+      const inheritanceData = await getInheritanceStatus(userId)
+      if (inheritanceData) {
+        setInheritanceTriggered(inheritanceData.inheritance_triggered || false)
       }
 
-      const globalTrigger = await userActions.getGlobalTriggerSettings(userId)
+      const globalTrigger = await getGlobalTriggerSettings(userId)
 
       if (globalTrigger) {
         let method = globalTrigger.global_trigger_method
@@ -188,7 +180,7 @@ export default function SignOffPage() {
                         // Deactivate - delete the trigger
                         setSaving(true)
                         try {
-                          await deleteGlobalTrigger(user.id)
+                          await deleteGlobalTriggerSettings(user.id)
                           setIsActivated(false)
                           setActiveMethod(null)
                         } catch (error) {

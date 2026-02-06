@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Key, AlertTriangle } from "lucide-react"
 import { logger } from "@/lib/utils/logger"
 import { toast } from "@/lib/utils/toast"
-import { userActions } from "@/app/actions/users"
+import { deleteAccount } from "@/app/actions/users"
 import { supabase } from "@/lib/supabase"
 
 export function SecuritySettings() {
@@ -24,7 +24,7 @@ export function SecuritySettings() {
 
     setIsDeleting(true)
     try {
-      await userActions.deleteAccount(deleteConfirmText)
+      await deleteAccount(deleteConfirmText)
 
       // Sign out and redirect
       await supabase.auth.signOut()
