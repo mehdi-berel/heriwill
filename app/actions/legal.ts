@@ -259,6 +259,10 @@ export async function getUserLegalDocuments(
 ): Promise<{ data: Array<Database['public']['Tables']['vault_items']['Row']>; total: number; page: number; pageSize: number }> {
   try {
     const supabase = await createServerSupabaseClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) return { data: [], total: 0, page, pageSize }
+    if (userId !== user.id) return { data: [], total: 0, page, pageSize }
+
     const from = (page - 1) * pageSize
     const to = from + pageSize - 1
 

@@ -361,8 +361,13 @@ export async function getPendingInvitations() {
 
   logger.info('Fetching pending invitations for user', { userId: user.id, email: user.email })
 
+  if (!user.email) {
+    logger.warn('User has no email in getPendingInvitations', { userId: user.id })
+    return []
+  }
+
   // Sanitize user email to match how it's stored in database
-  const sanitizedUserEmail = sanitizeEmail(user.email || '')
+  const sanitizedUserEmail = sanitizeEmail(user.email)
   
   logger.info('Sanitized email for comparison', { original: user.email, sanitized: sanitizedUserEmail })
 

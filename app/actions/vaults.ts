@@ -36,32 +36,34 @@ interface VaultItemData {
 // Vault Management Actions
 // Create Vault
 export async function createVault(vaultData: VaultInsert) {
-    // Check vault limit
-    if (vaultData.user_id) {
-      const vaultLimitCheck = await checkVaultLimit(vaultData.user_id)
-      if (!vaultLimitCheck.canCreate) {
-        throw new Error(`Vault limit reached. You can create up to ${vaultLimitCheck.limit} vault(s) on your ${vaultLimitCheck.tier} plan. Upgrade to create more vaults.`)
-      }
+    const supabase = await createServerSupabaseClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) throw new Error('Not authenticated')
+    if (vaultData.user_id && vaultData.user_id !== user.id) throw new Error('Unauthorized')
 
-      // Check storage limit if vault has initial data
-      const vaultDataObj = (vaultData as { vault_data?: { size?: number } | null }).vault_data
-      const initialSize = vaultDataObj?.size || 0
-      if (initialSize > 0) {
-        const storageLimitCheck = await checkStorageLimit(vaultData.user_id, initialSize)
-        if (!storageLimitCheck.canUpload) {
-          throw new Error(`Storage limit exceeded. You're using ${storageLimitCheck.currentUsageGB}GB of ${storageLimitCheck.limitGB}GB. Upgrade to get more storage.`)
-        }
+    // Check vault limit
+    const vaultLimitCheck = await checkVaultLimit(user.id)
+    if (!vaultLimitCheck.canCreate) {
+      throw new Error(`Vault limit reached. You can create up to ${vaultLimitCheck.limit} vault(s) on your ${vaultLimitCheck.tier} plan. Upgrade to create more vaults.`)
+    }
+
+    // Check storage limit if vault has initial data
+    const vaultDataObj = (vaultData as { vault_data?: { size?: number } | null }).vault_data
+    const initialSize = vaultDataObj?.size || 0
+    if (initialSize > 0) {
+      const storageLimitCheck = await checkStorageLimit(user.id, initialSize)
+      if (!storageLimitCheck.canUpload) {
+        throw new Error(`Storage limit exceeded. You're using ${storageLimitCheck.currentUsageGB}GB of ${storageLimitCheck.limitGB}GB. Upgrade to get more storage.`)
       }
     }
 
-    const supabase = await createServerSupabaseClient()
     const { data, error } = await supabase
       .from('vaults')
-      .insert(vaultData)
+      .insert({ ...vaultData, user_id: user.id })
       .select()
       .single()
 
-    if (error) throw new Error(error.message)
+    if (error) throw new Error('Failed to create vault')
     return data
 }
 
@@ -104,7 +106,7 @@ export async function updateVault(vaultId: string, updateData: VaultUpdate) {
 
     if (error) {
       logger.error('Error updating vault', error, { vaultId, userId: user.id })
-      throw new Error(error.message)
+      throw new Error('Failed to update vault')
     }
     
     logger.info('Vault updated successfully', { vaultId, userId: user.id })
@@ -159,7 +161,7 @@ export async function deleteVault(vaultId: string) {
 
     if (error) {
       logger.error('Error deleting vault', error, { vaultId, userId: user.id })
-      throw new Error(error.message)
+      throw new Error('Failed to delete vault')
     }
     
     logger.info('Vault deleted successfully', { vaultId, userId: user.id })
@@ -168,40 +170,51 @@ export async function deleteVault(vaultId: string) {
 // Get Vault by ID
 export async function getVaultById(vaultId: string) {
     const supabase = await createServerSupabaseClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) throw new Error('Not authenticated')
+
     const { data, error } = await supabase
       .from('vaults')
       .select('*')
       .eq('id', vaultId)
       .single()
 
-    if (error) throw new Error(error.message)
+    if (error) throw new Error('Vault not found')
     return data
 }
 
 // Get All Vaults for User
 export async function getAllVaults(userId: string, page = 1, pageSize = 50) {
     const supabase = await createServerSupabaseClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) throw new Error('Not authenticated')
+    if (userId !== user.id) throw new Error('Unauthorized')
+
     const from = (page - 1) * pageSize
     const to = from + pageSize - 1
 
     const { data, error, count } = await supabase
       .from('vaults')
       .select('*', { count: 'exact' })
-      .eq('user_id', userId)
+      .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .range(from, to)
 
-    if (error) throw new Error(error.message)
+    if (error) throw new Error('Failed to fetch vaults')
     return { data: data || [], total: count ?? 0, page, pageSize }
 }
 
 // Update Last Accessed
 export async function updateLastAccessed(vaultId: string) {
     const supabase = await createServerSupabaseClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) throw new Error('Not authenticated')
+
     const { data } = await supabase
       .from('vaults')
       .update({ last_accessed: new Date().toISOString() })
       .eq('id', vaultId)
+      .eq('user_id', user.id)
       .select()
       .single()
 
@@ -218,10 +231,14 @@ export async function toggleFavorite(vaultId: string, isFavorite: boolean) {
 // Lock/Unlock Vault
 export async function toggleLock(vaultId: string, isLocked: boolean) {
     const supabase = await createServerSupabaseClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) throw new Error('Not authenticated')
+
     const { data } = await supabase
       .from('vaults')
       .update({ is_locked: isLocked })
       .eq('id', vaultId)
+      .eq('user_id', user.id)
       .select()
       .single()
 
@@ -231,10 +248,14 @@ export async function toggleLock(vaultId: string, isLocked: boolean) {
 // Share/Unshare Vault
 export async function toggleShare(vaultId: string, isShared: boolean) {
     const supabase = await createServerSupabaseClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) throw new Error('Not authenticated')
+
     const { data } = await supabase
       .from('vaults')
       .update({ is_shared: isShared })
       .eq('id', vaultId)
+      .eq('user_id', user.id)
       .select()
       .single()
 
@@ -326,7 +347,7 @@ export async function createVaultItem(itemData: VaultItemData) {
       .select()
       .single()
 
-    if (error) throw new Error(error.message)
+    if (error) throw new Error('Failed to create vault item')
     return data
 }
 
@@ -363,7 +384,7 @@ export async function updateVaultItem(itemId: string, updateData: VaultItemUpdat
       .select()
       .single()
 
-    if (error) throw new Error(error.message)
+    if (error) throw new Error('Failed to update vault item')
     return data
 }
 
@@ -388,12 +409,15 @@ export async function deleteVaultItem(itemId: string) {
       .eq('id', itemId)
       .eq('user_id', user.id)
 
-    if (error) throw new Error(error.message)
+    if (error) throw new Error('Failed to delete vault item')
 }
 
 // Get Vault Items
 export async function getVaultItems(vaultId: string, page = 1, pageSize = 50) {
     const supabase = await createServerSupabaseClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) throw new Error('Not authenticated')
+
     const from = (page - 1) * pageSize
     const to = from + pageSize - 1
 
@@ -404,20 +428,23 @@ export async function getVaultItems(vaultId: string, page = 1, pageSize = 50) {
       .order('created_at', { ascending: false })
       .range(from, to)
 
-    if (error) throw new Error(error.message)
+    if (error) throw new Error('Failed to fetch vault items')
     return { data: data || [], total: count ?? 0, page, pageSize }
 }
 
 // Get Vault Item by ID
 export async function getVaultItemById(itemId: string) {
     const supabase = await createServerSupabaseClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) throw new Error('Not authenticated')
+
     const { data, error } = await supabase
       .from('vault_items')
       .select('*')
       .eq('id', itemId)
       .single()
 
-    if (error) throw new Error(error.message)
+    if (error) throw new Error('Vault item not found')
     return data
 }
 

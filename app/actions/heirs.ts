@@ -52,7 +52,7 @@ export async function createHeir(heirData: HeirData) {
       .select()
       .single()
 
-  if (error) throw new Error(error.message)
+  if (error) throw new Error('Failed to create heir')
   return data
 }
 
@@ -88,7 +88,7 @@ export async function updateHeir(heirId: string, updateData: HeirUpdate) {
       .select()
       .single()
 
-  if (error) throw new Error(error.message)
+  if (error) throw new Error('Failed to update heir')
   return data
 }
 
@@ -141,53 +141,70 @@ export async function deleteHeir(heirId: string) {
       .eq('id', heirId)
       .eq('user_id', user.id)
 
-  if (error) throw new Error(error.message)
+  if (error) throw new Error('Failed to delete heir')
 }
 
 // Get Heir by ID
 export async function getHeirById(heirId: string) {
     const supabase = await createServerSupabaseClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) throw new Error('Not authenticated')
+
     const { data, error } = await supabase
       .from('heirs')
       .select('*')
       .eq('id', heirId)
       .single()
 
-  if (error) throw new Error(error.message)
+  if (error) throw new Error('Heir not found')
   return data
 }
 
 // Get All Heirs for User
 export async function getAllHeirs(userId: string, page = 1, pageSize = 50): Promise<{ data: HeirRow[]; total: number; page: number; pageSize: number }> {
     const supabase = await createServerSupabaseClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) throw new Error('Not authenticated')
+    if (userId !== user.id) throw new Error('Unauthorized')
+
     const from = (page - 1) * pageSize
     const to = from + pageSize - 1
 
     const { data, error, count } = await supabase
       .from('heirs')
       .select('*', { count: 'exact' })
-      .eq('user_id', userId)
+      .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .range(from, to)
 
-  if (error) throw new Error(error.message)
+  if (error) throw new Error('Failed to fetch heirs')
   return { data: data || [], total: count ?? 0, page, pageSize }
 }
 
 // Invitation Management
 export async function resendInvitation(heirId: string) {
-  const heir = await getHeirById(heirId)
-    if (!heir) throw new Error('Heir not found')
+  const supabase = await createServerSupabaseClient()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) throw new Error('Not authenticated')
+
+  // Verify ownership
+  const { data: existingHeir, error: fetchError } = await supabase
+    .from('heirs')
+    .select('user_id')
+    .eq('id', heirId)
+    .single()
+  if (fetchError || !existingHeir) throw new Error('Heir not found')
+  if (existingHeir.user_id !== user.id) throw new Error('Unauthorized')
 
     // TODO: Implement email sending service
     // await sendInvitationEmail(heir.email_encrypted, heir.invitation_code)
     
     // Update invitation status
-    const supabase = await createServerSupabaseClient()
     const { data } = await supabase
       .from('heirs')
       .update({ invitation_status: 'pending' })
       .eq('id', heirId)
+      .eq('user_id', user.id)
       .select()
       .single()
 
@@ -197,10 +214,23 @@ export async function resendInvitation(heirId: string) {
 // Revoke Access
 export async function revokeAccess(heirId: string) {
     const supabase = await createServerSupabaseClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) throw new Error('Not authenticated')
+
+    // Verify ownership
+    const { data: existingHeir, error: fetchError } = await supabase
+      .from('heirs')
+      .select('user_id')
+      .eq('id', heirId)
+      .single()
+    if (fetchError || !existingHeir) throw new Error('Heir not found')
+    if (existingHeir.user_id !== user.id) throw new Error('Unauthorized')
+
     const { data } = await supabase
       .from('heirs')
       .update({ invitation_status: 'rejected' })
       .eq('id', heirId)
+      .eq('user_id', user.id)
       .select()
       .single()
 
@@ -210,10 +240,23 @@ export async function revokeAccess(heirId: string) {
 // Update Verification Status
 export async function updateVerificationStatus(heirId: string, status: string) {
     const supabase = await createServerSupabaseClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) throw new Error('Not authenticated')
+
+    // Verify ownership
+    const { data: existingHeir, error: fetchError } = await supabase
+      .from('heirs')
+      .select('user_id')
+      .eq('id', heirId)
+      .single()
+    if (fetchError || !existingHeir) throw new Error('Heir not found')
+    if (existingHeir.user_id !== user.id) throw new Error('Unauthorized')
+
     const { data } = await supabase
       .from('heirs')
-      .update({ notification_status: status }) // mapped verification_status to notification_status or similar if needed, check DB
+      .update({ notification_status: status })
       .eq('id', heirId)
+      .eq('user_id', user.id)
       .select()
       .single()
 
@@ -223,9 +266,12 @@ export async function updateVerificationStatus(heirId: string, status: string) {
 // Get Heir Statistics
 export async function getHeirStats(userId: string) {
   const supabase = await createServerSupabaseClient()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) throw new Error('Not authenticated')
+  if (userId !== user.id) throw new Error('Unauthorized')
   
   // Single SQL query with aggregation instead of fetching all and filtering in JS
-  const { data, error } = await supabase.rpc('get_heir_stats', { p_user_id: userId })
+  const { data, error } = await supabase.rpc('get_heir_stats', { p_user_id: user.id })
   
   if (error) {
     // Fallback to old method if RPC doesn't exist yet
@@ -249,7 +295,7 @@ export async function getHeirStats(userId: string) {
   return data
 }
 
-// Search and Filter
+// Search and Filter (auth check delegated to getAllHeirs)
 export async function searchHeirs(userId: string, searchTerm: string) {
   const { data: heirs } = await getAllHeirs(userId, 1, 1000)
     
@@ -265,28 +311,36 @@ export async function searchHeirs(userId: string, searchTerm: string) {
 // Filter by Status
 export async function getHeirsByStatus(userId: string, status: string) {
   const supabase = await createServerSupabaseClient()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) throw new Error('Not authenticated')
+  if (userId !== user.id) throw new Error('Unauthorized')
+
   const { data, error } = await supabase
     .from('heirs')
     .select('*')
-    .eq('user_id', userId)
+    .eq('user_id', user.id)
     .eq('invitation_status', status)
     .order('created_at', { ascending: false })
   
-  if (error) throw new Error(error.message)
+  if (error) throw new Error('Failed to fetch heirs')
   return data || []
 }
 
 // Filter by Heir Type
 export async function getHeirsByType(userId: string, heirType: string) {
   const supabase = await createServerSupabaseClient()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) throw new Error('Not authenticated')
+  if (userId !== user.id) throw new Error('Unauthorized')
+
   const { data, error } = await supabase
     .from('heirs')
     .select('*')
-    .eq('user_id', userId)
+    .eq('user_id', user.id)
     .eq('heir_type', heirType)
     .order('created_at', { ascending: false })
   
-  if (error) throw new Error(error.message)
+  if (error) throw new Error('Failed to fetch heirs')
   return data || []
 }
 
@@ -331,12 +385,14 @@ export async function removeSuccessorRole(heirId: string) {
     .eq('id', heirId)
     .eq('heir_user_id', user.id)
 
-  if (error) throw new Error(error.message)
+  if (error) throw new Error('Failed to remove successor role')
 }
 
 // Get Death Notification Status for a successor card
 export async function getDeathNotificationStatus(ownerUserId: string, heirId: string) {
   const supabase = await createServerSupabaseClient()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) throw new Error('Not authenticated')
 
   const { data: ownerData } = await supabase
     .from('users')
@@ -379,6 +435,8 @@ export async function getDeathNotificationStatus(ownerUserId: string, heirId: st
 // Check if a heir is the trusted contact for an owner
 export async function getOwnerTrustedContactStatus(ownerUserId: string, heirId: string) {
   const supabase = await createServerSupabaseClient()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) throw new Error('Not authenticated')
 
   const { data: ownerData } = await supabase
     .from('users')
@@ -393,6 +451,8 @@ export async function getOwnerTrustedContactStatus(ownerUserId: string, heirId: 
 // Get Heir Activities from audit logs
 export async function getHeirActivities(heirId: string) {
   const supabase = await createServerSupabaseClient()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) throw new Error('Not authenticated')
 
   const { data, error } = await supabase
     .from('audit_logs')
@@ -402,7 +462,7 @@ export async function getHeirActivities(heirId: string) {
     .order('created_at', { ascending: false })
     .limit(20)
 
-  if (error) throw new Error(error.message)
+  if (error) throw new Error('Failed to fetch heir activities')
 
   return (data || []).map((activity: Record<string, unknown>) => ({
     id: activity.id as string,

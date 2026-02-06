@@ -22,7 +22,7 @@ export async function createNotary(notaryData: NotaryInsert) {
     .select()
     .single()
 
-  if (error) throw new Error(error.message)
+  if (error) throw new Error('Failed to create notary')
   return data
 }
 
@@ -49,7 +49,7 @@ export async function updateNotary(notaryId: string, updateData: NotaryUpdate) {
     .select()
     .single()
 
-  if (error) throw new Error(error.message)
+  if (error) throw new Error('Failed to update notary')
   return data
 }
 
@@ -74,58 +74,69 @@ export async function deleteNotary(notaryId: string) {
     .eq('id', notaryId)
     .eq('user_id', user.id)
 
-  if (error) throw new Error(error.message)
+  if (error) throw new Error('Failed to delete notary')
 }
 
 // Get Notary by ID
 export async function getNotaryById(notaryId: string): Promise<NotaryRow> {
   const supabase = await createServerSupabaseClient()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) throw new Error('Not authenticated')
+
   const { data, error } = await supabase
     .from('notaries')
     .select('*')
     .eq('id', notaryId)
+    .eq('user_id', user.id)
     .single()
 
-  if (error) throw new Error(error.message)
+  if (error) throw new Error('Notary not found')
   return data
 }
 
 // Get All Notaries for User
 export async function getAllNotaries(userId: string, page = 1, pageSize = 50): Promise<{ data: NotaryRow[]; total: number; page: number; pageSize: number }> {
   const supabase = await createServerSupabaseClient()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) throw new Error('Not authenticated')
+  if (userId !== user.id) throw new Error('Unauthorized')
+
   const from = (page - 1) * pageSize
   const to = from + pageSize - 1
 
   const { data, error, count } = await supabase
     .from('notaries')
     .select('*', { count: 'exact' })
-    .eq('user_id', userId)
+    .eq('user_id', user.id)
     .order('created_at', { ascending: false })
     .range(from, to)
 
-  if (error) throw new Error(error.message)
+  if (error) throw new Error('Failed to fetch notaries')
   return { data: data || [], total: count ?? 0, page, pageSize }
 }
 
 // Set Primary Notary
 export async function setPrimaryNotary(userId: string, notaryId: string) {
   const supabase = await createServerSupabaseClient()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) throw new Error('Not authenticated')
+  if (userId !== user.id) throw new Error('Unauthorized')
   
   // First, unset all primary notaries for this user
   await supabase
     .from('notaries')
     .update({ is_primary: false })
-    .eq('user_id', userId)
+    .eq('user_id', user.id)
 
   // Then set the selected notary as primary
   const { data, error } = await supabase
     .from('notaries')
     .update({ is_primary: true })
     .eq('id', notaryId)
-    .eq('user_id', userId)
+    .eq('user_id', user.id)
     .select()
     .single()
 
-  if (error) throw new Error(error.message)
+  if (error) throw new Error('Failed to set primary notary')
   return data
 }

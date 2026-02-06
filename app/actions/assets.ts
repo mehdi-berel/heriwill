@@ -45,7 +45,7 @@ export async function createDigitalAsset(assetData: DigitalAssetData) {
     .select()
     .single()
 
-  if (error) throw new Error(error.message)
+  if (error) throw new Error('Failed to create asset')
   return data
 }
 
@@ -75,7 +75,7 @@ export async function updateDigitalAsset(assetId: string, updateData: DigitalAss
     .select()
     .single()
 
-  if (error) throw new Error(error.message)
+  if (error) throw new Error('Failed to update asset')
   return data
 }
 
@@ -100,48 +100,60 @@ export async function deleteDigitalAsset(assetId: string) {
     .eq('id', assetId)
     .eq('user_id', user.id)
 
-  if (error) throw new Error(error.message)
+  if (error) throw new Error('Failed to delete asset')
 }
 
 // Get Digital Asset by ID
 export async function getDigitalAssetById(assetId: string) {
   const supabase = await createServerSupabaseClient()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) throw new Error('Not authenticated')
+
   const { data, error } = await supabase
     .from('assets')
     .select('*')
     .eq('id', assetId)
+    .eq('user_id', user.id)
     .single()
 
-  if (error) throw new Error(error.message)
+  if (error) throw new Error('Asset not found')
   return data
 }
 
 // Get All Digital Assets for User
 export async function getAllDigitalAssets(userId: string, page = 1, pageSize = 50): Promise<{ data: AssetRow[]; total: number; page: number; pageSize: number }> {
   const supabase = await createServerSupabaseClient()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) throw new Error('Not authenticated')
+  if (userId !== user.id) throw new Error('Unauthorized')
+
   const from = (page - 1) * pageSize
   const to = from + pageSize - 1
 
   const { data, error, count } = await supabase
     .from('assets')
     .select('*', { count: 'exact' })
-    .eq('user_id', userId)
+    .eq('user_id', user.id)
     .order('created_at', { ascending: false })
     .range(from, to)
 
-  if (error) throw new Error(error.message)
+  if (error) throw new Error('Failed to fetch assets')
   return { data: data || [], total: count ?? 0, page, pageSize }
 }
 
 // Update Asset Status
 export async function updateAssetStatus(assetId: string) {
   const supabase = await createServerSupabaseClient()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) throw new Error('Not authenticated')
+
   const { data } = await supabase
     .from('assets')
     .update({ 
       updated_at: new Date().toISOString()
     })
     .eq('id', assetId)
+    .eq('user_id', user.id)
     .select()
     .single()
 
@@ -151,12 +163,16 @@ export async function updateAssetStatus(assetId: string) {
 // Assign Beneficiary
 export async function assignBeneficiary(assetId: string) {
   const supabase = await createServerSupabaseClient()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) throw new Error('Not authenticated')
+
   const { data } = await supabase
     .from('assets')
     .update({ 
       updated_at: new Date().toISOString()
     })
     .eq('id', assetId)
+    .eq('user_id', user.id)
     .select()
     .single()
 
@@ -166,12 +182,16 @@ export async function assignBeneficiary(assetId: string) {
 // Update Instructions
 export async function updateInstructions(assetId: string) {
   const supabase = await createServerSupabaseClient()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) throw new Error('Not authenticated')
+
   const { data } = await supabase
     .from('assets')
     .update({ 
       updated_at: new Date().toISOString()
     })
     .eq('id', assetId)
+    .eq('user_id', user.id)
     .select()
     .single()
 
