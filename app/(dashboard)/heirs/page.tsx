@@ -16,11 +16,10 @@ import { User } from "@supabase/supabase-js"
 import { Badge } from "@/components/ui/badge"
 import { logger } from "@/lib/utils/logger"
 import { toast } from "@/lib/utils/toast"
-import { 
-  acceptHeirInvitation, 
-  rejectHeirInvitation 
-} from "@/app/actions/heirInvitations"
-import { createHeir, updateHeir, deleteHeir } from "@/app/actions/heirs"
+
+function generateInvitationCode(): string {
+  return Math.random().toString(36).substring(2, 10).toUpperCase()
+}
 
 interface Heir {
   id: string
@@ -225,15 +224,30 @@ export default function HeirsPage() {
       const expirationDate = new Date()
       expirationDate.setDate(expirationDate.getDate() + 7)
 
-      const newHeir = await createHeir({
-        user_id: user.id,
-        full_name: formData.full_name,
-        email: formData.email.toLowerCase().trim(),
-        phone: formData.phone || null,
-        relationship: formData.relationship || null,
-        heir_type: formData.heir_type || 'family',
-        invitation_expires_at: expirationDate.toISOString(),
-      })
+      const { data: newHeir, error } = await supabase
+        .from('heirs')
+        .insert({
+          user_id: user.id,
+          full_name_encrypted: formData.full_name,
+          email_encrypted: formData.email.toLowerCase().trim(),
+          phone_encrypted: formData.phone || null,
+          relationship: formData.relationship || null,
+          heir_type: formData.heir_type || 'family',
+          invitation_status: 'pending',
+          invitation_code: generateInvitationCode(),
+          invited_at: new Date().toISOString(),
+          invitation_expires_at: expirationDate.toISOString(),
+          notify_on_activation: true,
+          notification_delay_days: 0,
+          is_active: true
+        })
+        .select()
+        .single()
+
+      if (error) {
+        logger.error('Error creating heir', error, { userId: user.id })
+        throw new Error('Failed to create heir')
+      }
 
       logger.info('Heir created successfully', { heirId: newHeir.id })
       
@@ -247,10 +261,7 @@ export default function HeirsPage() {
       setShowForm(false)
       logger.error('Error adding heir', error, {
         formData: { full_name: formData.full_name, email: formData.email },
-        userId: user.id,
-        errorName: (error as Error).name,
-        errorMessage: (error as Error).message,
-        errorStack: (error as Error).stack
+        userId: user.id
       })
       
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
@@ -262,15 +273,23 @@ export default function HeirsPage() {
     if (!editingHeir) return
 
     try {
-      await updateHeir(editingHeir.id, {
-        full_name_encrypted: formData.full_name,
-        email_encrypted: formData.email,
-        phone_encrypted: formData.phone || null,
-        relationship: formData.relationship || null,
-        heir_type: formData.heir_type || 'family',
-        notification_delay_days: formData.notification_delay_days || 0,
-        is_active: formData.is_active !== undefined ? formData.is_active : true
-      })
+      const { error } = await supabase
+        .from('heirs')
+        .update({
+          full_name_encrypted: formData.full_name,
+          email_encrypted: formData.email,
+          phone_encrypted: formData.phone || null,
+          relationship: formData.relationship || null,
+          heir_type: formData.heir_type || 'family',
+          notification_delay_days: formData.notification_delay_days || 0,
+          is_active: formData.is_active !== undefined ? formData.is_active : true
+        })
+        .eq('id', editingHeir.id)
+
+      if (error) {
+        logger.error('Error updating heir', error, { heirId: editingHeir.id })
+        throw new Error('Failed to update heir')
+      }
 
       if (user) {
         await loadHeirs(user.id)
@@ -293,7 +312,15 @@ export default function HeirsPage() {
     if (!heirToDelete) return
 
     try {
-      await deleteHeir(heirToDelete)
+      const { error } = await supabase
+        .from('heirs')
+        .delete()
+        .eq('id', heirToDelete)
+
+      if (error) {
+        logger.error('Error deleting heir', error, { heirId: heirToDelete })
+        throw new Error('Failed to delete heir')
+      }
 
       if (user) {
         await loadHeirs(user.id)
@@ -317,10 +344,48 @@ export default function HeirsPage() {
   }
 
   const handleAcceptInvitation = async (invitationCode: string) => {
+    if (!user) return
     try {
-      await acceptHeirInvitation(invitationCode)
-      await loadReceivedInvitations(user?.id || '', user?.email ?? undefined)
-      await loadHeirs(user?.id || '')
+      // Validate the invitation code
+      const { data: heirRecord, error: fetchError } = await supabase
+        .from('heirs')
+        .select('*')
+        .eq('invitation_code', invitationCode)
+        .eq('invitation_status', 'pending')
+        .single()
+
+      if (fetchError || !heirRecord) {
+        toast.error('Invalid or expired invitation code')
+        return
+      }
+
+      // Prevent self-invitation
+      if (heirRecord.user_id === user.id) {
+        toast.error('You cannot be your own heir')
+        return
+      }
+
+      // Accept the invitation
+      const { error } = await supabase
+        .from('heirs')
+        .update({
+          heir_user_id: user.id,
+          has_accepted: true,
+          accepted_at: new Date().toISOString(),
+          invitation_status: 'accepted',
+          is_active: true,
+        })
+        .eq('invitation_code', invitationCode)
+        .eq('invitation_status', 'pending')
+
+      if (error) {
+        logger.error('Error accepting invitation', error)
+        throw new Error('Failed to accept invitation')
+      }
+
+      toast.success('Invitation accepted successfully')
+      await loadReceivedInvitations(user.id, user.email ?? undefined)
+      await loadHeirs(user.id)
     } catch (error) {
       logger.error('Error accepting invitation', error, { invitationCode })
       toast.error('Failed to accept invitation', 'Please try again')
@@ -328,9 +393,38 @@ export default function HeirsPage() {
   }
 
   const handleDeclineInvitation = async (invitationCode: string) => {
+    if (!user) return
     try {
-      await rejectHeirInvitation(invitationCode)
-      await loadReceivedInvitations(user?.id || '', user?.email ?? undefined)
+      // Find the invitation
+      const { data: heirRecord, error: fetchError } = await supabase
+        .from('heirs')
+        .select('*')
+        .eq('invitation_code', invitationCode)
+        .eq('invitation_status', 'pending')
+        .single()
+
+      if (fetchError || !heirRecord) {
+        toast.error('Invitation not found or already processed')
+        return
+      }
+
+      // Reject the invitation
+      const { error } = await supabase
+        .from('heirs')
+        .update({
+          invitation_status: 'rejected',
+          rejected_at: new Date().toISOString(),
+          is_active: false,
+        })
+        .eq('id', heirRecord.id)
+
+      if (error) {
+        logger.error('Error declining invitation', error)
+        throw new Error('Failed to decline invitation')
+      }
+
+      toast.success('Invitation declined')
+      await loadReceivedInvitations(user.id, user.email ?? undefined)
     } catch (error) {
       logger.error('Error declining invitation', error, { invitationCode })
       toast.error('Failed to decline invitation', 'Please try again')

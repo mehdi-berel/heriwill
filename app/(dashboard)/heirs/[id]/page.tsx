@@ -6,7 +6,6 @@ import { HeirDetail } from "@/components/module/heirs/heir-detail"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft, Edit, Trash2 } from "lucide-react"
 import { supabase } from "@/lib/supabase"
-import { deleteHeir, revokeAccess } from "@/app/actions/heirs"
 import { logger } from "@/lib/utils/logger"
 import { toast } from "@/lib/utils/toast"
 
@@ -166,7 +165,16 @@ export default function HeirDetailPage() {
     }
 
     try {
-      await deleteHeir(heirId)
+      const { error } = await supabase
+        .from('heirs')
+        .delete()
+        .eq('id', heirId)
+
+      if (error) {
+        logger.error('Error deleting heir', error, { heirId })
+        toast.error('Failed to delete heir', 'Please try again')
+        return
+      }
       router.push("/heirs")
     } catch (error) {
       logger.error('Error deleting heir', error, { heirId })
@@ -187,7 +195,16 @@ export default function HeirDetailPage() {
 
   const handleRevokeAccess = async () => {
     try {
-      await revokeAccess(heirId)
+      const { error } = await supabase
+        .from('heirs')
+        .update({ invitation_status: 'rejected', is_active: false })
+        .eq('id', heirId)
+
+      if (error) {
+        logger.error('Error revoking access', error, { heirId })
+        toast.error('Failed to revoke access', 'Please try again')
+        return
+      }
       if (heir) {
         setHeir({ ...heir, invitation_status: 'rejected' })
       }
