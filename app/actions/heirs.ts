@@ -3,7 +3,6 @@
 import { createServerSupabaseClient, createServiceRoleClient } from '@/lib/supabase'
 import type { Database } from '@/lib/database.types'
 import { logger } from '@/lib/utils/logger'
-import { checkHeirLimit } from '@/lib/subscription-limits'
 
 type HeirRow = Database['public']['Tables']['heirs']['Row']
 type HeirUpdate = Database['public']['Tables']['heirs']['Update']
@@ -34,19 +33,15 @@ export async function createHeir(heirData: HeirData) {
       throw new Error('Unauthorized: Cannot create heir for another user')
     }
 
-    // Check heir limit
-    const heirLimitCheck = await checkHeirLimit(user.id)
-    if (!heirLimitCheck.canCreate) {
-      throw new Error(`Heir limit reached. You can add up to ${heirLimitCheck.limit} heir(s) on your ${heirLimitCheck.tier} plan. Upgrade to add more heirs.`)
-    }
+    // No tier limits in open source version
 
     const { data, error } = await supabase
       .from('heirs')
       .insert({
         user_id: heirData.user_id,
-        full_name_encrypted: heirData.full_name,
-        email_encrypted: heirData.email,
-        phone_encrypted: heirData.phone || null,
+        name: heirData.full_name,
+        email: heirData.email,
+        phone: heirData.phone || null,
         relationship: heirData.relationship || null,
         heir_type: heirData.heir_type || 'family',
         invitation_status: 'pending',
@@ -223,7 +218,7 @@ export async function resendInvitation(heirId: string) {
   if (existingHeir.user_id !== user.id) throw new Error('Unauthorized')
 
     // TODO: Implement email sending service
-    // await sendInvitationEmail(heir.email_encrypted, heir.invitation_code)
+    // await sendInvitationEmail(heir.email, heir.invitation_code)
     
     // Update invitation status
     const { data } = await supabase
@@ -326,8 +321,8 @@ export async function searchHeirs(userId: string, searchTerm: string) {
   const { data: heirs } = await getAllHeirs(userId, 1, 1000)
     
     const filteredHeirs = heirs.filter((heir: HeirRow) =>
-      heir.full_name_encrypted?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      heir.email_encrypted?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      heir.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      heir.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       heir.relationship?.toLowerCase().includes(searchTerm.toLowerCase())
     )
 
@@ -493,26 +488,9 @@ export async function getHeirActivities(heirId: string) {
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) return []
 
-    const { data, error } = await supabase
-      .from('audit_logs')
-      .select('*')
-      .eq('resource_type', 'heir')
-      .eq('resource_id', heirId)
-      .order('created_at', { ascending: false })
-      .limit(20)
-
-    if (error) {
-      logger.error('Error fetching heir activities', error, { heirId })
-      return []
-    }
-
-    return (data || []).map((activity: Record<string, unknown>) => ({
-      id: activity.id as string,
-      type: activity.action as string,
-      description: (activity.metadata as Record<string, unknown>)?.description as string || activity.action as string,
-      timestamp: activity.created_at as string,
-      metadata: activity.metadata as Record<string, unknown>
-    }))
+    // audit_logs table doesn't exist in current database schema
+    // Returning empty array for now
+    return []
   } catch (error) {
     logger.error('Error in getHeirActivities', error, { heirId })
     return []

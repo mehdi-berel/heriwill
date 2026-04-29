@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { RevenueCatProvider } from "@/contexts/RevenueCatContext";
 import { Toaster } from "sonner";
 import { GoogleAnalytics } from "@next/third-parties/google";
 
@@ -29,9 +28,7 @@ export default function RootLayout({
         className={`${inter.variable} antialiased`}
       >
         <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || ''} />
-        <RevenueCatProvider>
-          {children}
-        </RevenueCatProvider>
+        {children}
         <Toaster position="top-right" richColors />
       </body>
     </html>

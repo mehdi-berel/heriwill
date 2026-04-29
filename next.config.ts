@@ -10,6 +10,39 @@ const nextConfig: NextConfig = {
     ],
   },
   async headers() {
+    // Build CSP dynamically based on environment variables
+    const enableAnalytics = !!process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
+    const enableStripe = false; // Stripe not currently used in open-source version
+    
+    const scriptSrc = [
+      "'self'",
+      "'unsafe-eval'",
+      "'unsafe-inline'"
+    ];
+    
+    const connectSrc = [
+      "'self'",
+      "https://*.supabase.co",
+      "wss://*.supabase.co"
+    ];
+    
+    const frameSrc = [
+      "https://*.supabase.co",
+      "blob:"
+    ];
+    
+    if (enableAnalytics) {
+      scriptSrc.push('https://www.googletagmanager.com', 'https://www.google-analytics.com');
+      connectSrc.push('https://www.google-analytics.com', 'https://*.google-analytics.com');
+    }
+    
+    if (enableStripe) {
+      scriptSrc.push('https://js.stripe.com');
+      frameSrc.push('https://js.stripe.com');
+    }
+    
+    const cspValue = `default-src 'self'; script-src ${scriptSrc.join(' ')}; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src ${connectSrc.join(' ')}; media-src 'self' blob:; frame-src ${frameSrc.join(' ')}; frame-ancestors 'self';`;
+    
     return [
       {
         source: '/:path*',
@@ -44,7 +77,7 @@ const nextConfig: NextConfig = {
           },
           {
             key: 'Content-Security-Policy',
-            value: "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://js.stripe.com https://www.googletagmanager.com https://www.google-analytics.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.revenuecat.com https://e.revenue.cat https://www.google-analytics.com https://*.google-analytics.com; media-src 'self' blob:; frame-src https://js.stripe.com https://*.supabase.co blob:; frame-ancestors 'self';"
+            value: cspValue
           }
         ],
       },

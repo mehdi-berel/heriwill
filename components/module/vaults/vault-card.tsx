@@ -6,13 +6,12 @@ import {
   FolderOpen, 
   Share2, 
   Trash2,
-  Shield,
   Edit,
   ChevronRight,
   Lock
 } from "lucide-react"
 
-export type VaultCategory = 'share' | 'delete' | 'pro'
+export type VaultCategory = 'share' | 'delete'
 
 export interface Vault {
   id: string
@@ -47,13 +46,11 @@ interface VaultCardProps {
 const categoryIcons: Record<VaultCategory, typeof Share2> = {
   delete: Trash2,
   share: Share2,
-  pro: Shield,
 }
 
 const categoryLabels: Record<VaultCategory, string> = {
   delete: 'Delete After Death',
   share: 'Share After Death',
-  pro: 'Secure After Death',
 }
 
 export function VaultCard({ 

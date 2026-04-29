@@ -219,7 +219,6 @@ export default function LoginPage() {
               </Link>
             </div>
           </form>
-          
 
           {/* Divider */}
           <div className="relative my-6">

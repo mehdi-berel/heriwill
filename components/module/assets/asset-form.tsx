@@ -29,7 +29,7 @@ interface Vault {
 
 interface Heir {
   id: string
-  full_name_encrypted: string | null
+  name: string | null
   relationship?: string | null
 }
 

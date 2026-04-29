@@ -73,65 +73,11 @@ export type Database = {
           },
         ]
       }
-      audit_logs: {
-        Row: {
-          action: string
-          created_at: string
-          id: string
-          ip_address: unknown
-          metadata: Json | null
-          new_values: Json | null
-          old_values: Json | null
-          resource_id: string | null
-          resource_type: string
-          risk_level: string | null
-          user_agent: string | null
-          user_id: string | null
-        }
-        Insert: {
-          action: string
-          created_at?: string
-          id?: string
-          ip_address?: unknown
-          metadata?: Json | null
-          new_values?: Json | null
-          old_values?: Json | null
-          resource_id?: string | null
-          resource_type: string
-          risk_level?: string | null
-          user_agent?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          action?: string
-          created_at?: string
-          id?: string
-          ip_address?: unknown
-          metadata?: Json | null
-          new_values?: Json | null
-          old_values?: Json | null
-          resource_id?: string | null
-          resource_type?: string
-          risk_level?: string | null
-          user_agent?: string | null
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "audit_logs_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       heirs: {
         Row: {
           accepted_at: string | null
           created_at: string
-          email_encrypted: string | null
-          full_name_encrypted: string | null
+          email: string | null
           has_accepted: boolean | null
           heir_type: string | null
           heir_user_id: string | null
@@ -141,22 +87,21 @@ export type Database = {
           invitation_status: string | null
           invited_at: string | null
           is_active: boolean | null
+          name: string | null
           notification_delay_days: number | null
           notification_status: string | null
           notified_at: string | null
           notify_on_activation: boolean | null
-          phone_encrypted: string | null
+          phone: string | null
           rejected_at: string | null
           relationship: string | null
-          relationship_encrypted: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
           accepted_at?: string | null
           created_at?: string
-          email_encrypted?: string | null
-          full_name_encrypted?: string | null
+          email?: string | null
           has_accepted?: boolean | null
           heir_type?: string | null
           heir_user_id?: string | null
@@ -166,22 +111,21 @@ export type Database = {
           invitation_status?: string | null
           invited_at?: string | null
           is_active?: boolean | null
+          name?: string | null
           notification_delay_days?: number | null
           notification_status?: string | null
           notified_at?: string | null
           notify_on_activation?: boolean | null
-          phone_encrypted?: string | null
+          phone?: string | null
           rejected_at?: string | null
           relationship?: string | null
-          relationship_encrypted?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
           accepted_at?: string | null
           created_at?: string
-          email_encrypted?: string | null
-          full_name_encrypted?: string | null
+          email?: string | null
           has_accepted?: boolean | null
           heir_type?: string | null
           heir_user_id?: string | null
@@ -191,14 +135,14 @@ export type Database = {
           invitation_status?: string | null
           invited_at?: string | null
           is_active?: boolean | null
+          name?: string | null
           notification_delay_days?: number | null
           notification_status?: string | null
           notified_at?: string | null
           notify_on_activation?: boolean | null
-          phone_encrypted?: string | null
+          phone?: string | null
           rejected_at?: string | null
           relationship?: string | null
-          relationship_encrypted?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -279,59 +223,6 @@ export type Database = {
           },
         ]
       }
-      legal: {
-        Row: {
-          created_at: string | null
-          description: string | null
-          document_type: string
-          file_size: number | null
-          id: string
-          is_active: boolean | null
-          metadata: Json | null
-          name: string
-          template_file_path: string | null
-          template_file_url: string | null
-          updated_at: string | null
-          user_id: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          description?: string | null
-          document_type: string
-          file_size?: number | null
-          id?: string
-          is_active?: boolean | null
-          metadata?: Json | null
-          name: string
-          template_file_path?: string | null
-          template_file_url?: string | null
-          updated_at?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          description?: string | null
-          document_type?: string
-          file_size?: number | null
-          id?: string
-          is_active?: boolean | null
-          metadata?: Json | null
-          name?: string
-          template_file_path?: string | null
-          template_file_url?: string | null
-          updated_at?: string | null
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "legal_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       notaries: {
         Row: {
           address: string
@@ -399,55 +290,55 @@ export type Database = {
       }
       notifications: {
         Row: {
-          id: string
-          user_id: string
-          type: string
-          title: string
-          message: string
-          action_url: string | null
           action_label: string | null
-          is_read: boolean
-          is_archived: boolean
-          priority: string
-          metadata: Json
-          created_at: string
-          read_at: string | null
+          action_url: string | null
           archived_at: string | null
+          created_at: string
           expires_at: string | null
+          id: string
+          is_archived: boolean | null
+          is_read: boolean | null
+          message: string
+          metadata: Json | null
+          priority: string | null
+          read_at: string | null
+          title: string
+          type: string
+          user_id: string
         }
         Insert: {
-          id?: string
-          user_id: string
-          type: string
-          title: string
-          message: string
-          action_url?: string | null
           action_label?: string | null
-          is_read?: boolean
-          is_archived?: boolean
-          priority?: string
-          metadata?: Json
-          created_at?: string
-          read_at?: string | null
+          action_url?: string | null
           archived_at?: string | null
+          created_at?: string
           expires_at?: string | null
+          id?: string
+          is_archived?: boolean | null
+          is_read?: boolean | null
+          message: string
+          metadata?: Json | null
+          priority?: string | null
+          read_at?: string | null
+          title: string
+          type: string
+          user_id: string
         }
         Update: {
-          id?: string
-          user_id?: string
-          type?: string
-          title?: string
-          message?: string
-          action_url?: string | null
           action_label?: string | null
-          is_read?: boolean
-          is_archived?: boolean
-          priority?: string
-          metadata?: Json
-          created_at?: string
-          read_at?: string | null
+          action_url?: string | null
           archived_at?: string | null
+          created_at?: string
           expires_at?: string | null
+          id?: string
+          is_archived?: boolean | null
+          is_read?: boolean | null
+          message?: string
+          metadata?: Json | null
+          priority?: string | null
+          read_at?: string | null
+          title?: string
+          type?: string
+          user_id?: string
         }
         Relationships: [
           {
@@ -540,9 +431,6 @@ export type Database = {
           last_login: string | null
           last_reminder_sent_at: string | null
           locked_until: string | null
-          subscription_expires_at: string | null
-          subscription_status: string | null
-          subscription_tier: string | null
           trusted_contact_heir_id: string | null
           updated_at: string
           user_type: string | null
@@ -569,9 +457,6 @@ export type Database = {
           last_login?: string | null
           last_reminder_sent_at?: string | null
           locked_until?: string | null
-          subscription_expires_at?: string | null
-          subscription_status?: string | null
-          subscription_tier?: string | null
           trusted_contact_heir_id?: string | null
           updated_at?: string
           user_type?: string | null
@@ -598,9 +483,6 @@ export type Database = {
           last_login?: string | null
           last_reminder_sent_at?: string | null
           locked_until?: string | null
-          subscription_expires_at?: string | null
-          subscription_status?: string | null
-          subscription_tier?: string | null
           trusted_contact_heir_id?: string | null
           updated_at?: string
           user_type?: string | null
@@ -611,62 +493,6 @@ export type Database = {
             columns: ["trusted_contact_heir_id"]
             isOneToOne: false
             referencedRelation: "heirs"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      user_sessions: {
-        Row: {
-          created_at: string
-          device_name: string | null
-          device_type: string | null
-          expires_at: string
-          id: string
-          ip_address: unknown
-          is_active: boolean | null
-          last_activity: string
-          location_city: string | null
-          location_country: string | null
-          session_token: string
-          user_agent: string | null
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          device_name?: string | null
-          device_type?: string | null
-          expires_at: string
-          id?: string
-          ip_address?: unknown
-          is_active?: boolean | null
-          last_activity?: string
-          location_city?: string | null
-          location_country?: string | null
-          session_token: string
-          user_agent?: string | null
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          device_name?: string | null
-          device_type?: string | null
-          expires_at?: string
-          id?: string
-          ip_address?: unknown
-          is_active?: boolean | null
-          last_activity?: string
-          location_city?: string | null
-          location_country?: string | null
-          session_token?: string
-          user_agent?: string | null
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "user_sessions_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -816,6 +642,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      archive_notification: {
+        Args: { p_notification_id: string }
+        Returns: undefined
+      }
       check_inactivity_triggers: { Args: never; Returns: undefined }
       check_scheduled_triggers: { Args: never; Returns: undefined }
       cleanup_expired_invitations: { Args: never; Returns: number }
@@ -824,9 +654,22 @@ export type Database = {
         Args: { p_heir_id: string }
         Returns: Json
       }
+      create_notification: {
+        Args: {
+          p_action_label?: string
+          p_action_url?: string
+          p_message: string
+          p_metadata?: Json
+          p_priority?: string
+          p_title: string
+          p_type: string
+          p_user_id: string
+        }
+        Returns: string
+      }
       delete_user_account: {
-        Args: { user_id_to_delete: string }
-        Returns: Json
+        Args: { target_user_id: string }
+        Returns: undefined
       }
       generate_invitation_code: { Args: never; Returns: string }
       get_heir_stats: { Args: { p_user_id: string }; Returns: Json }
@@ -856,26 +699,17 @@ export type Database = {
         }[]
       }
       mark_expired_invitations: { Args: never; Returns: number }
-      create_notification: {
-        Args: {
-          p_user_id: string
-          p_type: string
-          p_title: string
-          p_message: string
-          p_action_url?: string
-          p_action_label?: string
-          p_priority?: string
-          p_metadata?: Json
-        }
-        Returns: string
-      }
       mark_notification_read: {
         Args: { p_notification_id: string }
         Returns: undefined
       }
-      archive_notification: {
-        Args: { p_notification_id: string }
-        Returns: undefined
+      trigger_inheritance_transaction: {
+        Args: {
+          p_deactivation_date: string
+          p_trigger_reason: string
+          p_user_id: string
+        }
+        Returns: Json
       }
     }
     Enums: {
@@ -918,7 +752,6 @@ export type Database = {
         | "image"
         | "note"
         | "crypto"
-        | "bank"
         | "other"
         | "legal"
         | "assets"
@@ -1093,7 +926,6 @@ export const Constants = {
         "image",
         "note",
         "crypto",
-        "bank",
         "other",
         "legal",
         "assets",

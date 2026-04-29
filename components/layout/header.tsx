@@ -4,51 +4,16 @@ import Link from "next/link"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { FeedbackButton } from "@/components/module/feedback/feedback-button"
-import { useRevenueCat } from "@/contexts/RevenueCatContext"
 import { supabase } from "@/lib/supabase"
-import { Crown, Zap, CheckCircle, LogOut } from "lucide-react"
+import { CheckCircle, LogOut } from "lucide-react"
 
 export function Header() {
-  const { entitlements, loading } = useRevenueCat()
   const router = useRouter()
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()
     router.push("/login")
   }
-  
-  // Determine subscription tier from entitlements
-  const getTier = () => {
-    if (loading) return null
-    if (entitlements.includes('pro')) return 'pro'
-    if (entitlements.includes('premium')) return 'premium'
-    return 'free'
-  }
-
-  const tier = getTier()
-
-  const tierConfig = {
-    free: {
-      label: 'Free',
-      icon: CheckCircle,
-      className: 'bg-gray-700/50 text-gray-300 border-gray-600',
-    },
-    premium: {
-      label: 'Premium',
-      icon: Zap,
-      className: 'bg-primary-500/20 text-primary-400 border-primary-500/50',
-    },
-    pro: {
-      label: 'Pro',
-      icon: Crown,
-      className: 'bg-amber-500/20 text-amber-400 border-amber-500/50',
-    },
-  }
-
-  const config = tier ? tierConfig[tier] : null
-  const Icon = config?.icon
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background-primary/95 backdrop-blur-xl shadow-sm" style={{ borderColor: '#232629' }}>
@@ -69,21 +34,8 @@ export function Header() {
           </Link>
         </div>
 
-        {/* Right side - Tier badge and actions */}
+        {/* Right side - Actions */}
         <div className="flex items-center gap-2 md:gap-2 ml-auto">
-          {/* Subscription Tier Badge */}
-          {config && (
-            <Link href="/upgrade">
-              <Badge variant="outline" className={`flex items-center gap-1.5 cursor-pointer transition-all hover:scale-105 h-9 px-2 md:px-3 text-xs md:text-sm ${config.className}`}>
-                {Icon && <Icon className="h-3.5 w-3.5 md:h-3.5 md:w-3.5" />}
-                <span className="font-semibold hidden md:inline">{config.label}</span>
-              </Badge>
-            </Link>
-          )}
-
-          {/* Feedback Button */}
-          <FeedbackButton />
-
           {/* Sign Out - Mobile only */}
           <Button
             variant="ghost"

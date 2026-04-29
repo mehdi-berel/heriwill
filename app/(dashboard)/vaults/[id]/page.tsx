@@ -32,7 +32,7 @@ interface Vault {
   id: string
   name: string
   description: string
-  category: 'share' | 'delete' | 'pro'
+  category: 'share' | 'delete'
   is_locked: boolean
   is_shared: boolean
   item_count: number
@@ -107,45 +107,7 @@ export default function VaultDetailPage() {
         .single()
 
       if (ownedVault) {
-        // Check if this vault is locked for free users
-        const { data: userProfile } = await supabase
-          .from('users')
-          .select('subscription_tier')
-          .eq('id', userId)
-          .single()
-
-        const tier = (userProfile as { subscription_tier?: string } | null)?.subscription_tier ?? 'free'
-        const isFreeUser = tier === 'free'
-        const isProUser = tier === 'pro'
-        const isProVault = (ownedVault as { category?: string }).category === 'pro'
-
-        // Pro vaults only accessible to pro users
-        if (isProVault && !isProUser) {
-          toast.error('Upgrade to Pro to access this vault')
-          router.push('/vaults')
-          return
-        }
-
-        // Free users can only access their first created vault
-        if (isFreeUser) {
-          const { data: olderVaults } = await supabase
-            .from('vaults')
-            .select('id')
-            .eq('user_id', userId)
-            .lte('created_at', (ownedVault as { created_at: string }).created_at)
-            .order('created_at', { ascending: true })
-
-          const vaultIndex = (olderVaults || []).findIndex(
-            (v: { id: string }) => v.id === id
-          )
-
-          if (vaultIndex > 0) {
-            toast.error('Upgrade your plan to access this vault')
-            router.push('/vaults')
-            return
-          }
-        }
-
+        // Subscription tiers removed - all vaults accessible
         setVault({ ...ownedVault, item_count: 0 } as unknown as Vault)
         return
       }
@@ -325,11 +287,10 @@ export default function VaultDetailPage() {
     if (!vault) return
 
     try {
-      logger.info('Assigning heirs/notaries to vault', { 
+      logger.info('Assigning heirs to vault', { 
         vaultId: vault.id, 
         vaultCategory: vault.category,
-        heirIds,
-        isNotaryMode: vault.category === 'pro'
+        heirIds
       })
 
       // Update vault with assigned heir IDs using server action
@@ -355,22 +316,15 @@ export default function VaultDetailPage() {
       })
       setShowAssignModal(false)
       
-      const successMessage = vault.category === 'pro' 
-        ? 'Notary assigned successfully' 
-        : 'Heirs assigned successfully'
-      toast.success(successMessage)
+      toast.success('Heirs assigned successfully')
     } catch (error) {
-      logger.error('Error assigning heirs/notaries', error, { 
+      logger.error('Error assigning heirs', error, { 
         vaultId,
         vaultCategory: vault.category,
         errorMessage: (error as Error).message,
         errorStack: (error as Error).stack
       })
-      
-      const errorMessage = vault.category === 'pro'
-        ? 'Failed to assign notary. Please try again.'
-        : 'Failed to assign heirs. Please try again.'
-      toast.error(errorMessage, (error as Error).message)
+      toast.error('Failed to assign heirs. Please try again.', (error as Error).message)
     }
   }
 
@@ -527,12 +481,7 @@ export default function VaultDetailPage() {
         </div>
         {/* Action buttons - always in row */}
         <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
-          {vault.category === 'pro' ? (
-            <Button variant="outline" onClick={handleAssignHeirs} className="h-10 sm:h-9">
-              <Scale className="h-4 w-4 sm:mr-2" />
-              <span className="hidden sm:inline">Assign Notary</span>
-            </Button>
-          ) : vault.category !== 'delete' && (
+          {vault.category !== 'delete' && (
             <Button variant="outline" onClick={handleAssignHeirs} className="h-10 sm:h-9">
               <Users className="h-4 w-4 sm:mr-2" />
               <span className="hidden sm:inline">Assign Heirs</span>
@@ -586,7 +535,7 @@ export default function VaultDetailPage() {
     {/* Assign Heirs/Notary Modal */}
     <Dialog open={showAssignModal} onOpenChange={setShowAssignModal}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto w-[95vw] sm:w-full">
-        <DialogTitle className="text-lg sm:text-xl">{vault?.category === 'pro' ? 'Assign Notary to Vault' : 'Assign Heirs to Vault'}</DialogTitle>
+        <DialogTitle className="text-lg sm:text-xl">Assign Heirs to Vault</DialogTitle>
         {vault && (
           <VaultAssign
             vaultId={vault.id}

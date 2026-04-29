@@ -11,8 +11,6 @@ import { Search } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { User } from "@supabase/supabase-js"
 import { createVault } from "@/app/actions/vaults"
-import { UpgradeModal } from "@/components/module/subscription/upgrade-modal"
-import { SUBSCRIPTION_LIMITS } from "@/lib/subscription-limits"
 import { sanitizeInput } from "@/lib/utils/sanitize"
 import { logger } from "@/lib/utils/logger"
 import { toast } from "@/lib/utils/toast"
@@ -20,7 +18,7 @@ import { toast } from "@/lib/utils/toast"
 interface VaultFormData {
   name: string
   description: string
-  category: string
+  category: 'share' | 'delete'
 }
 
 interface Vault {
@@ -28,7 +26,7 @@ interface Vault {
   user_id: string
   name: string
   description: string | null
-  category: 'share' | 'delete' | 'pro'
+  category: 'share' | 'delete'
   is_locked: boolean | null
   is_shared: boolean | null
   created_at: string
@@ -49,14 +47,11 @@ export default function VaultsPage() {
   const [user, setUser] = useState<User | null>(null)
   const [vaults, setVaults] = useState<Vault[]>([])
   const [searchTerm, setSearchTerm] = useState('')
-  const [selectedCategory, setSelectedCategory] = useState<'share' | 'delete' | 'pro' | null>(null)
+  const [selectedCategory, setSelectedCategory] = useState<'share' | 'delete' | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [editingVault, setEditingVault] = useState<Vault | null>(null)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [vaultToDelete, setVaultToDelete] = useState<string | null>(null)
-  const [showUpgradeModal, setShowUpgradeModal] = useState(false)
-  const [upgradeReason, setUpgradeReason] = useState<'vault_limit' | 'pro_feature'>('vault_limit')
-  const [subscriptionTier, setSubscriptionTier] = useState<'free' | 'premium' | 'pro'>('free')
   const router = useRouter()
 
   const loadVaults = useCallback(async (userId: string) => {
@@ -77,20 +72,8 @@ export default function VaultsPage() {
       const allVaults = [...(ownedVaults || [])]
 
       if (allVaults.length > 0) {
-        // Get user's subscription tier
-        const { data: userProfile } = await supabase
-          .from('users')
-          .select('subscription_tier')
-          .eq('id', userId)
-          .single()
-        
-        const tier = ((userProfile as { subscription_tier?: string } | null)?.subscription_tier ?? 'free') as 'free' | 'premium' | 'pro'
-        setSubscriptionTier(tier)
-        const isFreeUser = tier === 'free'
-        const isProUser = tier === 'pro'
-        
         const vaultsWithCounts = await Promise.all(
-          allVaults.map(async (vault: Record<string, unknown>, index: number) => {
+          allVaults.map(async (vault: Record<string, unknown>) => {
             const { count, error: countError } = await supabase
               .from('vault_items')
               .select('*', { count: 'exact', head: true })
@@ -100,17 +83,9 @@ export default function VaultsPage() {
               logger.error('Error loading vault item count', countError, { vaultId: vault.id })
             }
             
-            // Lock rules:
-            // 1. Free users: only first vault accessible, pro vaults locked
-            // 2. Premium users: unlimited vaults, but pro vaults locked
-            // 3. Pro users: everything accessible
-            const isProVault = (vault as { category?: string }).category === 'pro'
-            const shouldLock = (isFreeUser && (index > 0 || isProVault)) || (!isProUser && isProVault)
-            
             return {
               ...(vault as Record<string, unknown>),
               item_count: count || 0,
-              is_locked: shouldLock || (vault as { is_locked?: boolean }).is_locked || false
             }
           })
         )
@@ -167,15 +142,6 @@ export default function VaultsPage() {
     const sanitizedName = sanitizeInput(formData.name)
     const sanitizedDescription = formData.description ? sanitizeInput(formData.description) : null
 
-    // Client-side vault limit pre-check
-    const limits = SUBSCRIPTION_LIMITS[subscriptionTier] || SUBSCRIPTION_LIMITS.free
-    if (vaults.length >= limits.maxVaults) {
-      setShowForm(false)
-      setUpgradeReason('vault_limit')
-      setShowUpgradeModal(true)
-      return
-    }
-
     try {
       await createVault({
         user_id: user.id,
@@ -215,13 +181,8 @@ export default function VaultsPage() {
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : ''
-      if (message.includes('Vault limit reached') || message.includes('Storage limit exceeded')) {
-        setUpgradeReason('vault_limit')
-        setShowUpgradeModal(true)
-      } else {
-        logger.error('Error adding vault', error, { userId: user?.id })
-        toast.error('Failed to add vault', message || 'Please try again')
-      }
+      logger.error('Error adding vault', error, { userId: user?.id })
+      toast.error('Failed to add vault', message || 'Please try again')
     }
   }
 
@@ -258,12 +219,6 @@ export default function VaultsPage() {
   }
 
   const handleVaultSelect = (vault: Vault) => {
-    if (vault.is_locked) {
-      const isProVault = vault.category === 'pro'
-      setUpgradeReason(isProVault ? 'pro_feature' : 'vault_limit')
-      setShowUpgradeModal(true)
-      return
-    }
     router.push(`/vaults/${vault.id}`)
   }
 
@@ -335,14 +290,6 @@ export default function VaultsPage() {
               className="rounded-lg"
             >
               Delete ({vaults.filter(v => v.category === 'delete').length})
-            </Button>
-            <Button
-              variant={selectedCategory === 'pro' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setSelectedCategory(selectedCategory === 'pro' ? null : 'pro')}
-              className="rounded-lg"
-            >
-              Pro ({vaults.filter(v => v.category === 'pro').length})
             </Button>
           </div>
           
@@ -417,14 +364,6 @@ export default function VaultsPage() {
           searchTerm={searchTerm}
           onSearchChange={setSearchTerm}
           selectedCategory={selectedCategory}
-        />
-
-        {/* Upgrade Modal */}
-        <UpgradeModal
-          isOpen={showUpgradeModal}
-          onClose={() => setShowUpgradeModal(false)}
-          reason={upgradeReason}
-          currentPlan={subscriptionTier}
         />
     </div>
   )

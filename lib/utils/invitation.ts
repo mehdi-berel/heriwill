@@ -44,7 +44,7 @@ export async function generateHeirInvitationLink(
       return null
     }
 
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.heriwill.com'
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
 
     const url = `${baseUrl}/invite?code=${code}&type=heir`
 
@@ -78,7 +78,7 @@ export async function generateNotaryInvitationLink(
     // For now, return a placeholder
     logger.warn('Notary invitation system not yet implemented')
 
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.heriwill.com'
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
 
     const url = `${baseUrl}/invite?code=${code}&type=notary`
 

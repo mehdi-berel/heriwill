@@ -67,9 +67,9 @@ export default function HeirDetailPage() {
       const heirData = data as Record<string, unknown>
       const mappedHeir: Heir = {
         id: heirData.id as string,
-        full_name: (heirData.full_name_encrypted as string) || 'Unknown',
-        email: (heirData.email_encrypted as string) || '',
-        phone: (heirData.phone_encrypted as string) || undefined,
+        full_name: (heirData.name as string) || 'Unknown',
+        email: (heirData.email as string) || '',
+        phone: (heirData.phone as string) || undefined,
         relationship: (heirData.relationship as string) || 'Unknown',
         invitation_status: (heirData.invitation_status as 'pending' | 'accepted' | 'rejected' | 'expired') || 'pending',
         invitation_code: (heirData.invitation_code as string) || undefined,
@@ -96,32 +96,8 @@ export default function HeirDetailPage() {
   }, [router])
 
   const loadHeirActivities = useCallback(async (id: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('audit_logs')
-        .select('*')
-        .eq('resource_type', 'heir')
-        .eq('resource_id', id)
-        .order('created_at', { ascending: false })
-        .limit(20)
-
-      if (error) {
-        logger.error('Error loading heir activities', error, { heirId: id })
-        setActivities([])
-        return
-      }
-
-      setActivities((data || []).map((activity: Record<string, unknown>) => ({
-        id: activity.id as string,
-        type: activity.action as string,
-        description: (activity.metadata as Record<string, unknown>)?.description as string || activity.action as string,
-        timestamp: activity.created_at as string,
-        metadata: activity.metadata as Record<string, unknown>
-      })) as HeirActivity[])
-    } catch (error) {
-      logger.error('Error loading heir activities', error, { heirId: id })
-      setActivities([])
-    }
+    // audit_logs table doesn't exist in current database schema
+    setActivities([])
   }, [])
 
   useEffect(() => {
@@ -135,31 +111,6 @@ export default function HeirDetailPage() {
       if (!user) {
         router.push("/login")
         return
-      }
-
-      // Check if this heir is locked for free users
-      const { data: userProfile } = await supabase
-        .from('users')
-        .select('subscription_tier')
-        .eq('id', user.id)
-        .single()
-
-      const tier = (userProfile as { subscription_tier?: string } | null)?.subscription_tier ?? 'free'
-
-      if (tier === 'free') {
-        // Get all heirs sorted by creation date to determine if this one is locked
-        const { data: allHeirs } = await supabase
-          .from('heirs')
-          .select('id')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: true })
-
-        const heirIndex = (allHeirs || []).findIndex((h: { id: string }) => h.id === heirId)
-        if (heirIndex > 0) {
-          toast.error('Upgrade your plan to access this heir')
-          router.push('/heirs')
-          return
-        }
       }
 
       // Load heir data

@@ -9,13 +9,6 @@ export const STORAGE_BUCKETS = {
   ASSETS: 'assets',
 } as const
 
-// Storage limits per tier (in bytes)
-export const STORAGE_LIMITS = {
-  free: 1 * 1024 * 1024 * 1024, // 1GB
-  premium: 10 * 1024 * 1024 * 1024, // 10GB
-  pro: 100 * 1024 * 1024 * 1024, // 100GB
-}
-
 // File type validation
 const ALLOWED_FILE_TYPES = {
   documents: ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain'],
@@ -178,25 +171,6 @@ export async function getUserStorageUsage(userId: string): Promise<number> {
   } catch (error) {
     logger.error('Error calculating storage usage', error)
     return 0
-  }
-}
-
-/**
- * Check if user has enough storage space
- */
-export async function checkStorageLimit(
-  userId: string,
-  fileSize: number,
-  tier: 'free' | 'premium' | 'pro'
-): Promise<{ allowed: boolean; currentUsage: number; limit: number }> {
-  const currentUsage = await getUserStorageUsage(userId)
-  const limit = STORAGE_LIMITS[tier]
-  const allowed = (currentUsage + fileSize) <= limit
-
-  return {
-    allowed,
-    currentUsage,
-    limit
   }
 }
 

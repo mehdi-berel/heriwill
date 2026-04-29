@@ -1,15 +1,12 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { supabase } from "@/lib/supabase"
-import { logger } from "@/lib/utils/logger"
 import { 
   FolderOpen, 
-  Lock, 
   Share2, 
   Trash2,
   FileText,
@@ -19,7 +16,7 @@ import {
 interface VaultFormData {
   name: string
   description: string
-  category: 'share' | 'delete' | 'pro'
+  category: 'share' | 'delete'
   access_control: {
     allowedHeirs: string[]
     requireApproval: boolean
@@ -45,27 +42,6 @@ export function VaultForm({ onSubmit, onCancel, initialData }: VaultFormProps) {
       requireApproval: initialData?.access_control?.requireApproval || true
     }
   })
-
-  useEffect(() => {
-    const checkProStatus = async () => {
-      try {
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user) return
-
-        const { data: profile } = await supabase
-          .from('users')
-          .select('subscription_tier')
-          .eq('id', user.id)
-          .single()
-
-        setIsProUser((profile as { subscription_tier?: string } | null)?.subscription_tier === 'pro')
-      } catch (error) {
-        logger.error('Error checking pro status', error)
-      }
-    }
-
-    checkProStatus()
-  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -146,23 +122,20 @@ export function VaultForm({ onSubmit, onCancel, initialData }: VaultFormProps) {
           {/* Category Selection */}
           <div className="space-y-3">
             <Label className="text-sm font-medium">Vault Category</Label>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {[
-                { value: 'share', label: 'Share', shortLabel: 'Share', icon: Share2, isPro: false },
-                { value: 'delete', label: 'Delete', shortLabel: 'Delete', icon: Trash2, isPro: false },
-                { value: 'pro', label: 'Pro', shortLabel: 'Pro', icon: Lock, isPro: true }
+                { value: 'share', label: 'Share', shortLabel: 'Share', icon: Share2 },
+                { value: 'delete', label: 'Delete', shortLabel: 'Delete', icon: Trash2 },
               ].map((category) => {
-                const isDisabled = category.isPro && !isProUser
                 return (
                   <Button
                     key={category.value}
                     type="button"
                     variant={formData.category === category.value ? 'default' : 'outline'}
-                    onClick={() => !isDisabled && setFormData(prev => ({ ...prev, category: category.value as VaultFormData['category'] }))}
+                    onClick={() => setFormData(prev => ({ ...prev, category: category.value as VaultFormData['category'] }))}
                     className="flex items-center justify-center gap-2 h-12 text-base transition-all"
                     style={formData.category === category.value ? { backgroundColor: '#8B5CF6', boxShadow: '0 10px 15px -3px rgba(139, 92, 246, 0.3)' } : { borderColor: '#232629' }}
-                    disabled={isDisabled || loading}
-                    title={isDisabled ? 'Upgrade to Pro to use this vault type' : ''}
+                    disabled={loading}
                   >
                     <category.icon className="h-4 w-4 flex-shrink-0" />
                     <span className="hidden sm:inline">{category.label}</span>
@@ -171,11 +144,6 @@ export function VaultForm({ onSubmit, onCancel, initialData }: VaultFormProps) {
                 )
               })}
             </div>
-            {!isProUser && (
-              <p className="text-sm text-muted-foreground">
-                Upgrade to Pro to unlock Sign Off vault type
-              </p>
-            )}
           </div>
 
           {/* Form Actions */}

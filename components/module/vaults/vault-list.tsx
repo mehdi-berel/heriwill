@@ -8,7 +8,7 @@ interface Vault {
   user_id: string
   name: string
   description: string | null
-  category: 'share' | 'delete' | 'pro'
+  category: 'share' | 'delete'
   is_locked: boolean | null
   is_shared: boolean | null
   item_count: number
@@ -30,7 +30,7 @@ interface VaultListProps {
   onVaultDelete: (vaultId: string) => void
   searchTerm?: string
   onSearchChange?: (term: string) => void
-  selectedCategory?: 'share' | 'delete' | 'pro' | null
+  selectedCategory?: 'share' | 'delete' | null
 }
 
 export function VaultList({ 

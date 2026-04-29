@@ -27,7 +27,7 @@ export async function createHeirInvitation(data: {
   email: string
   phone?: string
   relationship?: string
-  heir_type?: 'family' | 'friend' | 'professional' | 'organization'
+  heir_type?: 'family' | 'friend' | 'professional' | 'organization' | 'notary'
   code_validity_days?: number
 }) {
   try {
@@ -95,9 +95,9 @@ export async function createHeirInvitation(data: {
   
   const insertData = {
     user_id: user.id,
-    full_name_encrypted: sanitizedFullName,
-    email_encrypted: sanitizedEmail,
-    phone_encrypted: sanitizedPhone,
+    name: sanitizedFullName,
+    email: sanitizedEmail,
+    phone: sanitizedPhone,
     relationship: sanitizedRelationship,
     heir_type: data.heir_type || 'family',
     invitation_code: invitationCode,
@@ -121,7 +121,7 @@ export async function createHeirInvitation(data: {
       errorCode: error.code,
       errorMessage: error.message,
       errorDetails: error.details,
-      insertData: { ...insertData, full_name_encrypted: '[REDACTED]', email_encrypted: '[REDACTED]' }
+      insertData: { ...insertData, name: '[REDACTED]', email: '[REDACTED]' }
     })
     throw new Error('Failed to create heir invitation: ' + error.message)
   }
@@ -399,7 +399,7 @@ export async function getPendingInvitations(userId?: string, userEmail?: string)
         const { data, error: error1 } = await supabase
           .from('heirs')
           .select('*')
-          .eq('email_encrypted', sanitizedUserEmail)
+          .eq('email', sanitizedUserEmail)
           .eq('invitation_status', 'pending')
           .order('created_at', { ascending: false })
 

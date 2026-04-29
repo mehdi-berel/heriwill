@@ -48,7 +48,7 @@ interface Vault {
 
 interface Heir {
   id: string
-  full_name_encrypted: string
+  name: string
   relationship: string
 }
 
@@ -110,10 +110,10 @@ export default function AssetDetailPage() {
     try {
       const { data, error } = await supabase
         .from('heirs')
-        .select('id, full_name_encrypted, relationship')
+        .select('id, name, relationship')
         .eq('user_id', userId)
         .eq('is_active', true)
-        .order('full_name_encrypted', { ascending: true })
+        .order('name', { ascending: true })
 
       if (error) {
         logger.error('Error loading heirs', error)

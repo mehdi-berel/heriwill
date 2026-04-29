@@ -3,7 +3,6 @@
 import { createServerSupabaseClient } from '../../lib/supabase'
 import { logger } from '../../lib/utils/logger'
 import type { Database } from '../../lib/database.types'
-import { checkStorageLimit, checkVaultLimit } from '../../lib/subscription-limits'
 
 type VaultRow = Database['public']['Tables']['vaults']['Row']
 type VaultInsert = Database['public']['Tables']['vaults']['Insert']
@@ -41,22 +40,7 @@ export async function createVault(vaultData: VaultInsert) {
     if (authError || !user) throw new Error('Not authenticated')
     if (vaultData.user_id && vaultData.user_id !== user.id) throw new Error('Unauthorized')
 
-    // Check vault limit
-    const vaultLimitCheck = await checkVaultLimit(user.id)
-    if (!vaultLimitCheck.canCreate) {
-      throw new Error(`Vault limit reached. You can create up to ${vaultLimitCheck.limit} vault(s) on your ${vaultLimitCheck.tier} plan. Upgrade to create more vaults.`)
-    }
-
-    // Check storage limit if vault has initial data
-    const vaultDataObj = (vaultData as { vault_data?: { size?: number } | null }).vault_data
-    const initialSize = vaultDataObj?.size || 0
-    if (initialSize > 0) {
-      const storageLimitCheck = await checkStorageLimit(user.id, initialSize)
-      if (!storageLimitCheck.canUpload) {
-        throw new Error(`Storage limit exceeded. You're using ${storageLimitCheck.currentUsageGB}GB of ${storageLimitCheck.limitGB}GB. Upgrade to get more storage.`)
-      }
-    }
-
+    // No tier limits in open source version
     const { data, error } = await supabase
       .from('vaults')
       .insert({ ...vaultData, user_id: user.id })

@@ -18,8 +18,7 @@ interface HeirFormData {
   email: string
   phone: string
   relationship: string
-  heir_type: 'family' | 'friend' | 'professional' | 'organization'
-  invitation_expires_at?: string
+  heir_type: 'family' | 'friend' | 'professional' | 'organization' | 'notary'
 }
 
 interface HeirFormProps {
@@ -37,8 +36,7 @@ export function HeirForm({ onSubmit, onCancel, initialData, isEditing = false }:
     email: initialData?.email || '',
     phone: initialData?.phone || '',
     relationship: initialData?.relationship || '',
-    heir_type: initialData?.heir_type || 'family',
-    invitation_expires_at: initialData?.invitation_expires_at || ''
+    heir_type: initialData?.heir_type || 'family'
   })
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -123,7 +121,8 @@ export function HeirForm({ onSubmit, onCancel, initialData, isEditing = false }:
               { value: 'family', label: 'Family' },
               { value: 'friend', label: 'Friend' },
               { value: 'professional', label: 'Professional' },
-              { value: 'organization', label: 'Organization' }
+              { value: 'organization', label: 'Organization' },
+              { value: 'notary', label: 'Notary' }
             ].map((type) => (
               <Button
                 key={type.value}

@@ -24,24 +24,17 @@ export function SignOffSettings({ method, userId, onSave, onCancel }: SignOffSet
   const [loading, setLoading] = useState(false)
   interface Heir {
     id: string
-    full_name_encrypted?: string
-    email_encrypted?: string
-  }
-  
-  interface Notary {
-    id: string
-    name: string
-    email: string
+    name?: string
+    email?: string
   }
   
   interface TrustedContact {
     id: string
     name: string
-    type: 'heir' | 'notary'
+    type: 'heir'
   }
   
   const [heirs, setHeirs] = useState<Heir[]>([])
-  const [notaries, setNotaries] = useState<Notary[]>([])
   const [trustedContacts, setTrustedContacts] = useState<TrustedContact[]>([])
   
   // Inactivity settings
@@ -108,52 +101,30 @@ export function SignOffSettings({ method, userId, onSave, onCancel }: SignOffSet
     }
   }, [userId])
 
-  const loadNotaries = useCallback(async () => {
-    try {
-      const { data } = await supabase
-        .from('notaries')
-        .select('*')
-        .eq('user_id', userId)
-
-      setNotaries(data || [])
-    } catch (error) {
-      logger.error('Error loading notaries', error, { userId })
-    }
-  }, [userId])
-
   const combineTrustedContacts = useCallback(() => {
     const contacts: TrustedContact[] = []
     
     heirs.forEach(heir => {
       contacts.push({
         id: heir.id,
-        name: heir.full_name_encrypted || heir.email_encrypted || 'Unknown Heir',
+        name: heir.name || heir.email || 'Unknown Heir',
         type: 'heir'
       })
     })
     
-    notaries.forEach(notary => {
-      contacts.push({
-        id: notary.id,
-        name: notary.name || notary.email || 'Unknown Notary',
-        type: 'notary'
-      })
-    })
-    
     setTrustedContacts(contacts)
-  }, [heirs, notaries])
+  }, [heirs])
 
   useEffect(() => {
     loadSettings()
     if (method === 'trusted_contact') {
       loadHeirs()
-      loadNotaries()
     }
-  }, [method, loadSettings, loadHeirs, loadNotaries])
+  }, [method, loadSettings, loadHeirs])
 
   useEffect(() => {
     combineTrustedContacts()
-  }, [heirs, notaries, combineTrustedContacts])
+  }, [heirs, combineTrustedContacts])
 
   const handleSave = async () => {
     try {
@@ -273,7 +244,7 @@ export function SignOffSettings({ method, userId, onSave, onCancel }: SignOffSet
                 <SelectItem value="">Choose a trusted contact</SelectItem>
                 {trustedContacts.map((contact) => (
                   <SelectItem key={contact.id} value={contact.id}>
-                    {contact.name} ({contact.type === 'heir' ? 'Heir' : 'Notary'})
+                    {contact.name} (Heir)
                   </SelectItem>
                 ))}
               </Select>

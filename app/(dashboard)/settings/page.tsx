@@ -88,9 +88,7 @@ function SettingsPageContent() {
           </TabsContent>
 
           <TabsContent value="billing">
-            <BillingSettings 
-              subscriptionTier={profile?.subscription_tier as string}
-            />
+            <BillingSettings />
           </TabsContent>
         </Tabs>
     </div>

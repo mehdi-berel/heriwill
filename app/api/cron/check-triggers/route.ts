@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { logger } from '@/lib/utils/logger'
 import { Database } from '@/lib/database.types'
-import { rateLimit, RateLimitPresets } from '@/lib/middleware/rateLimit'
 import { sanitizeApiError } from '@/lib/utils/error-handler'
 
 function createServiceRoleClient() {
@@ -33,12 +32,6 @@ type User = Database['public']['Tables']['users']['Row']
 
 export async function GET(request: NextRequest) {
   try {
-    // Apply relaxed rate limiting for cron jobs
-    const rateLimitResult = await rateLimit(RateLimitPresets.relaxed)(request)
-    if (rateLimitResult) {
-      return rateLimitResult
-    }
-
     // Verify cron secret to prevent unauthorized access
     const authHeader = request.headers.get('authorization')
     if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {

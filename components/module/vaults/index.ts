@@ -6,7 +6,6 @@ export { ItemDetails } from './item-details'
 export { ItemList } from './item-list'
 export { VaultCard } from './vault-card'
 export { VaultItemCard } from './item-card'
-export { StorageUsageIndicator } from './storage-usage-indicator'
 
 export type { VaultItemType, VaultItemMetadata, VaultItem } from './item-card'
 export type { Vault, VaultCategory } from './vault-card'

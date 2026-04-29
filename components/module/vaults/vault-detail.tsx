@@ -12,7 +12,7 @@ interface Vault {
   id: string
   name: string
   description: string
-  category: 'share' | 'delete' | 'pro'
+  category: 'share' | 'delete'
   is_locked: boolean
   is_shared: boolean
   item_count: number

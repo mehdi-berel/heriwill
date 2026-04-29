@@ -61,7 +61,7 @@ interface ItemListProps {
   selectedItemType?: VaultItemType | null
   showAddButton?: boolean
   emptyMessage?: string
-  vaultCategory?: 'share' | 'delete' | 'pro'
+  vaultCategory?: 'share' | 'delete'
 }
 
 const itemIcons: Record<VaultItemType, typeof Key> = {
@@ -195,18 +195,6 @@ export function ItemList({
             className="pl-10 h-11 sm:h-10"
           />
         </div>
-        
-        {/* Assets Button - Only for Pro Vaults */}
-        {vaultCategory === 'pro' && (
-          <Button
-            onClick={() => router.push('/assets')}
-            variant="outline"
-            className="h-11 sm:h-10 px-3 flex-shrink-0"
-          >
-            <Package className="h-4 w-4 sm:mr-2" />
-            <span className="hidden sm:inline">Assets</span>
-          </Button>
-        )}
         
         {showAddButton && onAddItem && (
           <Button onClick={onAddItem} className="h-11 sm:h-10 flex-shrink-0">

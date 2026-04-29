@@ -1,18 +1,14 @@
 "use client"
 
-import { useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { supabase } from "@/lib/supabase"
-import { logger } from "@/lib/utils/logger"
 import {
   Home,
   Users,
   Lock,
   Power,
   Settings,
-  LockKeyhole,
 } from "lucide-react"
 
 const mainNavigation = [
@@ -45,36 +41,6 @@ const mainNavigation = [
 
 export function MobileNav() {
   const pathname = usePathname()
-  const [isProUser, setIsProUser] = useState(false)
-
-  useEffect(() => {
-    const checkProStatus = async () => {
-      try {
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user) return
-
-        const { data: profile } = await supabase
-          .from('users')
-          .select('subscription_tier')
-          .eq('id', user.id)
-          .single()
-
-        interface ProfileData {
-          subscription_tier?: string
-        }
-        setIsProUser((profile as ProfileData | null)?.subscription_tier === 'pro')
-      } catch (error) {
-        logger.error('Error checking pro status', error)
-      }
-    }
-
-    checkProStatus()
-  }, [])
-
-  // Check if current route is a pro feature
-  const isProRoute = (href: string) => {
-    return ['/assets', '/Legal', '/notary'].includes(href)
-  }
 
   // Split navigation into left and right groups
   const leftNavItems = mainNavigation.slice(0, 2) // Home, Vaults
@@ -90,19 +56,16 @@ export function MobileNav() {
         {/* Left nav items */}
         {leftNavItems.map((item) => {
           const isActive = pathname === item.href
-          const isLocked = isProRoute(item.href) && !isProUser
           const Icon = item.icon
           
           return (
             <Link
               key={item.name}
-              href={isLocked ? "/upgrade" : item.href}
+              href={item.href}
               className={cn(
                 "flex flex-col items-center justify-center gap-1 py-2 rounded-lg transition-all duration-200",
                 isActive
                   ? "bg-primary-600/10 text-primary-400"
-                  : isLocked
-                  ? "text-text-tertiary opacity-60"
                   : "text-text-muted active:bg-background-hover"
               )}
             >
@@ -113,11 +76,6 @@ export function MobileNav() {
                     isActive && "scale-110"
                   )} 
                 />
-                {isLocked && (
-                  <div className="absolute -top-1 -right-1 w-3 h-3 bg-background-primary rounded-full flex items-center justify-center">
-                    <LockKeyhole className="h-2 w-2 text-amber-500" />
-                  </div>
-                )}
                 {isActive && (
                   <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary-400 animate-pulse" />
                 )}
@@ -163,19 +121,16 @@ export function MobileNav() {
         {/* Right nav items */}
         {rightNavItems.map((item) => {
           const isActive = pathname === item.href
-          const isLocked = isProRoute(item.href) && !isProUser
           const Icon = item.icon
           
           return (
             <Link
               key={item.name}
-              href={isLocked ? "/upgrade" : item.href}
+              href={item.href}
               className={cn(
                 "flex flex-col items-center justify-center gap-1 py-2 rounded-lg transition-all duration-200",
                 isActive
                   ? "bg-primary-600/10 text-primary-400"
-                  : isLocked
-                  ? "text-text-tertiary opacity-60"
                   : "text-text-muted active:bg-background-hover"
               )}
             >
@@ -186,11 +141,6 @@ export function MobileNav() {
                     isActive && "scale-110"
                   )} 
                 />
-                {isLocked && (
-                  <div className="absolute -top-1 -right-1 w-3 h-3 bg-background-primary rounded-full flex items-center justify-center">
-                    <LockKeyhole className="h-2 w-2 text-amber-500" />
-                  </div>
-                )}
                 {isActive && (
                   <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary-400 animate-pulse" />
                 )}

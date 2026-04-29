@@ -19,28 +19,23 @@ import { toast } from "@/lib/utils/toast"
 interface Heir {
   id: string
   user_id: string
-  full_name_encrypted: string | null
-  email_encrypted: string | null
-  phone_encrypted: string | null
+  heir_user_id: string | null
+  name: string | null
+  email: string | null
+  phone: string | null
   relationship: string | null
-  heir_type: 'family' | 'friend' | 'professional' | 'organization' | null
-  invitation_status: 'pending' | 'accepted' | 'rejected' | 'expired' | null
-  invitation_code: string | null
-  created_at: string
-  accepted_at: string | null
-  invitation_expires_at: string | null
-  invited_at: string | null
-  has_accepted: boolean | null
+  heir_type: string | null
   is_active: boolean | null
+  has_accepted: boolean | null
+  invitation_status: string | null
+  invitation_code: string | null
+  invited_at: string | null
+  accepted_at: string | null
+  rejected_at: string | null
   notify_on_activation: boolean | null
   notification_delay_days: number | null
-  heir_user_id: string | null
+  created_at: string
   updated_at: string
-  rejected_at: string | null
-  notification_status?: string
-  notified_at?: string | null
-  death_confirmed_at?: string | null
-  relationship_encrypted?: string | null
 }
 
 interface HeirListProps {
@@ -70,7 +65,7 @@ export function HeirList({
     e.stopPropagation()
     if (!heir.invitation_code) return
     
-    const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://app.heriwill.com'
+    const baseUrl = typeof window !== 'undefined' ? window.location.origin : process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
     const invitationLink = `${baseUrl}/invite?code=${heir.invitation_code}&type=heir`
     
     try {
@@ -84,8 +79,8 @@ export function HeirList({
   }
 
   const filteredHeirs = heirs.filter(heir => {
-    const matchesSearch = heir.full_name_encrypted?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         heir.email_encrypted?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const matchesSearch = heir.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         heir.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          heir.relationship?.toLowerCase().includes(searchTerm.toLowerCase())
     
     let matchesStatus = true
@@ -102,7 +97,7 @@ export function HeirList({
     return matchesSearch && matchesStatus
   })
 
-  const sortedHeirs = [...filteredHeirs].sort((a, b) => (a.full_name_encrypted || '').localeCompare(b.full_name_encrypted || ''))
+  const sortedHeirs = [...filteredHeirs].sort((a, b) => (a.name || '').localeCompare(b.name || ''))
 
   return (
     <div className="space-y-6">
@@ -151,7 +146,7 @@ export function HeirList({
               {/* Content */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1.5">
-                  <h3 className="text-base font-semibold truncate">{heir.full_name_encrypted || 'Unnamed Heir'}</h3>
+                  <h3 className="text-base font-semibold truncate">{heir.name || 'Unnamed Heir'}</h3>
                   {heir.invitation_status === 'accepted' && (
                     <div className="px-1.5 py-0.5 rounded bg-success/20 flex items-center">
                       <CheckCircle className="h-3 w-3 text-success" />
@@ -160,7 +155,7 @@ export function HeirList({
                 </div>
                 <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                   <Mail className="h-3.5 w-3.5" />
-                  <span className="truncate">{heir.email_encrypted || 'No email'}</span>
+                  <span className="truncate">{heir.email || 'No email'}</span>
                   {heir.relationship && (
                     <>
                       <span>•</span>

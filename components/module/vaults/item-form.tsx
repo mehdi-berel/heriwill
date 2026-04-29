@@ -73,7 +73,7 @@ interface ItemFormProps {
   onSave: (item: VaultItem) => Promise<void>
   initialData?: VaultItem
   vaultId: string
-  vaultCategory?: 'share' | 'delete' | 'pro'
+  vaultCategory?: 'share' | 'delete'
 }
 
 const ITEM_TYPES = [
@@ -127,8 +127,6 @@ export function ItemForm({ isOpen, onClose, onSave, initialData, vaultCategory }
     isEncrypted: initialData?.isEncrypted !== undefined ? initialData.isEncrypted : true,
     tags: initialData?.tags || [],
   }))
-  
-  const isProVault = vaultCategory === 'pro'
 
   const handleTypeChange = (type: VaultItemType) => {
     setFormData(prev => ({
@@ -589,33 +587,6 @@ export function ItemForm({ isOpen, onClose, onSave, initialData, vaultCategory }
               <Label className="text-sm font-medium">Item Type</Label>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
               {ITEM_TYPES.map((type) => {
-                const Icon = type.icon
-                const isSelected = formData.type === type.value
-                return (
-                  <button
-                    key={type.value}
-                    type="button"
-                    onClick={() => handleTypeChange(type.value as VaultItemType)}
-                    disabled={!!initialData}
-                    className={`p-3 rounded-lg border-2 transition-all ${
-                      initialData ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
-                    }`}
-                    style={isSelected ? { 
-                      backgroundColor: '#8B5CF620', 
-                      borderColor: '#8B5CF6',
-                      boxShadow: '0 4px 6px -1px rgba(139, 92, 246, 0.2)'
-                    } : { borderColor: '#232629' }}
-                  >
-                    <div className="flex flex-col items-center gap-2">
-                      <Icon className="h-5 w-5" style={{ color: isSelected ? '#8B5CF6' : '#71717A' }} />
-                      <span className="text-xs font-medium" style={{ color: isSelected ? '#8B5CF6' : '#A1A1AA' }}>
-                        {type.label}
-                      </span>
-                    </div>
-                  </button>
-                )
-              })}
-              {isProVault && PRO_ITEM_TYPES.map((type) => {
                 const Icon = type.icon
                 const isSelected = formData.type === type.value
                 return (

@@ -52,8 +52,8 @@ function InvitePageContent() {
             invitation_code,
             invitation_status,
             invitation_expires_at,
-            email_encrypted,
-            full_name_encrypted,
+            email,
+            name,
             user_id,
             users!heirs_user_id_fkey (
               full_name,
@@ -68,8 +68,8 @@ function InvitePageContent() {
           invitation_code: string
           invitation_status: string
           invitation_expires_at: string | null
-          email_encrypted: string
-          full_name_encrypted: string
+          email: string
+          name: string
           user_id: string
           users: { full_name: string; email: string } | null
         }
@@ -101,16 +101,16 @@ function InvitePageContent() {
           inviterName: heir.users?.full_name || 'Unknown',
           inviterEmail: heir.users?.email || '',
           heirId: heir.id,
-          email: heir.email_encrypted || '',
-          fullName: heir.full_name_encrypted || '',
+          email: heir.email || '',
+          fullName: heir.name || '',
           expired
         })
 
         // Pre-fill form if data exists
         setFormData(prev => ({
           ...prev,
-          email: heir.email_encrypted || '',
-          fullName: heir.full_name_encrypted || ''
+          email: heir.email || '',
+          fullName: heir.name || ''
         }))
 
       } else {
@@ -183,7 +183,7 @@ function InvitePageContent() {
           data: {
             full_name: sanitizeText(formData.fullName.trim())
           },
-          emailRedirectTo: 'https://app.heriwill.com'
+          emailRedirectTo: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
         }
       })
 

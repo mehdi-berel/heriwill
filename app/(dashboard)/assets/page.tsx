@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { ProTierGuard } from "@/components/module/auth/pro-tier-guard"
 import { AssetForm } from "@/components/module/assets/asset-form"
 import { AssetList } from "@/components/module/assets/asset-list"
 import { Button } from "@/components/ui/button"
@@ -48,7 +47,7 @@ interface Vault {
 
 interface Heir {
   id: string
-  full_name_encrypted: string | null
+  name: string | null
   relationship?: string | null
 }
 
@@ -110,10 +109,10 @@ function AssetsPageContent() {
     try {
       const { data, error } = await supabase
         .from('heirs')
-        .select('id, full_name_encrypted, relationship')
+        .select('id, name, relationship')
         .eq('user_id', userId)
         .eq('is_active', true)
-        .order('full_name_encrypted', { ascending: true })
+        .order('name', { ascending: true })
 
       if (error) {
         logger.error('Error loading heirs', error, { userId })
@@ -280,8 +279,7 @@ function AssetsPageContent() {
   })
 
   return (
-    <ProTierGuard pageName="Assets">
-      <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+    <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
         {/* Back Button, Title and Add Button Row */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
@@ -410,7 +408,6 @@ function AssetsPageContent() {
           </DialogContent>
         </Dialog>
       </div>
-    </ProTierGuard>
   )
 }
 

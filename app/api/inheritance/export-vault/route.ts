@@ -2,17 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase'
 import { logger } from '@/lib/utils/logger'
 import JSZip from 'jszip'
-import { rateLimit, RateLimitPresets } from '@/lib/middleware/rateLimit'
 import { sanitizeApiError } from '@/lib/utils/error-handler'
 
 export async function POST(request: NextRequest) {
   try {
-    // Apply standard rate limiting
-    const rateLimitResult = await rateLimit(RateLimitPresets.standard)(request)
-    if (rateLimitResult) {
-      return rateLimitResult
-    }
-
     const supabase = await createServerSupabaseClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
 

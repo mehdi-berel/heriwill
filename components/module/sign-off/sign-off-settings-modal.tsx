@@ -33,8 +33,8 @@ export function SignOffSettingsModal({
   const [loading, setLoading] = useState(false)
   interface Heir {
     id: string
-    full_name_encrypted?: string
-    email_encrypted?: string
+    name?: string
+    email?: string
   }
   
   interface Notary {
@@ -132,7 +132,7 @@ export function SignOffSettingsModal({
     heirs.forEach(heir => {
       contacts.push({
         id: heir.id,
-        name: heir.full_name_encrypted || heir.email_encrypted || 'Unknown Heir',
+        name: heir.name || heir.email || 'Unknown Heir',
         type: 'heir'
       })
     })

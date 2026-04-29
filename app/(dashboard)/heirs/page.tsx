@@ -14,8 +14,6 @@ import { Search, Users, Mail, Heart, Scale } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { User } from "@supabase/supabase-js"
 import { Badge } from "@/components/ui/badge"
-import { UpgradeModal } from "@/components/module/subscription/upgrade-modal"
-import { SUBSCRIPTION_LIMITS } from "@/lib/subscription-limits"
 import { logger } from "@/lib/utils/logger"
 import { toast } from "@/lib/utils/toast"
 
@@ -26,22 +24,21 @@ function generateInvitationCode(): string {
 interface Heir {
   id: string
   user_id: string
-  full_name_encrypted: string | null
-  email_encrypted: string | null
-  phone_encrypted: string | null
+  heir_user_id: string | null
+  name: string | null
+  email: string | null
+  phone: string | null
   relationship: string | null
-  heir_type: 'family' | 'friend' | 'professional' | 'organization' | null
-  invitation_status: 'pending' | 'accepted' | 'rejected' | 'expired' | null
+  heir_type: string | null
+  is_active: boolean | null
+  has_accepted: boolean | null
+  invitation_status: string | null
   invitation_code: string | null
   invited_at: string | null
-  invitation_expires_at: string | null
-  has_accepted: boolean | null
   accepted_at: string | null
+  rejected_at: string | null
   notify_on_activation: boolean | null
   notification_delay_days: number | null
-  is_active: boolean | null
-  rejected_at: string | null
-  heir_user_id: string | null
   created_at: string
   updated_at: string
   users?: { full_name: string | null; email: string | null }
@@ -52,11 +49,10 @@ interface HeirFormData {
   email: string
   phone?: string
   relationship?: string
-  heir_type?: 'family' | 'friend' | 'professional' | 'organization'
+  heir_type?: 'family' | 'friend' | 'professional' | 'organization' | 'notary'
   notification_delay_days?: number
   is_active?: boolean
   notify_on_activation?: boolean
-  invitation_expires_at?: string
 }
 
 export default function HeirsPage() {
@@ -71,9 +67,7 @@ export default function HeirsPage() {
   const [receivedInvitations, setReceivedInvitations] = useState<Heir[]>([])
   const [showInvitationModal, setShowInvitationModal] = useState(false)
   const [newlyCreatedHeir, setNewlyCreatedHeir] = useState<Heir | null>(null)
-  const [userTier, setUserTier] = useState<'free' | 'premium' | 'pro'>('free')
   const [trustedContactMap, setTrustedContactMap] = useState<Record<string, boolean>>({})
-  const [showUpgradeModal, setShowUpgradeModal] = useState(false)
   const router = useRouter()
 
   const loadHeirs = useCallback(async (userId: string) => {
@@ -116,7 +110,7 @@ export default function HeirsPage() {
         const { data, error: error2 } = await supabase
           .from('heirs')
           .select('*')
-          .eq('email_encrypted', userEmail.toLowerCase().trim())
+          .eq('email', userEmail.toLowerCase().trim())
           .eq('invitation_status', 'pending')
           .order('created_at', { ascending: false })
 
@@ -184,16 +178,6 @@ export default function HeirsPage() {
       }
       setUser(user)
 
-      // Get user tier
-      const { data: userProfile } = await supabase
-        .from('users')
-        .select('subscription_tier')
-        .eq('id', user.id)
-        .single()
-
-      const tier = (userProfile as { subscription_tier?: string } | null)?.subscription_tier as 'free' | 'premium' | 'pro' ?? 'free'
-      setUserTier(tier)
-
       // Load heirs data and invitations
       await loadHeirs(user.id)
       await loadReceivedInvitations(user.id, user.email ?? undefined)
@@ -214,19 +198,8 @@ export default function HeirsPage() {
     return () => subscription.unsubscribe()
   }, [router, loadHeirs, loadReceivedInvitations])
 
-  // Compute locked heir IDs based on subscription tier
-  // Free users: only the first created heir is unlocked
-  // Premium/Pro: all heirs unlocked
-  const lockedHeirIds = useMemo(() => {
-    const locked = new Set<string>()
-    if (userTier === 'free' && heirs.length > 1) {
-      // heirs are sorted by created_at ascending, so index 0 is the first created
-      heirs.forEach((heir, index) => {
-        if (index > 0) locked.add(heir.id)
-      })
-    }
-    return locked
-  }, [heirs, userTier])
+  // No subscription tiers - all heirs unlocked
+  const lockedHeirIds = useMemo(() => new Set<string>(), [])
 
   const handleAddHeir = async (formData: HeirFormData) => {
     if (!user) {
@@ -237,14 +210,6 @@ export default function HeirsPage() {
 
     try {
       logger.info('Starting heir creation', { userId: user.id, email: formData.email })
-      
-      // Check heir limit before creating (client-side using tier from state)
-      const limits = SUBSCRIPTION_LIMITS[userTier] || SUBSCRIPTION_LIMITS.free
-      if (heirs.length >= limits.maxHeirs) {
-        setShowForm(false)
-        setShowUpgradeModal(true)
-        return
-      }
 
       const expirationDate = new Date()
       expirationDate.setDate(expirationDate.getDate() + 7)
@@ -253,9 +218,9 @@ export default function HeirsPage() {
         .from('heirs')
         .insert({
           user_id: user.id,
-          full_name_encrypted: formData.full_name,
-          email_encrypted: formData.email.toLowerCase().trim(),
-          phone_encrypted: formData.phone || null,
+          name: formData.full_name,
+          email: formData.email.toLowerCase().trim(),
+          phone: formData.phone || null,
           relationship: formData.relationship || null,
           heir_type: formData.heir_type || 'family',
           invitation_status: 'pending',
@@ -284,16 +249,11 @@ export default function HeirsPage() {
       
     } catch (error) {
       setShowForm(false)
-      const message = error instanceof Error ? error.message : ''
-      if (message.includes('Heir limit reached')) {
-        setShowUpgradeModal(true)
-      } else {
-        logger.error('Error adding heir', error, {
-          formData: { full_name: formData.full_name, email: formData.email },
-          userId: user.id
-        })
-        toast.error('Failed to add heir', message || 'Unknown error occurred')
-      }
+      logger.error('Error adding heir', error, {
+        formData: { full_name: formData.full_name, email: formData.email },
+        userId: user.id
+      })
+      toast.error('Failed to add heir', error instanceof Error ? error.message : 'Unknown error occurred')
     }
   }
 
@@ -304,9 +264,9 @@ export default function HeirsPage() {
       const { error } = await supabase
         .from('heirs')
         .update({
-          full_name_encrypted: formData.full_name,
-          email_encrypted: formData.email,
-          phone_encrypted: formData.phone || null,
+          name: formData.full_name,
+          email: formData.email,
+          phone: formData.phone || null,
           relationship: formData.relationship || null,
           heir_type: formData.heir_type || 'family',
           notification_delay_days: formData.notification_delay_days || 0,
@@ -468,24 +428,6 @@ export default function HeirsPage() {
             <div className="flex items-center gap-2">
               <Button 
                 onClick={() => {
-                  if (userTier === 'pro') {
-                    router.push('/notary')
-                  }
-                }}
-                variant="outline"
-                className="h-10 px-4 relative"
-                disabled={userTier !== 'pro'}
-              >
-                <Scale className="h-4 w-4 mr-2" />
-                <span className="hidden sm:inline">Notary</span>
-                {userTier !== 'pro' && (
-                  <Badge className="ml-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white border-0 text-xs px-1.5 py-0">
-                    PRO
-                  </Badge>
-                )}
-              </Button>
-              <Button 
-                onClick={() => {
                   setEditingHeir(null)
                   setShowForm(true)
                 }}
@@ -597,8 +539,8 @@ export default function HeirsPage() {
                         email: invitation.users?.email || undefined,
                         phone: undefined,
                         relationship: invitation.relationship || undefined,
-                        heir_type: invitation.heir_type || 'family',
-                        invitation_status: invitation.invitation_status || 'pending',
+                        heir_type: (invitation.heir_type || 'family') as 'family' | 'friend' | 'professional' | 'organization' | 'notary',
+                        invitation_status: (invitation.invitation_status || 'pending') as 'pending' | 'accepted' | 'rejected' | 'expired',
                         invited_at: invitation.invited_at || ''
                       }}
                       ownerName={invitation.users?.full_name || invitation.users?.email || 'Owner'}
@@ -632,8 +574,8 @@ export default function HeirsPage() {
                       email: successor.users?.email || undefined,
                       phone: undefined,
                       relationship: successor.relationship || undefined,
-                      heir_type: successor.heir_type || 'family',
-                      invitation_status: successor.invitation_status || 'accepted',
+                      heir_type: (successor.heir_type || 'family') as 'family' | 'friend' | 'professional' | 'organization' | 'notary',
+                      invitation_status: (successor.invitation_status || 'accepted') as 'pending' | 'accepted' | 'rejected' | 'expired',
                       invited_at: successor.invited_at || ''
                     }}
                     ownerName={successor.users?.full_name || successor.users?.email || 'Owner'}
@@ -660,12 +602,11 @@ export default function HeirsPage() {
             </DialogTitle>
             <HeirForm
               initialData={editingHeir ? {
-                full_name: editingHeir.full_name_encrypted || '',
-                email: editingHeir.email_encrypted || '',
-                phone: editingHeir.phone_encrypted || '',
+                full_name: editingHeir.name || '',
+                email: editingHeir.email || '',
+                phone: editingHeir.phone || '',
                 relationship: editingHeir.relationship || '',
-                heir_type: editingHeir.heir_type || 'family',
-                invitation_expires_at: editingHeir.invitation_expires_at || undefined
+                heir_type: (editingHeir.heir_type || 'family') as 'family' | 'friend' | 'professional' | 'organization' | 'notary'
               } : undefined}
               onSubmit={editingHeir ? handleUpdateHeir : handleAddHeir}
               onCancel={() => {
@@ -683,10 +624,10 @@ export default function HeirsPage() {
             <DialogTitle className="sr-only">Heir Invitation Created</DialogTitle>
             {newlyCreatedHeir && (
               <HeirInvitation
-                heirName={newlyCreatedHeir.full_name_encrypted || ''}
-                heirEmail={newlyCreatedHeir.email_encrypted || ''}
+                heirName={newlyCreatedHeir.name || ''}
+                heirEmail={newlyCreatedHeir.email || ''}
                 invitationCode={newlyCreatedHeir.invitation_code || ''}
-                invitationLink={`${process.env.NEXT_PUBLIC_APP_URL || 'https://app.heriwill.com'}/invite?code=${newlyCreatedHeir.invitation_code}&type=heir`}
+                invitationLink={`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/invite?code=${newlyCreatedHeir.invitation_code}&type=heir`}
                 onClose={() => {
                   setShowInvitationModal(false)
                   setNewlyCreatedHeir(null)
@@ -724,14 +665,6 @@ export default function HeirsPage() {
             </div>
           </DialogContent>
         </Dialog>
-
-        {/* Upgrade Modal */}
-        <UpgradeModal
-          isOpen={showUpgradeModal}
-          onClose={() => setShowUpgradeModal(false)}
-          reason="heir_limit"
-          currentPlan={userTier}
-        />
     </div>
   )
 }
