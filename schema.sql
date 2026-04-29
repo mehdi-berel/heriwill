@@ -20,22 +20,6 @@ CREATE TABLE public.assets (
   CONSTRAINT assets_vault_id_fkey FOREIGN KEY (vault_id) REFERENCES public.vaults(id),
   CONSTRAINT assets_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
 );
-CREATE TABLE public.audit_logs (
-  id uuid NOT NULL DEFAULT uuid_generate_v4(),
-  user_id uuid,
-  action text NOT NULL,
-  resource_type text NOT NULL CHECK (resource_type = ANY (ARRAY['vault'::text, 'vault_item'::text, 'inheritance_plan'::text, 'heir'::text, 'user'::text, 'shared_vault'::text])),
-  resource_id uuid,
-  ip_address inet,
-  user_agent text,
-  old_values jsonb,
-  new_values jsonb,
-  risk_level text CHECK (risk_level = ANY (ARRAY['low'::text, 'medium'::text, 'high'::text, 'critical'::text])),
-  created_at timestamp with time zone NOT NULL DEFAULT now(),
-  metadata jsonb DEFAULT '{}'::jsonb,
-  CONSTRAINT audit_logs_pkey PRIMARY KEY (id),
-  CONSTRAINT audit_logs_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
-);
 CREATE TABLE public.heirs (
   id uuid NOT NULL DEFAULT uuid_generate_v4(),
   user_id uuid NOT NULL,
@@ -55,10 +39,10 @@ CREATE TABLE public.heirs (
   relationship text,
   notification_status text DEFAULT 'pending'::text,
   notified_at timestamp with time zone,
-  full_name_encrypted text,
-  email_encrypted text,
-  phone_encrypted text,
-  heir_type text DEFAULT 'family'::text CHECK (heir_type = ANY (ARRAY['family'::text, 'friend'::text, 'professional'::text, 'organization'::text])),
+  name text,
+  email text,
+  phone text,
+  heir_type text DEFAULT 'family'::text CHECK (heir_type = ANY (ARRAY['family'::text, 'friend'::text, 'professional'::text, 'organization'::text, 'notary'::text])),
   CONSTRAINT heirs_pkey PRIMARY KEY (id),
   CONSTRAINT heirs_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id),
   CONSTRAINT heirs_heir_user_id_fkey FOREIGN KEY (heir_user_id) REFERENCES public.users(id)
@@ -79,23 +63,6 @@ CREATE TABLE public.inheritance_triggers (
   CONSTRAINT inheritance_triggers_pkey PRIMARY KEY (id),
   CONSTRAINT inheritance_triggers_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id),
   CONSTRAINT inheritance_triggers_verified_by_fkey FOREIGN KEY (verified_by) REFERENCES public.users(id)
-);
-CREATE TABLE public.legal (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  name text NOT NULL,
-  document_type text NOT NULL CHECK (document_type = ANY (ARRAY['will'::text, 'trust'::text, 'power_of_attorney'::text, 'healthcare_directive'::text, 'living_will'::text, 'deed'::text, 'contract'::text, 'other'::text])),
-  description text,
-  template_content text,
-  template_fields jsonb DEFAULT '[]'::jsonb,
-  category text,
-  is_system_template boolean DEFAULT false,
-  is_active boolean DEFAULT true,
-  created_by uuid,
-  created_at timestamp with time zone DEFAULT now(),
-  updated_at timestamp with time zone DEFAULT now(),
-  metadata jsonb DEFAULT '{}'::jsonb,
-  CONSTRAINT legal_pkey PRIMARY KEY (id),
-  CONSTRAINT legal_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id)
 );
 CREATE TABLE public.notaries (
   id uuid NOT NULL DEFAULT uuid_generate_v4(),
@@ -164,9 +131,6 @@ CREATE TABLE public.users (
   updated_at timestamp with time zone NOT NULL DEFAULT now(),
   last_login timestamp with time zone,
   email_verified boolean DEFAULT false,
-  subscription_tier text DEFAULT 'free'::text CHECK (subscription_tier = ANY (ARRAY['free'::text])),
-  subscription_status text DEFAULT 'inactive'::text CHECK (subscription_status = ANY (ARRAY['active'::text, 'inactive'::text, 'cancelled'::text, 'past_due'::text])),
-  subscription_expires_at timestamp with time zone,
   global_trigger_method text DEFAULT 'inactivity'::text CHECK (global_trigger_method = ANY (ARRAY['inactivity'::text, 'death_certificate'::text, 'manual_trigger'::text, 'scheduled'::text, 'trusted_contact'::text, 'heir_notification'::text])),
   global_trigger_settings jsonb DEFAULT '{"inactivity_days": 30}'::jsonb,
   global_scheduled_date timestamp with time zone,
