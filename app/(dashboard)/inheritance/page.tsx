@@ -3,7 +3,9 @@
 import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent } from "@/components/ui/card"
-import { ShieldCheck, Info } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { ShieldCheck, Info, Search } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { logger } from "@/lib/utils/logger"
 import { VaultsList } from "@/components/module/inheritance/vaults-list"
@@ -25,6 +27,7 @@ export default function InheritanceRoute() {
   const [vaults, setVaults] = useState<InheritedVault[]>([])
   const [loading, setLoading] = useState(true)
   const [userId, setUserId] = useState<string | null>(null)
+  const [searchTerm, setSearchTerm] = useState('')
 
   const loadInheritedVaults = useCallback(async (currentUserId: string) => {
     try {
@@ -127,22 +130,31 @@ export default function InheritanceRoute() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6">
       {/* Header */}
-      <div className="flex items-start justify-between">
-        <div>
+      <div className="mb-6">
+        <div className="flex justify-between items-center mb-4">
           <h1 className="text-3xl font-bold">Inherited Vaults</h1>
-          <p className="text-muted-foreground mt-1">
-            Vaults shared with you through inheritance
-          </p>
+          <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+            <ShieldCheck className="h-6 w-6 text-primary" />
+          </div>
         </div>
-        <div className="h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center">
-          <ShieldCheck className="h-7 w-7 text-primary" />
+
+        {/* Search Bar */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+          <Input
+            placeholder="Search inherited vaults..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10 h-11 bg-background-secondary rounded-xl"
+            style={{ borderColor: '#232629' }}
+          />
         </div>
       </div>
 
       {/* Info Banner */}
-      <Card className="bg-blue-500/5 border-blue-500/20">
+      <Card className="bg-blue-500/5 border-blue-500/20 mb-6">
         <CardContent className="flex items-start gap-3 p-4">
           <Info className="h-5 w-5 text-blue-400 flex-shrink-0 mt-0.5" />
           <p className="text-sm text-muted-foreground">
@@ -152,9 +164,10 @@ export default function InheritanceRoute() {
       </Card>
 
       {/* Vaults List */}
-      <VaultsList 
+      <VaultsList
         vaults={vaults}
         onVaultClick={(vaultId) => router.push(`/inheritance/${vaultId}`)}
+        searchTerm={searchTerm}
       />
     </div>
   )

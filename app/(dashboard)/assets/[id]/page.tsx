@@ -253,50 +253,72 @@ export default function AssetDetailPage() {
     }
   }
 
+  const handleUpdateHeirs = async (heirIds: string[]) => {
+    if (!asset) return
+
+    try {
+      await updateDigitalAsset(asset.id, { heir_ids: heirIds })
+      await loadAsset(asset.id)
+      toast.success('Beneficiaries updated successfully')
+    } catch (error) {
+      logger.error('Error updating heirs', error, { assetId: asset.id })
+      toast.error('Failed to update beneficiaries. Please try again.')
+      throw error
+    }
+  }
+
   if (!asset) return null
 
   return (
-    <div className="p-6">
-      <div className="p-6">
-        {/* Header with Back Button and Title */}
-        <div className="flex items-center justify-between mb-6">
-          {/* Back Button - Left */}
-          <Button variant="ghost" onClick={() => router.push("/assets")}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Assets
+    <div className="p-4 sm:p-6 max-w-7xl mx-auto">
+      {/* Header */}
+      <div className="mb-6">
+        {/* Back button, title, and action buttons on same level */}
+        <div className="flex items-center gap-2 sm:gap-4">
+          <Button
+            variant="ghost"
+            onClick={() => router.push("/assets")}
+            className="h-10 sm:h-9 -ml-2 sm:ml-0 flex-shrink-0"
+          >
+            <ArrowLeft className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Back</span>
           </Button>
-          
-          {/* Title - Center */}
-          <div className="text-center flex-1">
-            <h1 className="text-2xl font-bold">{asset.name}</h1>
-            <p className="text-muted-foreground">{getAssetTypeLabel(asset.type)}</p>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-lg sm:text-2xl font-bold leading-tight truncate">{asset.name}</h1>
+            <p className="text-xs sm:text-base text-muted-foreground line-clamp-1 sm:line-clamp-2">{getAssetTypeLabel(asset.type)}</p>
           </div>
-          
-          {/* Action Buttons - Right */}
-          <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={handleEdit}>
-              <Edit className="h-4 w-4 mr-2" />
-              Edit
+          {/* Action buttons */}
+          <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+            <Button variant="outline" onClick={handleEdit} className="h-10 sm:h-9">
+              <Edit className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Edit</span>
             </Button>
-            <Button variant="outline" onClick={handleDelete}>
-              <Trash2 className="h-4 w-4 mr-2" />
-              Delete
+            <Button
+              variant="ghost"
+              onClick={handleDelete}
+              className="bg-red-500 hover:bg-red-600 text-white h-10 sm:h-9"
+            >
+              <Trash2 className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Delete</span>
             </Button>
           </div>
         </div>
+      </div>
 
-        {/* Asset Detail Component */}
-        <AssetDetail
-          asset={asset}
-          onBack={() => router.push("/assets")}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-          onUploadDocument={handleUploadDocument}
-          onDownloadDocument={handleDownloadDocument}
-          onDeleteDocument={handleDeleteDocument}
-        />
+      {/* Asset Detail Component */}
+      <AssetDetail
+        asset={asset}
+        heirs={heirs}
+        onBack={() => router.push("/assets")}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+        onUploadDocument={handleUploadDocument}
+        onDownloadDocument={handleDownloadDocument}
+        onDeleteDocument={handleDeleteDocument}
+        onUpdateHeirs={handleUpdateHeirs}
+      />
 
-        {/* Edit Modal */}
+      {/* Edit Modal */}
         <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogTitle>Edit Asset</DialogTitle>
@@ -344,7 +366,6 @@ export default function AssetDetailPage() {
             </div>
           </DialogContent>
         </Dialog>
-      </div>
     </div>
   )
 }

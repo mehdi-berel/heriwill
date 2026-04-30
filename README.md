@@ -6,7 +6,7 @@ A comprehensive open-source inheritance planning and vault management applicatio
 
 - **Vault Management**: Create and organize digital vaults for different purposes (share or delete after death)
 - **Heir Management**: Add heirs and manage their permissions with secure invitation codes
-- **Asset Tracking**: Keep track of digital assets and their designated recipients
+- **Asset Tracking**: Keep track of digital assets and their designated recipients with total value calculation
 - **Inheritance Triggers**: Set up automatic inheritance activation based on predefined conditions
 - **Secure Storage**: End-to-end encryption for all sensitive data
 - **Role-Based Access**: Different permission levels for owners, heirs, and trusted contacts
@@ -14,6 +14,8 @@ A comprehensive open-source inheritance planning and vault management applicatio
 - **File Storage**: Secure file upload and storage with signed URLs
 - **Real-time Notifications**: In-app notification system
 - **Self-Hosted**: Full control over your data with no subscription tiers or limits
+- **Heir Assignment**: Select which heirs inherit specific assets directly from asset details
+- **Consistent UX/UI**: Unified design language across vaults, inheritance, and assets sections
 
 ## Tech Stack
 
@@ -68,13 +70,17 @@ A comprehensive open-source inheritance planning and vault management applicatio
    - Database indexes
    - Functions and triggers
 
-5. **Create storage bucket**
+5. **Create storage buckets**
 
-   Create a storage bucket named `vault-files` in your Supabase project:
+   Create storage buckets in your Supabase project:
    - Go to Storage in your Supabase dashboard
    - Click "New bucket"
-   - Name it `vault-files`
-   - Configure bucket settings as needed (public/private access, file size limits, etc.)
+
+   **Required Buckets:**
+   - `vault-files`: For storing vault item files
+   - `documents`: For storing asset-related documents
+
+   Configure bucket settings as needed (public/private access, file size limits, etc.)
 
 6. **Run the development server**
    ```bash
@@ -115,6 +121,8 @@ See `schema.sql` for the complete database schema.
 3. Add environment variables in Vercel dashboard
 4. Deploy
 
+**Note:** The inheritance trigger cron job is automatically configured when deployed on Vercel. No additional setup required.
+
 ### Other Platforms
 
 The application can be deployed to any platform that supports Next.js:
@@ -124,6 +132,8 @@ The application can be deployed to any platform that supports Next.js:
 - DigitalOcean App Platform
 
 Ensure all environment variables are set in your deployment environment.
+
+**Important:** The inheritance trigger cron job (`/api/cron/check-triggers`) must be manually configured on non-Vercel platforms to run periodically (recommended: every hour). Configure your platform's cron job or scheduler to call this endpoint with the `CRON_SECRET` in the Authorization header.
 
 ## Security Features
 

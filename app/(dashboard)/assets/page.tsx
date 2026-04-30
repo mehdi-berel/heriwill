@@ -278,23 +278,34 @@ function AssetsPageContent() {
     return matchesSearch && matchesType
   })
 
+  const totalValue = assets.reduce((sum, asset) => sum + (asset.value || 0), 0)
+  const formattedTotalValue = new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).format(totalValue)
+
   return (
     <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
         {/* Back Button, Title and Add Button Row */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
-            <Button 
-              variant="ghost" 
+            <Button
+              variant="ghost"
               onClick={() => router.push(returnTo)}
               className="h-10 sm:h-9 px-2 sm:px-3 flex-shrink-0"
             >
               <ArrowLeft className="h-4 w-4 sm:mr-2" />
               <span className="hidden sm:inline">Back to Vault</span>
             </Button>
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-text-primary truncate">Assets</h1>
+            <div className="flex-1 min-w-0">
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-text-primary text-center truncate">Assets</h1>
+              <p className="text-xs sm:text-sm text-muted-foreground text-center mt-1">Total Value: {formattedTotalValue}</p>
+            </div>
           </div>
-          
-          <Button 
+
+          <Button
             onClick={() => {
               setEditingAsset(null)
               setShowForm(true)

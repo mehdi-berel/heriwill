@@ -12,7 +12,8 @@ import {
   LogOut,
   Lock,
   Power,
-  Settings
+  Settings,
+  Briefcase
 } from "lucide-react"
 
 const navigation = [
@@ -27,6 +28,12 @@ const navigation = [
     href: "/vaults",
     icon: Lock,
     description: "Secure storage",
+  },
+  {
+    name: "Assets",
+    href: "/assets",
+    icon: Briefcase,
+    description: "Asset tracking",
   },
   {
     name: "Heirs",

@@ -2,13 +2,12 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { useRouter, useParams } from "next/navigation"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { 
-  ArrowLeft, 
-  FolderOpen, 
-  Lock, 
+import {
+  ArrowLeft,
+  FolderOpen,
+  Lock,
   User,
   Calendar,
   FileText,
@@ -59,6 +58,7 @@ export default function InheritedVaultDetailPage() {
   const [selectedItem, setSelectedItem] = useState<VaultItem | null>(null)
   const [showItemPreview, setShowItemPreview] = useState(false)
   const [itemPreviewUrl, setItemPreviewUrl] = useState<string | null>(null)
+  const [searchTerm, setSearchTerm] = useState('')
 
   const loadVaultDetails = useCallback(async (userId: string) => {
     try {
@@ -361,83 +361,52 @@ export default function InheritedVaultDetailPage() {
   }
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-7xl mx-auto">
       {/* Header */}
       <div className="mb-6">
-        <Button
-          variant="ghost"
-          onClick={() => router.push('/inheritance')}
-          className="mb-4"
-        >
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Inheritance
-        </Button>
-
-        <Card className="border-primary/20">
-          <CardHeader>
-            <div className="flex items-start justify-between">
-              <div className="flex items-center gap-4">
-                <div 
-                  className="w-16 h-16 rounded-lg flex items-center justify-center"
-                  style={{ backgroundColor: vault.color || '#8B5CF6' }}
-                >
-                  <FolderOpen className="h-8 w-8 text-white" />
-                </div>
-                <div>
-                  <CardTitle className="text-2xl">{vault.name}</CardTitle>
-                  <CardDescription className="flex items-center gap-2 mt-1">
-                    <User className="h-4 w-4" />
-                    Inherited from {vault.owner_name}
-                  </CardDescription>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">
-                  <Lock className="h-3 w-3 mr-1" />
-                  Read Only
-                </Badge>
-                <Button
-                  onClick={handleDownloadVault}
-                  disabled={downloading}
-                  size="sm"
-                  variant="outline"
-                  className="gap-2"
-                >
-                  <Download className="h-4 w-4" />
-                  {downloading ? 'Downloading...' : 'Download Vault'}
-                </Button>
-              </div>
+        {/* Back button, title, and action buttons on same level */}
+        <div className="flex items-center gap-2 sm:gap-4">
+          <Button
+            variant="ghost"
+            onClick={() => router.push("/inheritance")}
+            className="h-10 sm:h-9 -ml-2 sm:ml-0 flex-shrink-0"
+          >
+            <ArrowLeft className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Back</span>
+          </Button>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-lg sm:text-2xl font-bold leading-tight truncate">{vault.name}</h1>
+            <div className="flex items-center gap-1.5 text-xs sm:text-sm text-muted-foreground">
+              <User className="h-3.5 w-3.5" />
+              <span>Inherited from {vault.owner_name}</span>
             </div>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <FileText className="h-4 w-4" />
-                <span>{vault.item_count} items</span>
-              </div>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Calendar className="h-4 w-4" />
-                <span>Created {formatDate(vault.created_at)}</span>
-              </div>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Package className="h-4 w-4" />
-                <span className="capitalize">{vault.category} vault</span>
-              </div>
-            </div>
-            {vault.description && (
-              <p className="mt-4 text-sm text-muted-foreground">{vault.description}</p>
-            )}
-          </CardContent>
-        </Card>
+          </div>
+          {/* Action buttons - read-only */}
+          <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+            <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">
+              <Lock className="h-3 w-3 mr-1" />
+              <span className="hidden sm:inline">Read Only</span>
+            </Badge>
+            <Button
+              onClick={handleDownloadVault}
+              disabled={downloading}
+              variant="outline"
+              className="h-10 sm:h-9"
+            >
+              <Download className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">{downloading ? 'Downloading...' : 'Download'}</span>
+            </Button>
+          </div>
+        </div>
       </div>
 
       {/* Vault Items */}
       <div className="space-y-4">
-        <h2 className="text-xl font-semibold">Vault Items</h2>
-        <ItemsList 
-          items={items} 
+        <ItemsList
+          items={items}
           onItemClick={handleItemClick}
           onDownloadItem={handleDownloadItem}
+          searchTerm={searchTerm}
         />
       </div>
 

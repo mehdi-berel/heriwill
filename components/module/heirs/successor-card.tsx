@@ -1,11 +1,10 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
-import { 
-  User, 
+import {
+  User,
   Heart,
   CheckCircle,
   Clock,
@@ -172,228 +171,208 @@ export function SuccessorCard({
 
   if (loading) {
     return (
-      <Card className="border-primary/20">
-        <CardContent className="py-8">
-          <div className="text-center text-muted-foreground">Loading...</div>
-        </CardContent>
-      </Card>
+      <div className="flex items-center p-4 bg-background-card border rounded-xl" style={{ borderColor: '#232629' }}>
+        <div className="text-center text-muted-foreground">Loading...</div>
+      </div>
     )
   }
 
   return (
     <>
-      <Card className="border-primary/20">
-        <CardHeader className="space-y-3">
-          <div className="flex items-center justify-between">
+      <div className="p-4 bg-background-card border rounded-xl" style={{ borderColor: '#232629' }}>
+        {/* Header */}
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{ backgroundColor: 'rgb(124, 58, 237)' }}>
+            <User className="h-6 w-6 text-white" />
+          </div>
+          <div className="flex-1">
+            <h3 className="text-base font-semibold">Successor Role</h3>
+            <p className="text-sm text-muted-foreground">For {ownerName}</p>
+          </div>
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-success/20 rounded-full">
+            <CheckCircle className="h-4 w-4 text-success" />
+            <span className="text-sm font-medium text-success">Active</span>
+          </div>
+        </div>
+
+        {/* Death Notification Alert */}
+        {deathNotification.hasNotification && !deathNotification.alreadyConfirmed && (
+          <div className="p-4 bg-red-500/10 rounded-lg border-2 border-red-500/50 space-y-4 mb-4">
+            <div className="flex items-start gap-3">
+              <Bell className="h-5 w-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-red-900 dark:text-red-200 mb-1">
+                  ⚠️ Death Notification
+                </p>
+                <p className="text-xs text-red-800 dark:text-red-300 mb-3">
+                  {ownerName} may have passed away. Please confirm if this is true.
+                </p>
+                {deathNotification.totalHeirs > 1 && (
+                  <div className="mb-3">
+                    <div className="flex items-center justify-between text-xs text-red-800 dark:text-red-300 mb-1">
+                      <span>Confirmation Progress</span>
+                      <span>{deathNotification.confirmedHeirs} of {deathNotification.totalHeirs} heirs confirmed</span>
+                    </div>
+                    <div className="w-full bg-red-200 dark:bg-red-900/30 rounded-full h-2">
+                      <div
+                        className="bg-red-600 dark:bg-red-500 h-2 rounded-full transition-all"
+                        style={{ width: `${deathNotification.confirmationProgress}%` }}
+                      />
+                    </div>
+                    <p className="text-xs text-red-700 dark:text-red-400 mt-2">
+                      {deathNotification.totalHeirs === 1
+                        ? 'Your confirmation will trigger the inheritance plan.'
+                        : 'All heirs must confirm to trigger the inheritance plan.'}
+                    </p>
+                  </div>
+                )}
+                <div className="flex gap-2">
+                  <Button
+                    onClick={() => setShowConfirmModal(true)}
+                    size="sm"
+                    className="bg-red-600 hover:bg-red-700 text-white"
+                    disabled={confirming}
+                  >
+                    <CheckCircle className="h-4 w-4 mr-1" />
+                    Confirm Death
+                  </Button>
+                  <Button
+                    onClick={handleDenyDeath}
+                    size="sm"
+                    variant="outline"
+                    className="border-red-500/50"
+                    disabled={confirming}
+                  >
+                    <X className="h-4 w-4 mr-1" />
+                    Not Deceased
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Already Confirmed Alert */}
+        {deathNotification.hasNotification && deathNotification.alreadyConfirmed && (
+          <div className="p-4 bg-blue-500/10 rounded-lg border border-blue-500/30 mb-4">
+            <div className="flex items-start gap-3">
+              <CheckCircle className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-blue-900 dark:text-blue-200 mb-1">
+                  Confirmation Recorded
+                </p>
+                <p className="text-xs text-blue-800 dark:text-blue-300">
+                  You have confirmed the death notification.
+                  {deathNotification.totalHeirs > 1 && (
+                    <> Waiting for {deathNotification.totalHeirs - deathNotification.confirmedHeirs} other heir(s) to confirm.</>
+                  )}
+                </p>
+                {deathNotification.totalHeirs > 1 && (
+                  <div className="mt-2">
+                    <div className="flex items-center gap-2 text-xs text-blue-800 dark:text-blue-300">
+                      <Users className="h-4 w-4" />
+                      <span>{deathNotification.confirmedHeirs} of {deathNotification.totalHeirs} confirmed ({Math.round(deathNotification.confirmationProgress)}%)</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Owner Information */}
+        <div className="space-y-3 mb-4">
+          <div className="flex items-center gap-3">
+            <User className="h-4 w-4 text-muted-foreground" />
+            <div>
+              <p className="text-sm text-muted-foreground">Full Name</p>
+              <p className="font-medium">{successor.full_name}</p>
+            </div>
+          </div>
+
+          {successor.email && (
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                <User className="h-6 w-6 text-primary" />
-              </div>
+              <Mail className="h-4 w-4 text-muted-foreground" />
               <div>
-                <CardTitle className="text-lg sm:text-xl">
-                  Successor Role
-                </CardTitle>
-                <CardDescription className="text-sm">
-                  For {ownerName}
-                </CardDescription>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-success/20 rounded-full">
-              <CheckCircle className="h-4 w-4 text-success" />
-              <span className="text-sm font-medium text-success">Active</span>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Death Notification Alert */}
-          {deathNotification.hasNotification && !deathNotification.alreadyConfirmed && (
-            <div className="p-4 bg-red-500/10 rounded-lg border-2 border-red-500/50 space-y-4">
-              <div className="flex items-start gap-3">
-                <Bell className="h-5 w-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
-                <div className="flex-1">
-                  <p className="text-sm font-semibold text-red-900 dark:text-red-200 mb-1">
-                    ⚠️ Death Notification
-                  </p>
-                  <p className="text-xs text-red-800 dark:text-red-300 mb-3">
-                    {ownerName} may have passed away. Please confirm if this is true.
-                  </p>
-                  {deathNotification.totalHeirs > 1 && (
-                    <div className="mb-3">
-                      <div className="flex items-center justify-between text-xs text-red-800 dark:text-red-300 mb-1">
-                        <span>Confirmation Progress</span>
-                        <span>{deathNotification.confirmedHeirs} of {deathNotification.totalHeirs} heirs confirmed</span>
-                      </div>
-                      <div className="w-full bg-red-200 dark:bg-red-900/30 rounded-full h-2">
-                        <div 
-                          className="bg-red-600 dark:bg-red-500 h-2 rounded-full transition-all"
-                          style={{ width: `${deathNotification.confirmationProgress}%` }}
-                        />
-                      </div>
-                      <p className="text-xs text-red-700 dark:text-red-400 mt-2">
-                        {deathNotification.totalHeirs === 1 
-                          ? 'Your confirmation will trigger the inheritance plan.'
-                          : 'All heirs must confirm to trigger the inheritance plan.'}
-                      </p>
-                    </div>
-                  )}
-                  <div className="flex gap-2">
-                    <Button
-                      onClick={() => setShowConfirmModal(true)}
-                      size="sm"
-                      className="bg-red-600 hover:bg-red-700 text-white"
-                      disabled={confirming}
-                    >
-                      <CheckCircle className="h-4 w-4 mr-1" />
-                      Confirm Death
-                    </Button>
-                    <Button
-                      onClick={handleDenyDeath}
-                      size="sm"
-                      variant="outline"
-                      className="border-red-500/50"
-                      disabled={confirming}
-                    >
-                      <X className="h-4 w-4 mr-1" />
-                      Not Deceased
-                    </Button>
-                  </div>
-                </div>
+                <p className="text-sm text-muted-foreground">Email</p>
+                <p className="font-medium">{successor.email}</p>
               </div>
             </div>
           )}
 
-          {/* Already Confirmed Alert */}
-          {deathNotification.hasNotification && deathNotification.alreadyConfirmed && (
-            <div className="p-4 bg-blue-500/10 rounded-lg border border-blue-500/30">
-              <div className="flex items-start gap-3">
-                <CheckCircle className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
-                <div className="flex-1">
-                  <p className="text-sm font-semibold text-blue-900 dark:text-blue-200 mb-1">
-                    Confirmation Recorded
-                  </p>
-                  <p className="text-xs text-blue-800 dark:text-blue-300">
-                    You have confirmed the death notification.
-                    {deathNotification.totalHeirs > 1 && (
-                      <> Waiting for {deathNotification.totalHeirs - deathNotification.confirmedHeirs} other heir(s) to confirm.</>
-                    )}
-                  </p>
-                  {deathNotification.totalHeirs > 1 && (
-                    <div className="mt-2">
-                      <div className="flex items-center gap-2 text-xs text-blue-800 dark:text-blue-300">
-                        <Users className="h-4 w-4" />
-                        <span>{deathNotification.confirmedHeirs} of {deathNotification.totalHeirs} confirmed ({Math.round(deathNotification.confirmationProgress)}%)</span>
-                      </div>
-                    </div>
-                  )}
-                </div>
+          {successor.phone && (
+            <div className="flex items-center gap-3">
+              <Phone className="h-4 w-4 text-muted-foreground" />
+              <div>
+                <p className="text-sm text-muted-foreground">Phone</p>
+                <p className="font-medium">{successor.phone}</p>
               </div>
             </div>
           )}
 
-          {/* Owner Information */}
-          <div className="space-y-4">
-            <h3 className="text-sm font-medium text-muted-foreground">Owner Details</h3>
-            <div className="space-y-3">
-              <div className="flex items-center gap-3">
-                <User className="h-4 w-4 text-muted-foreground" />
-                <div>
-                  <p className="text-sm text-muted-foreground">Full Name</p>
-                  <p className="font-medium">{successor.full_name}</p>
-                </div>
-              </div>
-              
-              {successor.email && (
-                <div className="flex items-center gap-3">
-                  <Mail className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">Email</p>
-                    <p className="font-medium">{successor.email}</p>
-                  </div>
-                </div>
-              )}
-              
-              {successor.phone && (
-                <div className="flex items-center gap-3">
-                  <Phone className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">Phone</p>
-                    <p className="font-medium">{successor.phone}</p>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Heir Type & Relationship */}
-          <div className="space-y-3">
-            <h3 className="text-sm font-medium text-muted-foreground">Relationship</h3>
-            <div className="flex items-center gap-2">
-              <Heart className="h-4 w-4 text-muted-foreground" />
-              <span className={`px-3 py-1 rounded-full text-sm font-medium ${heirTypeColors[successor.heir_type]}`}>
+          <div className="flex items-center gap-3">
+            <Heart className="h-4 w-4 text-muted-foreground" />
+            <div>
+              <p className="text-sm text-muted-foreground">Relationship</p>
+              <span className={`px-2 py-0.5 rounded text-sm font-medium ${heirTypeColors[successor.heir_type]}`}>
                 {heirTypeLabels[successor.heir_type]}
               </span>
               {successor.relationship && (
-                <>
-                  <span className="text-muted-foreground">•</span>
-                  <span className="text-sm text-muted-foreground">{successor.relationship}</span>
-                </>
+                <span className="text-sm text-muted-foreground ml-2">• {successor.relationship}</span>
               )}
             </div>
           </div>
 
-          {/* Invitation Date */}
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Clock className="h-4 w-4" />
             <span>Accepted on {formatDate(successor.invited_at)}</span>
           </div>
+        </div>
 
-          {/* Status Information */}
-          <div className="p-4 bg-success/10 rounded-lg border border-success/20">
-            <p className="text-sm text-center">
-              You are a successor for {ownerName}. You will be notified when access is granted according to their instructions.
-            </p>
-          </div>
+        {/* Status Information */}
+        <div className="p-4 bg-success/10 rounded-lg border border-success/20 mb-4">
+          <p className="text-sm text-center">
+            You are a successor for {ownerName}. You will be notified when access is granted according to their instructions.
+          </p>
+        </div>
 
-          {/* Remove Successor Button */}
-          <div className="pt-2">
-            <Button
-              onClick={() => setShowRemoveModal(true)}
-              variant="outline"
-              className="w-full h-11 border-red-500/50 hover:bg-red-500/10 text-red-600 dark:text-red-400"
-            >
-              <Trash2 className="h-4 w-4 mr-2" />
-              Remove Successor Role
-            </Button>
-          </div>
+        {/* Remove Successor Button */}
+        <Button
+          onClick={() => setShowRemoveModal(true)}
+          variant="outline"
+          className="w-full h-11 border-red-500/50 hover:bg-red-500/10 text-red-600 dark:text-red-400"
+        >
+          <Trash2 className="h-4 w-4 mr-2" />
+          Remove Successor Role
+        </Button>
 
-          {/* Trusted Contact Section */}
-          {isTrustedContact && (
-            <div className="space-y-3 pt-2">
-              <div className="p-4 bg-amber-500/10 rounded-lg border border-amber-500/20">
-                <div className="flex items-start gap-3">
-                  <Shield className="h-5 w-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-sm font-semibold text-amber-900 dark:text-amber-200 mb-1">
-                      You are the Trusted Contact
-                    </p>
-                    <p className="text-xs text-amber-800 dark:text-amber-300">
-                      {ownerName} has designated you as their trusted contact. You can confirm their passing to trigger the inheritance plan.
-                    </p>
-                  </div>
+        {/* Trusted Contact Section */}
+        {isTrustedContact && (
+          <div className="space-y-3 mt-4">
+            <div className="p-4 bg-amber-500/10 rounded-lg border border-amber-500/20">
+              <div className="flex items-start gap-3">
+                <Shield className="h-5 w-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-semibold text-amber-900 dark:text-amber-200 mb-1">
+                    You are the Trusted Contact
+                  </p>
+                  <p className="text-xs text-amber-800 dark:text-amber-300">
+                    {ownerName} has designated you as their trusted contact. You can confirm their passing to trigger the inheritance plan.
+                  </p>
                 </div>
               </div>
-              <Button
-                onClick={() => setShowConfirmModal(true)}
-                variant="outline"
-                className="w-full h-11 border-amber-500/50 hover:bg-amber-500/10"
-              >
-                <AlertTriangle className="h-4 w-4 mr-2" />
-                Confirm Death
-              </Button>
             </div>
-          )}
-        </CardContent>
-      </Card>
+            <Button
+              onClick={() => setShowConfirmModal(true)}
+              variant="outline"
+              className="w-full h-11 border-amber-500/50 hover:bg-amber-500/10"
+            >
+              <AlertTriangle className="h-4 w-4 mr-2" />
+              Confirm Death
+            </Button>
+          </div>
+        )}
+      </div>
 
       {/* Remove Successor Modal */}
       <Dialog open={showRemoveModal} onOpenChange={setShowRemoveModal}>
